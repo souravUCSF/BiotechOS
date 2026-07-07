@@ -21,5 +21,13 @@ TGTB_ANTITARGET_CHEMBL = "CHEMBL203"
 DEMO_SET_SIZE = 50
 HELD_OUT_COUNT = 25
 
+# --- LLM model tiers (see plan). Centralized so they're tunable in one place. ---
+# TPP Builder is the genuine hard-reasoning step -> best available model.
+# Artifact drafting (memos/PO/email) -> quality/latency balance.
+# Doc extraction -> high-volume, well-scoped.
+MODEL_TPP_BUILDER = "claude-opus-4-8"
+MODEL_ARTIFACTS = "claude-sonnet-4-6"
+MODEL_EXTRACTION = "claude-haiku-4-5-20251001"
+
 for _d in (CURATED_DIR, CACHE_DIR):
     _d.mkdir(parents=True, exist_ok=True)

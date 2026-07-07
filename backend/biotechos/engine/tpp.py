@@ -26,6 +26,7 @@ class ParamScore:
     param_id: int
     label: str
     axis: str
+    metric: str
     status: Status
     value: float | None
     threshold: float
@@ -117,20 +118,24 @@ def score_molecule(conn, molecule_id: int, params: list[dict]) -> list[ParamScor
         value = _molecule_value(conn, molecule_id, p["metric"])
         status = _status_for(value, p["operator"], p["threshold"], p["near_frac"])
         out.append(ParamScore(
-            param_id=p["id"], label=p["label"], axis=p["axis"], status=status,
-            value=value, threshold=p["threshold"], operator=p["operator"], units=p["units"],
+            param_id=p["id"], label=p["label"], axis=p["axis"], metric=p["metric"],
+            status=status, value=value, threshold=p["threshold"], operator=p["operator"],
+            units=p["units"],
         ))
     return out
 
 
 def overall_status(scores: list[ParamScore]) -> Status:
-    statuses = [s.status for s in scores if s.status != Status.NO_DATA]
-    if not statuses:
+    statuses = [s.status for s in scores]
+    if all(s == Status.NO_DATA for s in statuses):
         return Status.NO_DATA
+    # A molecule only "meets TPP" if it has data on every axis and passes them all —
+    # partial data cannot clear the bar (missing an axis is not a pass).
     if all(s == Status.PASS for s in statuses):
         return Status.PASS
     if any(s == Status.FAIL for s in statuses):
         return Status.FAIL
+    # remaining mix is NEAR and/or NO_DATA -> not yet a candidate, but not a hard fail
     return Status.NEAR
 
 
@@ -157,8 +162,8 @@ def recompute(program_id: str = DEMO_PROGRAM_ID) -> dict:
             "molecule_id": m["id"], "name": m["name"], "status": status.value,
             "params": [
                 {"param_id": s.param_id, "label": s.label, "axis": s.axis,
-                 "status": s.status.value, "value": s.value, "threshold": s.threshold,
-                 "operator": s.operator, "units": s.units}
+                 "metric": s.metric, "status": s.status.value, "value": s.value,
+                 "threshold": s.threshold, "operator": s.operator, "units": s.units}
                 for s in scores
             ],
         }
@@ -169,30 +174,54 @@ def recompute(program_id: str = DEMO_PROGRAM_ID) -> dict:
     return {"molecules": list(results.values()), "meets_tpp": meets_tpp}
 
 
+import math
+
+# metrics that span orders of magnitude read far better on a log axis
+_LOG_METRICS = {
+    "tgta_biochemical_ic50_nm", "egfr_biochemical_ic50_nm",
+    "cellular_antiprolif_ic50_nm", "selectivity_fold",
+}
+
+
 def population_histogram(metric: str, program_id: str = DEMO_PROGRAM_ID, bins: int = 12) -> dict:
-    """All-molecule distribution for a metric, for the Tracker's per-parameter histogram."""
+    """All-molecule distribution for a metric, for the Tracker's per-parameter histogram.
+    Uses log-spaced bins for concentration/ratio metrics that span decades."""
     conn = db.connect()
     molecules = conn.execute(
         "SELECT id FROM molecules WHERE program_id=? AND held_out=0", (program_id,)
     ).fetchall()
+    param = conn.execute(
+        "SELECT threshold, operator, units FROM tpp_params WHERE program_id=? AND metric=?",
+        (program_id, metric),
+    ).fetchone()
     values = []
     for m in molecules:
         v = _molecule_value(conn, m["id"], metric)
         if v is not None:
             values.append(v)
     conn.close()
+
+    result = {"metric": metric, "counts": [], "edges": [], "log_scale": False,
+              "threshold": param["threshold"] if param else None,
+              "operator": param["operator"] if param else None,
+              "units": param["units"] if param else None}
     if not values:
-        return {"metric": metric, "counts": [], "edges": []}
-    lo, hi = min(values), max(values)
+        return result
+
+    use_log = metric in _LOG_METRICS and min(values) > 0
+    result["log_scale"] = use_log
+    xs = [math.log10(v) for v in values] if use_log else list(values)
+    lo, hi = min(xs), max(xs)
     if lo == hi:
-        return {"metric": metric, "counts": [len(values)], "edges": [lo, hi]}
+        edges = [10 ** lo, 10 ** hi] if use_log else [lo, hi]
+        return {**result, "counts": [len(values)], "edges": edges}
+
     width = (hi - lo) / bins
-    edges = [lo + i * width for i in range(bins + 1)]
     counts = [0] * bins
-    for v in values:
-        idx = min(int((v - lo) / width), bins - 1)
-        counts[idx] += 1
-    return {"metric": metric, "counts": counts, "edges": edges}
+    for x in xs:
+        counts[min(int((x - lo) / width), bins - 1)] += 1
+    edges = [(10 ** (lo + i * width)) if use_log else (lo + i * width) for i in range(bins + 1)]
+    return {**result, "counts": counts, "edges": edges}
 
 
 if __name__ == "__main__":

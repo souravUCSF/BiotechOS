@@ -5,8 +5,11 @@ import json
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from ..config import DEMO_PROGRAM_ID
+from ..engine import tpp as tpp_engine
+from ..engine import tpp_builder
 from ..state import db
 
 app = FastAPI(title="BiotechOS API")
@@ -122,6 +125,39 @@ def get_molecule(molecule_id: int):
     d = dict(mol)
     d["assays"] = assays
     return _scrub(d)
+
+
+@app.get("/tpp/scores")
+def tpp_scores(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Per-molecule TPP scoring + the current 'meets TPP' set."""
+    return tpp_engine.recompute(program_id)
+
+
+@app.post("/tpp/recompute")
+def tpp_recompute(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    return tpp_engine.recompute(program_id)
+
+
+@app.get("/tpp/histogram")
+def tpp_histogram(metric: str, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Population distribution for one TPP metric (with threshold context)."""
+    return tpp_engine.population_histogram(metric, program_id)
+
+
+class BuildTppRequest(BaseModel):
+    brief: str
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/tpp/build")
+def tpp_build(req: BuildTppRequest):
+    """TPP Builder: turn a program brief into a structured, executable TPP."""
+    return tpp_builder.build(req.brief, req.program_id)
+
+
+@app.get("/tpp/demo-brief")
+def tpp_demo_brief():
+    return {"brief": tpp_builder.DEMO_BRIEF}
 
 
 @app.get("/healthz")
