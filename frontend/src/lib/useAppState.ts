@@ -11,20 +11,27 @@ export function useAppState() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const reload = useCallback(() => {
-    setLoading(true);
-    fetchState(programId)
-      .then((s) => {
-        setState(s);
-        setError(null);
-      })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, [programId]);
+  // `silent` refresh keeps the current UI mounted (no loading flip) so local
+  // component state — e.g. an approved inbox card's result — survives a reload.
+  const load = useCallback(
+    (silent = false) => {
+      if (!silent) setLoading(true);
+      fetchState(programId)
+        .then((s) => {
+          setState(s);
+          setError(null);
+        })
+        .catch((e) => setError(String(e)))
+        .finally(() => setLoading(false));
+    },
+    [programId],
+  );
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    load(false);
+  }, [load]);
+
+  const reload = useCallback(() => load(true), [load]);
 
   return { state, error, loading, reload };
 }

@@ -77,6 +77,49 @@ export async function fetchDemoBrief(): Promise<string> {
   return (await res.json()).brief;
 }
 
+export type Rederivation = {
+  has_curve: boolean;
+  flagged?: boolean;
+  reported_ic50?: number;
+  fitted_ic50?: number;
+  fold_difference?: number;
+  note?: string;
+  fit?: { ic50: number; hill: number; top: number; bottom: number; r2: number };
+  raw_points?: { concentration_nM: number[]; pct_inhibition: number[] };
+};
+
+export type ApproveResult = {
+  item_id: number;
+  kind: string;
+  loaded: number;
+  crossed: string[];
+  memo: { molecule: string; text: string; used_llm: boolean } | null;
+  rederivation: Rederivation | null;
+};
+
+export async function fetchRederivation(itemId: number, programId: string): Promise<Rederivation> {
+  const res = await fetch(
+    `${API_BASE}/inbox/${itemId}/rederivation?program_id=${programId}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`rederivation failed: ${res.status}`);
+  return res.json();
+}
+
+export async function approveInbox(itemId: number, programId: string): Promise<ApproveResult> {
+  const res = await fetch(`${API_BASE}/inbox/${itemId}/approve?program_id=${programId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`approve failed: ${res.status}`);
+  return res.json();
+}
+
+export async function resetDemo(programId: string): Promise<{ reset: boolean; inbox_items: number }> {
+  const res = await fetch(`${API_BASE}/demo/reset?program_id=${programId}`, { method: "POST" });
+  if (!res.ok) throw new Error(`reset failed: ${res.status}`);
+  return res.json();
+}
+
 export async function buildTpp(
   brief: string,
   programId: string,

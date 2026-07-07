@@ -12,6 +12,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from ..config import DEMO_PROGRAM_ID
+from ..engine import inbox as inbox_engine
 from ..engine import structure as structure_engine
 from ..engine import tpp as tpp_engine
 from ..engine import tpp_builder
@@ -230,6 +231,51 @@ def tpp_build(req: BuildTppRequest):
 @app.get("/tpp/demo-brief")
 def tpp_demo_brief():
     return {"brief": tpp_builder.DEMO_BRIEF}
+
+
+@app.get("/inbox/{item_id}/rederivation")
+def inbox_rederivation(item_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Re-derivation overlay data for an item (raw curve + fitted vs reported IC50)."""
+    conn = get_conn()
+    item = conn.execute(
+        "SELECT * FROM inbox_items WHERE id=? AND program_id=?", (item_id, program_id)
+    ).fetchone()
+    conn.close()
+    if item is None:
+        raise HTTPException(404, "inbox item not found")
+    chk = inbox_engine.rederivation_for_item(dict(item))
+    if chk is None:
+        return {"has_curve": False}
+    return {"has_curve": True, **chk}
+
+
+@app.post("/inbox/{item_id}/approve")
+def inbox_approve(item_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    try:
+        return inbox_engine.approve(item_id, program_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/demo/reset")
+def demo_reset(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Re-seed the inbox and re-hold the demo molecules — resets the loop for a
+    fresh run/recording without a full data reload."""
+    conn = get_conn()
+    with conn:
+        # remove CRO-loaded assays and re-hold the demo molecules
+        for name in ("BTX-1033", "BTX-1026", "BTX-1027"):
+            r = conn.execute(
+                "SELECT id FROM molecules WHERE program_id=? AND name=?", (program_id, name)
+            ).fetchone()
+            if r:
+                conn.execute("DELETE FROM assays WHERE molecule_id=? AND source IN ('cro','derived')",
+                             (r["id"],))
+                conn.execute("UPDATE molecules SET held_out=1 WHERE id=?", (r["id"],))
+        conn.execute("DELETE FROM ledger_entries WHERE program_id=?", (program_id,))
+    conn.close()
+    n = inbox_engine.seed_inbox(program_id)
+    return {"reset": True, "inbox_items": n}
 
 
 @app.get("/healthz")
