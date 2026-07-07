@@ -118,6 +118,25 @@ export type Rederivation = {
   raw_points?: { concentration_nM: number[]; pct_inhibition: number[] };
 };
 
+export type BudgetSnapshot = {
+  total: number;
+  committed: number;
+  actual: number;
+  available: number;
+  monthly_burn: number;
+  runway_months: number | null;
+};
+
+export type FinancialResult = {
+  po_number?: string;
+  amount?: number;
+  email?: string;
+  email_used_llm?: boolean;
+  matched?: boolean;
+  note?: string;
+  budget: BudgetSnapshot;
+};
+
 export type ApproveResult = {
   item_id: number;
   kind: string;
@@ -125,7 +144,27 @@ export type ApproveResult = {
   crossed: string[];
   memo: { molecule: string; text: string; used_llm: boolean } | null;
   rederivation: Rederivation | null;
+  financial?: FinancialResult;
 };
+
+export type BudgetResponse = {
+  budget: BudgetSnapshot;
+  purchase_orders: Array<{
+    id: number;
+    po_number: string;
+    vendor_name: string;
+    amount: number;
+    status: string;
+  }>;
+  invoices: Array<{ id: number; amount: number; status: string; match_notes: string }>;
+  quotes: Array<{ id: number; vendor_name: string; description: string; amount: number; status: string }>;
+};
+
+export async function fetchBudget(programId: string): Promise<BudgetResponse> {
+  const res = await fetch(`${API_BASE}/budget?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /budget failed: ${res.status}`);
+  return res.json();
+}
 
 export async function fetchRederivation(itemId: number, programId: string): Promise<Rederivation> {
   const res = await fetch(

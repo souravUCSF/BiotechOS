@@ -276,7 +276,31 @@ def demo_reset(program_id: str = Query(default=DEMO_PROGRAM_ID)):
         conn.execute("DELETE FROM ledger_entries WHERE program_id=?", (program_id,))
     conn.close()
     n = inbox_engine.seed_inbox(program_id)
+    from ..engine import cfo as cfo_engine
+    cfo_engine.seed_financials(program_id)
     return {"reset": True, "inbox_items": n}
+
+
+@app.get("/budget")
+def budget(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Budget snapshot + PO pipeline + invoices for the CFO page."""
+    from ..engine import cfo as cfo_engine
+    conn = get_conn()
+    snap = cfo_engine.budget_snapshot(conn, program_id)
+    pos = db.rows_to_dicts(conn.execute(
+        "SELECT po.*, v.name AS vendor_name FROM purchase_orders po "
+        "LEFT JOIN vendors v ON v.id=po.vendor_id WHERE po.program_id=? ORDER BY po.id DESC",
+        (program_id,),
+    ).fetchall())
+    invoices = db.rows_to_dicts(conn.execute(
+        "SELECT * FROM invoices WHERE program_id=? ORDER BY id DESC", (program_id,)
+    ).fetchall())
+    quotes = db.rows_to_dicts(conn.execute(
+        "SELECT q.*, v.name AS vendor_name FROM quotes q LEFT JOIN vendors v ON v.id=q.vendor_id "
+        "WHERE q.program_id=? ORDER BY q.id DESC", (program_id,)
+    ).fetchall())
+    conn.close()
+    return {"budget": snap, "purchase_orders": pos, "invoices": invoices, "quotes": quotes}
 
 
 @app.get("/competitive")

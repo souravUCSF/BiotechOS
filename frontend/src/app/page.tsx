@@ -114,6 +114,33 @@ function InboxCard({
               </pre>
             </div>
           )}
+          {result.financial && (
+            <div className="mt-1">
+              {result.financial.po_number && (
+                <div className="text-emerald-400">
+                  ✓ Issued {result.financial.po_number} · committed{" "}
+                  ${result.financial.amount?.toLocaleString()} · available now $
+                  {result.financial.budget.available.toLocaleString()}
+                </div>
+              )}
+              {result.financial.matched != null && (
+                <div className={result.financial.matched ? "text-emerald-400" : "text-red-400"}>
+                  {result.financial.matched ? "✓" : "⚠"} {result.financial.note} · actual spend $
+                  {result.financial.budget.actual.toLocaleString()}
+                </div>
+              )}
+              {result.financial.email && (
+                <div className="mt-2 border-t border-neutral-800 pt-2">
+                  <div className="mb-1 text-xs text-neutral-500">
+                    Vendor email — Gmail draft (composed, not sent)
+                  </div>
+                  <pre className="whitespace-pre-wrap font-sans text-xs text-neutral-300">
+                    {result.financial.email}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

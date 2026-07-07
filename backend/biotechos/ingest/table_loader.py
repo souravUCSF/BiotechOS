@@ -278,9 +278,11 @@ def load(reset: bool = True) -> dict:
     _conn.close()
 
     # seed the Monday-morning inbox (held-out CRO datasets, incl. the lead flip
-    # and the re-derivation catch)
+    # and the re-derivation catch), then the financial loop (vendor quote)
     from ..engine import inbox as _inbox
+    from ..engine import cfo as _cfo
     _inbox.seed_inbox(DEMO_PROGRAM_ID)
+    _cfo.seed_financials(DEMO_PROGRAM_ID)
 
     n_active = sum(1 for r in curated_rows if not r["held_out"])
     return {

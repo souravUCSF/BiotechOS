@@ -16,7 +16,7 @@ import json
 
 from ..config import DEMO_PROGRAM_ID
 from ..state import db
-from . import artifacts, curvefit, tpp
+from . import artifacts, cfo, curvefit, tpp
 
 
 def _mol_id_by_name(conn, program_id: str, name: str) -> int | None:
@@ -152,6 +152,21 @@ def approve(item_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
 
     result = {"item_id": item_id, "kind": item["kind"], "loaded": 0,
               "crossed": [], "memo": None, "rederivation": None}
+
+    # financial loop items dispatch to the CFO engine
+    if action.get("action") == "approve_po":
+        fin = cfo.approve_quote(payload["quote_id"], program_id)
+        with conn:
+            conn.execute("UPDATE inbox_items SET status='approved' WHERE id=?", (item_id,))
+        conn.close()
+        return {**result, "kind": item["kind"], "financial": fin}
+
+    if action.get("action") == "reconcile_invoice":
+        fin = cfo.reconcile_invoice(payload["po_id"], payload.get("amount"), program_id)
+        with conn:
+            conn.execute("UPDATE inbox_items SET status='approved' WHERE id=?", (item_id,))
+        conn.close()
+        return {**result, "kind": item["kind"], "financial": fin}
 
     if action.get("action") == "acknowledge":
         # timeline-only item; log the acknowledgement
