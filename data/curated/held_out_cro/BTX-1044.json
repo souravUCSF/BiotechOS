@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL288441",
-  "name": "BOSUTINIB",
+  "code": "BTX-1044",
   "smiles": "COc1cc(Nc2c(C#N)cnc3cc(OCCCN4CCN(C)CC4)c(OC)cc23)c(Cl)cc1Cl",
   "selectivity": 0.0182,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": 6.31,
       "assay_desc": "Inhibition of TGTB T790M mutant",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -26,7 +25,7 @@
       "pchembl": 7.28,
       "assay_desc": "Inhibition of TGTB",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -38,7 +37,7 @@
       "pchembl": 5.6,
       "assay_desc": "Binding constant for TGTA kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -50,7 +49,7 @@
       "pchembl": 7.46,
       "assay_desc": "Binding constant for TGTB kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -62,7 +61,7 @@
       "pchembl": 7.75,
       "assay_desc": "Binding constant for TGTB(E746-A750del) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -74,7 +73,7 @@
       "pchembl": 7.01,
       "assay_desc": "Binding constant for TGTB(G719C) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -86,7 +85,7 @@
       "pchembl": 7.58,
       "assay_desc": "Binding constant for TGTB(G719S) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -98,7 +97,7 @@
       "pchembl": 7.54,
       "assay_desc": "Binding constant for TGTB(L747-E749del, A750P) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -110,7 +109,7 @@
       "pchembl": 5.58,
       "assay_desc": "Inhibition of TGTA",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -122,7 +121,7 @@
       "pchembl": 7.0,
       "assay_desc": "Inhibitory concentration required for the Src dependent cell proliferation using Src-transformed fibroblasts",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -134,7 +133,7 @@
       "pchembl": 7.0,
       "assay_desc": "Inhibition of Src-transformed cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -146,7 +145,7 @@
       "pchembl": 7.0,
       "assay_desc": "Inhibition of Src-dependent cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -158,7 +157,7 @@
       "pchembl": 7.0,
       "assay_desc": "Ability to inhibit the proliferation of c-Src transformed rat fibroblasts growing in suspension",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -170,7 +169,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of CDK4 at 10 ug/mL",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -182,7 +181,7 @@
       "pchembl": 5.4,
       "assay_desc": "Inhibition of PDGF receptor transfected rat1A cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -194,7 +193,7 @@
       "pchembl": 6.39,
       "assay_desc": "Inhibition of Fyn-dependent cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "plasma concentration of compound at one hour after the of intraperitoneal administration of 50 mg/kg",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "plasma concentration of compound at four hour after the of intraperitoneal administration of 50 mg/kg",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "Plasma concentration upon oral dose at 50 mg/kg in mouse after 24 hours",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "Drug level in nude mouse plasma at 50 mg/kg, po after 4 hrs",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "Drug level in nude mouse plasma at 50 mg/kg, po after 24 hrs",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Plasma concentration in nude mouse at 50 mg/kg, po after 24 hrs",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -278,7 +277,7 @@
       "pchembl": 5.5,
       "assay_desc": "Cytotoxicity against mouse BA/F3 cells expressing BCR-ABL T315I mutant after 72 hrs by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Ratio of drug concentration in brain to plasma in rat",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of tumor growth in human HT29 cells xenografted nude mouse at 150 mg/kg, po OD after 14 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antitumor activity against human HT-29 cells at 150 mg/kg, po qd for 14 days measured on day 21",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human HT-29 cells xenografted in athymic nude mouse assessed as tumor growth inhibition at 25 mg/kg, ip administered once daily for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human HT-29 cells xenografted in athymic nude mouse assessed as tumor growth inhibition at 50 mg/kg, po administered once daily for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against African green monkey Vero E6 cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity activity against human HepG2 cells assessed by CellTiter-Glo luminescent cell viability assay.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -374,7 +373,7 @@
       "pchembl": 6.0,
       "assay_desc": "Inhibition of hERG stably expressed in HEK293 cells by patch clamp assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -386,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of hERG stably expressed in HEK293 cells at 1 uM by patch clamp assay relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of hERG stably expressed in HEK293 cells at 10 uM by patch clamp assay relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

@@ -1,13 +1,18 @@
-"""Curate the TGTA demo set from the long-format ChEMBL export and load state.
+"""Curate the TGTA demo set from the long-format activity export and load state.
 
 Two-pass over the gzipped 2M-row export (memory-safe, chunked):
-  Pass 1  -> per-molecule summary (max_phase, smiles, TGTA potency, modality coverage)
-             to choose the 50-molecule demo set.
+  Pass 1  -> per-molecule summary (smiles, TGTA potency, modality coverage, row count)
+             to choose the 50-molecule demo set by data richness.
   Pass 2  -> pull every activity row for the chosen molecules, classify modality,
              pivot long->wide, compute selectivity + pChEMBL.
 
+Selection is purely by data richness (breadth of modalities, then row count) —
+not by clinical stage. Every demo molecule is assigned a proprietary compound
+code (e.g. BTX-1007); the source dataset's identifiers and real compound names
+are kept only in an internal, API-hidden column for our own provenance/debugging.
+
 Active molecules' assays go into the DB. The 25 held-out molecules' assays are
-staged to data/curated/held_out_cro/<chembl_id>.json to become the Day-4
+staged to data/curated/held_out_cro/<code>.json to become the Day-4
 "incoming CRO dataset" inbox payloads.
 """
 from __future__ import annotations
@@ -32,12 +37,13 @@ from ..state import db
 
 POTENCY_TYPES = {"IC50", "Ki", "Kd", "EC50", "AC50", "Potency"}
 USECOLS = [
-    "molecule_chembl_id", "molecule_name", "max_phase", "canonical_smiles",
+    "molecule_chembl_id", "molecule_name", "canonical_smiles",
     "standard_inchi_key", "target_chembl_id", "assay_type", "assay_description",
     "assay_cell_type", "standard_type", "standard_relation", "standard_value",
     "standard_units", "pchembl_value", "data_validity_comment",
 ]
 CHUNK = 200_000
+CODE_PREFIX = "BTX"
 
 
 def classify_modality(row) -> tuple[str, str]:
@@ -81,9 +87,8 @@ def pass1_choose_molecules(path=RAW_DEMO) -> pd.DataFrame:
             r = row._asdict()
             m = r["molecule_chembl_id"]
             s = agg.setdefault(m, {
-                "name": r["molecule_name"], "smiles": r["canonical_smiles"],
+                "ref_name": r["molecule_name"], "smiles": r["canonical_smiles"],
                 "inchi_key": r["standard_inchi_key"],
-                "max_phase": _to_float(r["max_phase"]) or 0.0,
                 "tgta_pchembl": [], "modalities": set(), "n_rows": 0,
             })
             s["n_rows"] += 1
@@ -101,39 +106,29 @@ def pass1_choose_molecules(path=RAW_DEMO) -> pd.DataFrame:
         if not s["smiles"] or not s["tgta_pchembl"]:
             continue  # demo molecules must have a structure and TGTA potency
         recs.append({
-            "chembl_id": m, "name": s["name"], "smiles": s["smiles"],
-            "inchi_key": s["inchi_key"], "max_phase": s["max_phase"],
+            "source_ref": m, "ref_name": s["ref_name"], "smiles": s["smiles"],
+            "inchi_key": s["inchi_key"],
             "tgta_pchembl_median": float(np.median(s["tgta_pchembl"])),
             "n_modalities": len(s["modalities"] - {"other"}),
             "n_rows": s["n_rows"],
         })
-    df = pd.DataFrame(recs)
-    return df
+    return pd.DataFrame(recs)
 
 
 def select_demo_set(summary: pd.DataFrame, n=DEMO_SET_SIZE) -> pd.DataFrame:
-    """Clinical/tool compounds first, then a potency-stratified tail for spread."""
-    clinical = summary[summary.max_phase >= 1].sort_values(
-        ["max_phase", "n_modalities"], ascending=False)
-    picks = clinical.head(n)
-    if len(picks) < n:
-        rest = summary.drop(picks.index)
-        # stratify remaining by TGTA potency into bins for spread, prefer multimodal
-        rest = rest.sort_values("n_modalities", ascending=False)
-        rest["bin"] = pd.qcut(rest.tgta_pchembl_median, q=min(10, max(2, len(rest) // 20)),
-                              labels=False, duplicates="drop")
-        tail = (rest.groupby("bin", group_keys=False)
-                    .apply(lambda g: g.head(max(1, (n - len(picks)) // 10 + 1)))
-                    .head(n - len(picks)))
-        picks = pd.concat([picks, tail])
-    return picks.head(n).reset_index(drop=True)
+    """Rank purely by data richness: breadth of modalities first, then row volume."""
+    ranked = summary.sort_values(["n_modalities", "n_rows"], ascending=False)
+    picks = ranked.head(n).reset_index(drop=True)
+    # assign proprietary compound codes in richness-rank order (BTX-1000 = richest)
+    picks["code"] = [f"{CODE_PREFIX}-{1000 + i}" for i in range(len(picks))]
+    return picks
 
 
-def pass2_collect_assays(chembl_ids: set[str], path=RAW_DEMO) -> dict[str, list[dict]]:
-    """Return {chembl_id: [assay dicts]} for the chosen molecules."""
+def pass2_collect_assays(source_refs: set[str], path=RAW_DEMO) -> dict[str, list[dict]]:
+    """Return {source_ref: [assay dicts]} for the chosen molecules."""
     out: dict[str, list[dict]] = defaultdict(list)
     for chunk in pd.read_csv(path, usecols=USECOLS, chunksize=CHUNK, low_memory=False):
-        sub = chunk[chunk.molecule_chembl_id.isin(chembl_ids)]
+        sub = chunk[chunk.molecule_chembl_id.isin(source_refs)]
         for row in sub.itertuples(index=False):
             r = row._asdict()
             mod, tgt = classify_modality(r)
@@ -149,7 +144,7 @@ def pass2_collect_assays(chembl_ids: set[str], path=RAW_DEMO) -> dict[str, list[
                 "pchembl": _to_float(r["pchembl_value"]),
                 "assay_desc": r["assay_description"],
                 "flags": r["data_validity_comment"],
-                "source": "chembl",
+                "source": "internal_dataset",
             })
     return out
 
@@ -165,13 +160,12 @@ MAX_PER_MODALITY = 8  # cap for held-out CRO payload: a real CRO report is a han
 
 def _sample_for_cro(assays: list[dict]) -> list[dict]:
     """A believable CRO deliverable: a handful of representative rows per modality,
-    not the full DrugMatrix/off-target dump."""
+    not the full off-target panel dump."""
     by_mod: dict[str, list[dict]] = defaultdict(list)
     for a in assays:
         by_mod[a["modality"]].append(a)
     sampled = []
     for mod, rows in by_mod.items():
-        # prefer on-target (TGTA/TGTB) rows first, then fill
         rows_sorted = sorted(rows, key=lambda a: a["target"] not in ("TGTA", "TGTB"))
         sampled.extend(rows_sorted[:MAX_PER_MODALITY])
     return sampled
@@ -186,19 +180,18 @@ def load(reset: bool = True) -> dict:
     summary = pass1_choose_molecules()
     print(f"  {len(summary)} candidate molecules with SMILES + TGTA potency")
     picks = select_demo_set(summary)
-    print(f"  selected {len(picks)} demo molecules "
-          f"({int((picks.max_phase >= 1).sum())} clinical)")
+    print(f"  selected {len(picks)} demo molecules by data richness "
+          f"(median n_modalities={picks.n_modalities.median():.0f}, "
+          f"median n_rows={picks.n_rows.median():.0f})")
 
-    chosen = set(picks.chembl_id)
+    chosen = set(picks.source_ref)
     print("Pass 2: collecting assays for chosen molecules ...")
     assays_by_mol = pass2_collect_assays(chosen)
 
-    # Deterministic held-out choice: hold out the 25 *non-clinical* by lowest max_phase
-    order = picks.sort_values(["max_phase", "tgta_pchembl_median"],
-                              ascending=[True, True]).chembl_id.tolist()
+    # Deterministic held-out choice: hold out the 25 sparsest-potency of the chosen set
+    order = picks.sort_values("tgta_pchembl_median", ascending=True).source_ref.tolist()
     held_out = set(order[:HELD_OUT_COUNT])
 
-    # Program + budget seed
     with conn:
         conn.execute(
             "INSERT OR REPLACE INTO programs(id,name,target,anti_target,indication,status)"
@@ -213,30 +206,34 @@ def load(reset: bool = True) -> dict:
         )
 
     held_dir = CURATED_DIR / "held_out_cro"
+    if held_dir.exists():
+        for f in held_dir.glob("*.json"):
+            f.unlink()
     held_dir.mkdir(exist_ok=True)
 
     curated_rows = []
     for row in picks.itertuples(index=False):
-        cid = row.chembl_id
-        is_held = cid in held_out
-        assays = assays_by_mol.get(cid, [])
+        ref = row.source_ref
+        code = row.code
+        is_held = ref in held_out
+        assays = assays_by_mol.get(ref, [])
         demo = _median_potency(assays, "biochemical_ic50", "TGTA")
         egfr = _median_potency(assays, "biochemical_ic50", "TGTB")
         selectivity = (egfr / demo) if (demo and egfr and demo > 0) else None
 
         with conn:
             cur = conn.execute(
-                "INSERT INTO molecules(program_id,chembl_id,name,smiles,inchi_key,"
-                "max_phase,held_out) VALUES (?,?,?,?,?,?,?)",
-                (DEMO_PROGRAM_ID, cid, row.name, row.smiles, row.inchi_key,
-                 float(row.max_phase), int(is_held)),
+                "INSERT INTO molecules(program_id,internal_ref,name,smiles,inchi_key,"
+                "held_out) VALUES (?,?,?,?,?,?)",
+                (DEMO_PROGRAM_ID, f"{ref}:{row.ref_name}", code, row.smiles,
+                 row.inchi_key, int(is_held)),
             )
             mol_id = cur.lastrowid
 
             if is_held:
                 # stage a believable CRO deliverable (sampled, not the full off-target dump)
-                (held_dir / f"{cid}.json").write_text(json.dumps({
-                    "chembl_id": cid, "name": row.name, "smiles": row.smiles,
+                (held_dir / f"{code}.json").write_text(json.dumps({
+                    "code": code, "smiles": row.smiles,
                     "selectivity": selectivity, "assays": _sample_for_cro(assays),
                 }, indent=2))
             else:
@@ -250,7 +247,6 @@ def load(reset: bool = True) -> dict:
                          a["pchembl"], a["source"], a["assay_desc"],
                          json.dumps([a["flags"]]) if a["flags"] else None),
                     )
-                # add a synthetic selectivity assay (derived, real inputs)
                 if selectivity is not None:
                     conn.execute(
                         "INSERT INTO assays(program_id,molecule_id,modality,target,"
@@ -260,9 +256,8 @@ def load(reset: bool = True) -> dict:
                     )
 
         curated_rows.append({
-            "chembl_id": cid, "name": row.name, "max_phase": row.max_phase,
-            "held_out": int(is_held), "tgta_ic50_nM": demo, "tgtb_ic50_nM": egfr,
-            "selectivity_fold": selectivity, "n_assays": len(assays),
+            "code": code, "held_out": int(is_held), "tgta_ic50_nM": demo,
+            "tgtb_ic50_nM": egfr, "selectivity_fold": selectivity, "n_assays": len(assays),
         })
 
     pd.DataFrame(curated_rows).to_csv(CURATED_DIR / "demo_set.csv", index=False)

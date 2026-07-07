@@ -28,9 +28,7 @@ export default function MoleculesPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-neutral-900 text-neutral-400">
             <tr>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">ChEMBL ID</th>
-              <th className="px-3 py-2">Phase</th>
+              <th className="px-3 py-2">Compound Code</th>
               <th className="px-3 py-2">Assays</th>
               <th className="px-3 py-2">Modalities</th>
             </tr>
@@ -41,8 +39,6 @@ export default function MoleculesPage() {
               return (
                 <tr key={mol.id} className="border-t border-neutral-800">
                   <td className="px-3 py-2 font-medium">{mol.name}</td>
-                  <td className="px-3 py-2 text-neutral-400">{mol.chembl_id}</td>
-                  <td className="px-3 py-2">{mol.max_phase}</td>
                   <td className="px-3 py-2">{mol.assays.length}</td>
                   <td className="px-3 py-2 text-xs text-neutral-400">
                     {Object.entries(counts)

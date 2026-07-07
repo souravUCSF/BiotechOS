@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL24828",
-  "name": "VANDETANIB",
+  "code": "BTX-1018",
   "smiles": "COc1cc2/c(=N/c3ccc(Br)cc3F)nc[nH]c2cc1OCC1CCN(C)CC1",
   "selectivity": 0.007600000000000001,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": 6.7,
       "assay_desc": "Inhibition of epidermal growth factor receptor kinase activity at a concentration of 2 uM of ATP",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -26,7 +25,7 @@
       "pchembl": 7.8,
       "assay_desc": "In vitro inhibition of Kinase TGTB (TGTB,RTK-fam) expressed in baculovirus",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -38,7 +37,7 @@
       "pchembl": 6.3,
       "assay_desc": "In vitro inhibition of Kinase TGTB expressed in baculovirus",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -50,7 +49,7 @@
       "pchembl": 7.77,
       "assay_desc": "Average Binding Constant for TGTB; NA=Not Active at 10 uM",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -62,7 +61,7 @@
       "pchembl": 6.95,
       "assay_desc": "Inhibition of human TGTB in presence of 1 uM ATP",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -74,7 +73,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of human TGTB in presence of 1 mM ATP",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -86,7 +85,7 @@
       "pchembl": 8.02,
       "assay_desc": "Binding constant for TGTB kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -98,7 +97,7 @@
       "pchembl": 8.32,
       "assay_desc": "Binding constant for TGTB(E746-A750del) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -110,7 +109,7 @@
       "pchembl": 7.0,
       "assay_desc": "Inhibition of human endothelial cell growth stimulate by endothelial growth factor",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -122,7 +121,7 @@
       "pchembl": 6.85,
       "assay_desc": "Compound was evaluated for inhibition of human TGTA in an in vitro cell free assay measured by Caliper microfluidic capillary electrophoresis, time-resolved fluorescence resonance energy transfer method",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -134,7 +133,7 @@
       "pchembl": 8.01,
       "assay_desc": "Compound was evaluated for inhibition of human TGTB in an in vitro cell free assay measured by Caliper microfluidic capillary electrophoresis, time-resolved fluorescence resonance energy transfer method",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -146,7 +145,7 @@
       "pchembl": 7.6,
       "assay_desc": "Inhibition of human endothelial cell growth stimulate by vascular endothelial growth factor",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -158,7 +157,7 @@
       "pchembl": 5.3,
       "assay_desc": "Inhibition of basal unstimulated growth of human endothelial cell",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -170,7 +169,7 @@
       "pchembl": null,
       "assay_desc": "Mean % inhibition of induced angiogenesis by Vascular endothelial growth factor (Vligand-1) at a peroral dose of 50 mg/kg in mice",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -182,7 +181,7 @@
       "pchembl": null,
       "assay_desc": "Mean % inhibition of induced angiogenesis by Heparin-binding growth factor 2 at a peroral dose of 50 mg/kg in mice",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -194,7 +193,7 @@
       "pchembl": null,
       "assay_desc": "Mean % inhibition of lymph node metastasis in B16 mouse administration.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "Mean % inhibition of primary tumor growth in B16 mouse administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "In vivo inhibition of neo-vascularisation in human A549 cells xenografted in athymic mouse at 50 mg/kg/day, po administered for 5 days measured after 24 hrs of last dose by light microscopy",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "Antitumour activity against human A549 cells xenografted in Balb/c mouse assessed as tumour growth inhibition at 10 mg/kg, po administered daily and mesured at day 17 relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against rat BN472 cell implanted in Brown-Norway rat assessed as tumor growth inhibition by measuring T/C ratio at 30 mg/kg, po qd measured upto 14 days",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human Calu-6 cells xenografted in athymic mouse assessed as inhibition of tumor growth at 100 mg/kg, po administered once daily for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human Calu-6 cells xenografted in athymic nude mouse assessed as tumor growth inhibition at 100 mg/kg, po administered once daily for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -278,7 +277,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human Calu-6 cells xenografted in athymic nude mouse assessed as tumor growth inhibition at 50 mg/kg, po administered once daily for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human Calu-6 cells xenografted in athymic nude mouse assessed as tumor growth inhibition at 25 mg/kg, po administered once daily for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Free drug level in rat plasma at 37 degC",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Growth inhibition of African green monkey Vero cells at 10 uM after 72 hrs by MTT assay relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Electrical activity assay on cell lines treated with a given drug. DMSO was used as a vehicle and a control, unblinded dofetilide was used as a control.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "Electrical activity assay on cell lines treated with a given drug. DMSO was used as a vehicle and a control, unblinded dofetilide was used as a control.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "Electrical activity assay on cell lines treated with a given drug. DMSO was used as a vehicle and a control, unblinded dofetilide was used as a control.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "Electrical activity assay on cell lines treated with a given drug. DMSO was used as a vehicle and a control, unblinded dofetilide was used as a control.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -374,7 +373,7 @@
       "pchembl": null,
       "assay_desc": "Electrical activity assay on cell lines treated with a given drug. DMSO was used as a vehicle and a control, unblinded dofetilide was used as a control.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -386,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Electrical activity assay on cell lines treated with a given drug. DMSO was used as a vehicle and a control, unblinded dofetilide was used as a control.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "NOVARTIS: Cytotoxicity against human hepatocellular carcinoma cell line (Huh7)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity activity against human HepG2 cells assessed by CellTiter-Glo luminescent cell viability assay.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Antiproliferative activity against HUVEC cells assessed as cell growth inhibition",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -434,7 +433,7 @@
       "pchembl": null,
       "assay_desc": "Incucyte cell viability with HEK293T",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -446,7 +445,7 @@
       "pchembl": null,
       "assay_desc": "Incucyte cell viability with HEK293T",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -458,7 +457,7 @@
       "pchembl": null,
       "assay_desc": "Incucyte cell viability with U2OS",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -470,7 +469,7 @@
       "pchembl": null,
       "assay_desc": "Incucyte cell viability with U2OS",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -482,7 +481,7 @@
       "pchembl": null,
       "assay_desc": "Incucyte cell viability with human fibroblast",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

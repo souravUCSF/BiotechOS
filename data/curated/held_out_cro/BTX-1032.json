@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL4483575",
-  "name": "REMIBRUTINIB",
+  "code": "BTX-1032",
   "smiles": "C=CC(=O)N(C)CCOc1c(N)ncnc1-c1cc(F)cc(NC(=O)c2ccc(C3CC3)cc2F)c1C",
   "selectivity": 1.5,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": null,
       "assay_desc": "Binding affinity to DNA-tagged recombinant TGTA (unknown origin) measured after 1 hr by biotinylated-ligand affinity bead-based qPCR analysis",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -26,7 +25,7 @@
       "pchembl": 4.52,
       "assay_desc": "Binding affinity to TGTA (unknown origin) assessed as dissociation constant by KINOMEscan analysis",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -38,7 +37,7 @@
       "pchembl": 4.52,
       "assay_desc": "Binding affinity to TGTB (unknown origin) assessed as dissociation constant by KINOMEscan analysis",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -50,7 +49,7 @@
       "pchembl": 8.89,
       "assay_desc": "Inhibition of full-length human recombinant BTK using FITC-Ahx-TSELKKVVALYDYMPMNAND-NH2 as substrate measured after 60 mins by caliper assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -62,7 +61,7 @@
       "pchembl": 8.6,
       "assay_desc": "Inhibition of BTK in vitamin D3 differentiated human THP1 cells assessed as inhibition of FCgammaR-induced IL8 production measured after 24 hrs by HTRF assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -74,7 +73,7 @@
       "pchembl": 7.75,
       "assay_desc": "Inhibition of BTK in human B cells assessed as reduction in anti-IgM/IL4-stimulated CD69 expression on B cells preincubated for 60 mins followed by anti-IgM antibody/IL4 stimulation and measured after 16 hrs by flow cytometry",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -86,7 +85,7 @@
       "pchembl": 9.2,
       "assay_desc": "Binding affinity to DNA-tagged recombinant BTK (unknown origin) measured after 1 hr by biotinylated-ligand affinity bead-based qPCR analysis",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -98,7 +97,7 @@
       "pchembl": 6.27,
       "assay_desc": "Binding affinity to DNA-tagged recombinant BMX (unknown origin) measured after 1 hr by biotinylated-ligand affinity bead-based qPCR analysis",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -110,7 +109,7 @@
       "pchembl": null,
       "assay_desc": "Binding affinity to DNA-tagged recombinant TGTB (unknown origin) measured after 1 hr by biotinylated-ligand affinity bead-based qPCR analysis",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -122,7 +121,7 @@
       "pchembl": null,
       "assay_desc": "Intrinsic clearance in rat liver microsomes",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -134,7 +133,7 @@
       "pchembl": null,
       "assay_desc": "Half life in human plasma",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -146,7 +145,7 @@
       "pchembl": null,
       "assay_desc": "Permeability of the compound at pH 6.8 by PAMPA",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -158,7 +157,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of CYP2D6 (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -170,7 +169,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of CYP3A4 (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -182,7 +181,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of CYP2C9 (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -194,7 +193,7 @@
       "pchembl": null,
       "assay_desc": "Transactivation of PXR (unknown origin) assessed as induction of CYP3A activity by reporter gene assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "In vivo protein occupancy at BTK in OFA-1 rat spleen assessed as reduction in biotinylated-BTK probe binding at 3 mg/kg, po administered as single dose measured at 5 hrs by ELISA relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "In vivo protein occupancy at BTK in po dosed OFA-1 rat spleen assessed as reduction in biotinylated-BTK probe binding measured at 5 hrs by ELISA",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "In vivo protein occupancy at BTK in po dosed OFA-1 rat spleen assessed as reduction in biotinylated-BTK probe binding measured at 5 hrs by ELISA",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "In vivo protein occupancy at BTK in SRBC immunized OFA-1 rat spleen assessed as reduction in biotinylated-BTK probe binding at 3 mg/kg, po administered once daily for 4 days starting post-immunization and measured after 24 hrs by ELISA relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "In vivo protein occupancy at BTK in SRBC immunized OFA-1 rat spleen assessed as reduction in biotinylated-BTK probe binding at 0.3 mg/kg, po administered once daily for 4 days starting post-immunization and measured after 24 hrs by ELISA relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "In vivo protein occupancy at BTK in Lewis rat model of collagen-induced arthritis assessed as reduction in biotinylated-BTK probe binding at 3 mg/kg, po administered once daily starting from day 12 to day 25 post-immunization and measured 24 hrs post last dose by ELISA relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -278,7 +277,7 @@
       "pchembl": null,
       "assay_desc": "In vivo protein occupancy at BTK in OFA-1 rat spleen assessed as reduction in biotinylated-BTK probe binding at 1 mg/kg, po administered as single dose measured at 5 hrs by ELISA relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Antiinflammatory activity in SRBC immunized OFA-1 rat assessed as reduction in anti-IgM response in splenocytes at 3 mg/kg, po administered once daily for 4 days starting post-immunization and measured on day 5 by plaque formation assay relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Antiarthritic activity in Lewis rat model of collagen-induced arthritis assessed as reduction in paw swelling at 3 to 30 mg/kg, po administered once daily starting from day 12 to day 25 post-immunization and measured thrice a week during compound dosing relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Antiviral activity determined as inhibition of SARS-CoV-2 induced cytotoxicity of VERO-6 cells at 10 uM after 48 hours exposure to 0.01 MOI SARS CoV-2 virus by high content imaging",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Antiviral activity determined as inhibition of SARS-CoV-2 induced cytotoxicity of VERO-6 cells at 10 uM after 48 hours exposure to 0.01 MOI SARS CoV-2 virus by high content imaging",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -338,7 +337,7 @@
       "pchembl": 7.44,
       "assay_desc": "Inhibition of CD69 expression on CD19 positive B cells in anti-IgD stimulated human whole blood",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

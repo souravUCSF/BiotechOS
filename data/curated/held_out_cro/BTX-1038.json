@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL104",
-  "name": "CLOTRIMAZOLE",
+  "code": "BTX-1038",
   "smiles": "Clc1ccccc1C(c1ccccc1)(c1ccccc1)n1ccnc1",
   "selectivity": 1.0454182666967848,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": null,
       "assay_desc": "Antifungal activity against Candida albicans was determined in vitro",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -26,7 +25,7 @@
       "pchembl": null,
       "assay_desc": "Antifungal activity against Aspergillus fumigatus was determined in vitro",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -38,7 +37,7 @@
       "pchembl": null,
       "assay_desc": "Antifungal activity against Trichophyton asteroides was determined in vitro",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -50,7 +49,7 @@
       "pchembl": null,
       "assay_desc": "Enhanced styrene oxide hydrolase activity pH 8.7",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -62,7 +61,7 @@
       "pchembl": null,
       "assay_desc": "Lession score which is determined as number of animals minus days to become negative",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -74,7 +73,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of Vaginal Candida (C-60 strain) infection in Hamsters, estimated as Percent Area under curve at 0.05 % concentration after 8 days of administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -86,7 +85,7 @@
       "pchembl": null,
       "assay_desc": "Effective concentration that inhibits growth of Trypanosoma cruzi by 50% was reported",
       "flags": "Outside typical range",
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -98,7 +97,7 @@
       "pchembl": null,
       "assay_desc": "Effective concentration to inhibit the proliferation of amastigote form of the parasite grown on mammalian (Vero) cells",
       "flags": "Outside typical range",
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -110,7 +109,7 @@
       "pchembl": null,
       "assay_desc": "In vivo inhibition of topical Trichophyton infection in Guinea Pig during drug administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -122,7 +121,7 @@
       "pchembl": null,
       "assay_desc": "In vivo inhibition of topical Trichophyton infection in Guinea Pig after drug administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -134,7 +133,7 @@
       "pchembl": null,
       "assay_desc": "PUBCHEM_BIOASSAY: In vivo-based yeast HTS to detect compounds rescuing yeast growth/survival of Plasmodium Falciparum HSP40-mediated toxicity Measured in Whole Organism System Using Plate Reader - 2120-01_Inhibitor_Dose_CherryPick_Activity. (Class of assay: confirmatory) [Related pubchem assays (depositor defined):AID504552]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -146,7 +145,7 @@
       "pchembl": 4.16,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, ligand-1 Receptor enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -158,7 +157,7 @@
       "pchembl": 4.18,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, TGTA (TGTA) enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -170,7 +169,7 @@
       "pchembl": 4.7,
       "assay_desc": "Compound was tested for the inhibition of beta-lactamase",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -182,7 +181,7 @@
       "pchembl": 4.07,
       "assay_desc": "Compound was tested for the inhibition of Chymotrypsinogen",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -194,7 +193,7 @@
       "pchembl": 4.46,
       "assay_desc": "Inhibition of malate dehydrogenase (MDH)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "Fold decrease in IC50 vs beta-lactamase on pre-incubation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "Fold decrease in IC50 vs malate dehydrogenase (MDH) on pre-incubation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "Fold increase in IC50 vs beta-lactamase with 10x increased enzyme",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "HPLC capacity factor (k)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -254,7 +253,7 @@
       "pchembl": 7.7,
       "assay_desc": "Inhibition of human cytochrome P450 3A4",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human KB cells by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -278,7 +277,7 @@
       "pchembl": null,
       "assay_desc": "Binding affinity to recombinant CYP3A4 expressed in Escherichia coli assessed as spectral dissociation constant by spectrophotometric equilibrium binding titration method",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against mouse NSO cells by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human Daudi cells by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against PHA-stimulated human lymphocytes by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human effector memory T cells of PBMC",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "NOVARTIS: Cytotoxicity against human hepatocellular carcinoma cell line (Huh7)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "FDA Liver Toxicity Knowledge Base Benchmark Dataset (LTKB-BD) drugs of less concern for DILI",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "Moderate liver toxicity, defined via clinical-chemistry results: ALT or AST serum activity 6 times the normal upper limit (N) or alkaline phosphatase serum activity of 1.7 N. Value is number of references indexed. [column 'BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -374,7 +373,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of moderate liver toxicity observed during clinical trials, expressed as a percentage. [column '% BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -386,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Acute liver toxicity defined via clinical observations and clear clinical-chemistry results: serum ALT or AST activity > 6 N or serum alkaline phosphatases activity > 1.7 N. This category includes cytolytic, choleostatic and mixed liver toxicity. Value is number of references indexed. [column 'AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of acute liver toxicity observed during clinical trials, expressed as a percentage. [column '% AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Cytolytic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is > 5 (see ACUTE). Value is number of references indexed. [column 'CYTOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Choleostatic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is < 2 (see ACUTE). Value is number of references indexed. [column 'CHOLE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

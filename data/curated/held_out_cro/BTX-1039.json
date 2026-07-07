@@ -1,8 +1,7 @@
 {
-  "chembl_id": "CHEMBL808",
-  "name": "ECONAZOLE",
-  "smiles": "Clc1ccc(COC(Cn2ccnc2)c2ccc(Cl)cc2Cl)cc1",
-  "selectivity": 2.330552359033372,
+  "code": "BTX-1039",
+  "smiles": "Clc1ccc(COC(Cn2ccnc2)c2ccc(Cl)cc2Cl)c(Cl)c1",
+  "selectivity": 1.0665694495078382,
   "assays": [
     {
       "modality": "cellular_antiprolif",
@@ -14,19 +13,19 @@
       "pchembl": null,
       "assay_desc": "Antifungal activity against Candida albicans was determined in vitro",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
       "target": "CHEMBL363",
       "standard_type": "MIC",
-      "value": 3.1,
+      "value": 6.3,
       "units": "ug.mL-1",
       "relation": "=",
       "pchembl": null,
       "assay_desc": "Antifungal activity against Aspergillus fumigatus was determined in vitro",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -38,115 +37,163 @@
       "pchembl": null,
       "assay_desc": "Antifungal activity against Trichophyton asteroides was determined in vitro",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
-      "target": "CHEMBL2094118",
-      "standard_type": "Activity",
-      "value": -0.57,
-      "units": NaN,
+      "target": "CHEMBL366",
+      "standard_type": "Resistance",
+      "value": 0.0,
+      "units": "%",
       "relation": "=",
       "pchembl": null,
-      "assay_desc": "Beta-blocking activity measured by applying the stepwise linear discriminate analysis; Inactive",
+      "assay_desc": "In vitro antifungal activity against 40 strains of Candida albicans at pH 7.2; (percent of resistant species (R) at 256 ug/mL)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
-      "target": "CHEMBL612794",
-      "standard_type": "CC50",
-      "value": 60000.0,
-      "units": "nM",
+      "target": "CHEMBL366",
+      "standard_type": "MIC",
+      "value": 1.16,
+      "units": "ug.mL-1",
       "relation": "=",
       "pchembl": null,
-      "assay_desc": "Cytotoxicity to reduce human histolytic lymphoma U937 cells",
+      "assay_desc": "In vitro antifungal activity against 40 strains of Candida albicans at pH 7.2",
       "flags": NaN,
-      "source": "chembl"
-    },
-    {
-      "modality": "cellular_antiprolif",
-      "target": "CHEMBL612868",
-      "standard_type": "MFC",
-      "value": 2.0,
-      "units": "ug ml-1",
-      "relation": "=",
-      "pchembl": null,
-      "assay_desc": "Antifungal activity to inhibit Candida parapsilosis ATCC 22019",
-      "flags": NaN,
-      "source": "chembl"
-    },
-    {
-      "modality": "cellular_antiprolif",
-      "target": "CHEMBL385",
-      "standard_type": "CC50",
-      "value": 54700.0,
-      "units": "nM",
-      "relation": "=",
-      "pchembl": null,
-      "assay_desc": "Cytotoxicity to reduce chronic myeloid leukemia K 562 cells",
-      "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
       "target": "CHEMBL366",
       "standard_type": "MIC50",
-      "value": 4.0,
+      "value": 0.5,
       "units": "ug.mL-1",
       "relation": "=",
       "pchembl": null,
-      "assay_desc": "Minimum inhibitory concentration to inhibit 50% of the isolates",
+      "assay_desc": "In vitro antifungal activity against 40 strains of Candida albicans at pH 7.2",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "cellular_antiprolif",
+      "target": "CHEMBL366",
+      "standard_type": "MIC90",
+      "value": 2.0,
+      "units": "ug.mL-1",
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "In vitro antifungal activity against 40 strains of Candida albicans at pH 7.2",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "cellular_antiprolif",
+      "target": "CHEMBL366",
+      "standard_type": "Range",
+      "value": 16.0,
+      "units": "ug ml-1",
+      "relation": "<",
+      "pchembl": null,
+      "assay_desc": "In vitro antifungal activity against 40 strains of Candida albicans at pH 7.2; minimum inhibitory concentration; value ranges from <0.25 to 16",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "xenograft",
+      "target": "CHEMBL369",
+      "standard_type": "Culture negative",
+      "value": 20.0,
+      "units": "%",
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "In vivo inhibition of topical Trichophyton infection in Guinea Pig during drug administration",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "xenograft",
+      "target": "CHEMBL369",
+      "standard_type": "Culture negative",
+      "value": 40.0,
+      "units": "%",
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "In vivo inhibition of topical Trichophyton infection in Guinea Pig after drug administration",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "xenograft",
+      "target": "CHEMBL3879801",
+      "standard_type": "Ratio",
+      "value": 0.0,
+      "units": NaN,
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "Ratio of animals cured to that of animals dead, Tested in vivo for antifungal activity against vaginal candidosis in rat; 0/6",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "xenograft",
+      "target": "CHEMBL3879801",
+      "standard_type": "Ratio",
+      "value": 4.0,
+      "units": NaN,
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "Ratio of animals cured to that of animals infected, tested in vivo for antifungal activity against cutaneous candidosis in guinea pig; 4/13",
+      "flags": NaN,
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
       "target": "TGTB",
       "standard_type": "IC50",
-      "value": 32404.0,
+      "value": 29256.0,
       "units": "nM",
       "relation": "=",
-      "pchembl": 4.49,
+      "pchembl": 4.53,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, ligand-1 Receptor enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
       "target": "TGTA",
       "standard_type": "IC50",
-      "value": 13904.0,
+      "value": 27430.0,
       "units": "nM",
       "relation": "=",
-      "pchembl": 4.86,
+      "pchembl": 4.56,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, TGTA (TGTA) enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
       "target": "CHEMBL2026",
       "standard_type": "IC50",
-      "value": 25000.0,
+      "value": 40000.0,
       "units": "nM",
       "relation": "=",
-      "pchembl": 4.6,
+      "pchembl": 4.4,
       "assay_desc": "Compound was tested for the inhibition of beta-lactamase",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
       "target": "CHEMBL3314",
       "standard_type": "IC50",
-      "value": 150000.0,
+      "value": 125000.0,
       "units": "nM",
       "relation": "=",
       "pchembl": null,
       "assay_desc": "Compound was tested for the inhibition of Chymotrypsinogen",
       "flags": "Outside typical range",
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -158,31 +205,31 @@
       "pchembl": 4.6,
       "assay_desc": "Inhibition of malate dehydrogenase (MDH)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
       "target": "CHEMBL2026",
       "standard_type": "IC50",
-      "value": 19.0,
+      "value": 2.0,
       "units": NaN,
       "relation": "=",
       "pchembl": null,
       "assay_desc": "Fold decrease in IC50 vs beta-lactamase on pre-incubation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
       "target": "CHEMBL2026",
       "standard_type": "IC50",
-      "value": 24.0,
+      "value": 5.0,
       "units": NaN,
       "relation": "=",
       "pchembl": null,
       "assay_desc": "Fold increase in IC50 vs beta-lactamase with 10x increased enzyme",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -192,117 +239,117 @@
       "units": NaN,
       "relation": ">",
       "pchembl": null,
-      "assay_desc": "Fold increase in IC50 vs beta-lactamase with 1 mg/mL saponin",
+      "assay_desc": "Fold increase in IC50 vs beta-lactamase with 0.1 mg/mL saponin",
       "flags": NaN,
-      "source": "chembl"
-    },
-    {
-      "modality": "adme",
-      "target": "CHEMBL612794",
-      "standard_type": "CC50",
-      "value": 108000.0,
-      "units": "nM",
-      "relation": "=",
-      "pchembl": null,
-      "assay_desc": "Cytotoxicity against human U937 cells assessed as reduction of cell viability after 24 hrs by MTT assay",
-      "flags": NaN,
-      "source": "chembl"
-    },
-    {
-      "modality": "adme",
-      "target": "CHEMBL385",
-      "standard_type": "CC50",
-      "value": 70000.0,
-      "units": "nM",
-      "relation": "=",
-      "pchembl": null,
-      "assay_desc": "Cytotoxicity against human K562 cells after assessed as reduction of cell viability 24 hrs by MTT assay",
-      "flags": NaN,
-      "source": "chembl"
-    },
-    {
-      "modality": "adme",
-      "target": "CHEMBL612558",
-      "standard_type": "Ratio",
-      "value": 13.5,
-      "units": NaN,
-      "relation": "=",
-      "pchembl": null,
-      "assay_desc": "Therapeutic index, ratio of CC50 for human U937 cells to MIC90 for Candida albicans ATCC 10261",
-      "flags": NaN,
-      "source": "chembl"
-    },
-    {
-      "modality": "adme",
-      "target": "CHEMBL612558",
-      "standard_type": "Ratio",
-      "value": 8.8,
-      "units": NaN,
-      "relation": "=",
-      "pchembl": null,
-      "assay_desc": "Therapeutic index, ratio of CC50 for human K562 cells to MIC90 for Candida albicans ATCC 10261",
-      "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
       "target": "CHEMBL340",
       "standard_type": "IC50",
-      "value": 430.53,
+      "value": 180.0,
       "units": "nM",
       "relation": "=",
-      "pchembl": 6.37,
-      "assay_desc": "Inhibition of CYP3A4",
+      "pchembl": 6.75,
+      "assay_desc": "Inhibition of human cytochrome P450 3A4",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
-      "target": "CHEMBL375",
-      "standard_type": "Tmax",
-      "value": 1.0,
-      "units": "hr",
+      "target": "CHEMBL612794",
+      "standard_type": "CC50",
+      "value": 120000.0,
+      "units": "nM",
       "relation": "=",
       "pchembl": null,
-      "assay_desc": "Tmax in mouse plasma at 3.3 mg/kg, po",
+      "assay_desc": "Cytotoxicity against human U937 cells assessed as reduction of cell viability after 24 hrs by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
-      "target": "CHEMBL375",
-      "standard_type": "Cp",
-      "value": 0.23,
-      "units": "ug ml-1",
+      "target": "CHEMBL385",
+      "standard_type": "CC50",
+      "value": 80000.0,
+      "units": "nM",
       "relation": "=",
       "pchembl": null,
-      "assay_desc": "Plasma concentration in mouse at 3.3 mg/kg, po",
+      "assay_desc": "Cytotoxicity against human K562 cells after assessed as reduction of cell viability 24 hrs by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
-      "target": "CHEMBL1697861",
-      "standard_type": "Composite Activity - Active",
-      "value": 0.0,
+      "target": "CHEMBL612558",
+      "standard_type": "Ratio",
+      "value": 30.0,
       "units": NaN,
       "relation": "=",
       "pchembl": null,
-      "assay_desc": "FDA HLAED, liver enzyme composite activity",
+      "assay_desc": "Therapeutic index, ratio of CC50 for human U937 cells to MIC90 for Candida albicans ATCC 10261",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "adme",
+      "target": "CHEMBL612558",
+      "standard_type": "Ratio",
+      "value": 20.0,
+      "units": NaN,
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "Therapeutic index, ratio of CC50 for human K562 cells to MIC90 for Candida albicans ATCC 10261",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "adme",
+      "target": "CHEMBL340",
+      "standard_type": "IC50",
+      "value": 851.14,
+      "units": "nM",
+      "relation": "=",
+      "pchembl": 6.07,
+      "assay_desc": "Inhibition of CYP3A4",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "adme",
+      "target": "CHEMBL613427",
+      "standard_type": "log Pe",
+      "value": 0.05,
+      "units": NaN,
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "Permeability in human skin after 48 hrs by Franz cell permeability assay",
+      "flags": NaN,
+      "source": "internal_dataset"
+    },
+    {
+      "modality": "adme",
+      "target": "CHEMBL613289",
+      "standard_type": "TC50",
+      "value": 7.04,
+      "units": "10'4nM",
+      "relation": "=",
+      "pchembl": null,
+      "assay_desc": "Cytotoxicity against Hepatocyte cells assessed as cell viability by MTT assay",
+      "flags": NaN,
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
       "target": "CHEMBL3879801",
       "standard_type": "Hepatotoxicity (moderate)",
-      "value": 1.0,
+      "value": 2.0,
       "units": NaN,
       "relation": "=",
       "pchembl": null,
       "assay_desc": "Moderate liver toxicity, defined via clinical-chemistry results: ALT or AST serum activity 6 times the normal upper limit (N) or alkaline phosphatase serum activity of 1.7 N. Value is number of references indexed. [column 'BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -314,19 +361,19 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of moderate liver toxicity observed during clinical trials, expressed as a percentage. [column '% BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
       "target": "CHEMBL612545",
       "standard_type": "Hepatotoxicity (acute)",
-      "value": 1.0,
+      "value": 0.0,
       "units": NaN,
       "relation": "=",
       "pchembl": null,
       "assay_desc": "Acute liver toxicity defined via clinical observations and clear clinical-chemistry results: serum ALT or AST activity > 6 N or serum alkaline phosphatases activity > 1.7 N. This category includes cytolytic, choleostatic and mixed liver toxicity. Value is number of references indexed. [column 'AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -338,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of acute liver toxicity observed during clinical trials, expressed as a percentage. [column '% AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -350,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Cytolytic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is > 5 (see ACUTE). Value is number of references indexed. [column 'CYTOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -362,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Choleostatic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is < 2 (see ACUTE). Value is number of references indexed. [column 'CHOLE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -374,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Severe hepatitis, defined as possibly life-threatening liver failure or through clinical observations. Value is number of references indexed. [column 'MASS' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -386,7 +433,7 @@
       "pchembl": null,
       "assay_desc": "Chronic liver disease either proven histopathologically, or through a chonic elevation of serum amino-transferase activity after 6 months. Value is number of references indexed. [column 'CHRON' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

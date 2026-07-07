@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL71",
-  "name": "CHLORPROMAZINE",
+  "code": "BTX-1008",
   "smiles": "CN(C)CCCN1c2ccccc2Sc2ccc(Cl)cc21",
   "selectivity": 1.4906537230197252,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": null,
       "assay_desc": "Concentration required to inhibit ADP-induced platelet aggregation by 50%",
       "flags": "Outside typical range",
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -26,7 +25,7 @@
       "pchembl": null,
       "assay_desc": "Antipsychotic activity was assessed by ability to antagonize the stereotypy induced in rats by d-amphetamine (5 mg / kg, ip) after 1 h; Range is 3.2-10",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -38,7 +37,7 @@
       "pchembl": null,
       "assay_desc": "Antipsychotic activity was assessed by ability to antagonize the stereotypy induced in rats by d-amphetamine (5 mg / kg, ip) after 5 h",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -50,7 +49,7 @@
       "pchembl": null,
       "assay_desc": "Antipsychotic activity was assessed by ability to antagonize the stereotypy induced in rats by d-amphetamine (5 mg / kg, ip) after 24 h",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -62,7 +61,7 @@
       "pchembl": 5.89,
       "assay_desc": "Inhibitory concentration against Dopamine sensitive adenylate cyclase in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -74,7 +73,7 @@
       "pchembl": null,
       "assay_desc": "Effective Dose for avoidance acquisition in naive rats when administered intraperitoneal",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -86,7 +85,7 @@
       "pchembl": null,
       "assay_desc": "Effective Dose for catalepsy production in naive rats when administered intraperitoneal",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -98,7 +97,7 @@
       "pchembl": null,
       "assay_desc": "Hypothermia in mice after peroral administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -110,7 +109,7 @@
       "pchembl": 4.54,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, ligand-1 Receptor enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -122,7 +121,7 @@
       "pchembl": 4.71,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, TGTA (TGTA) enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -134,7 +133,7 @@
       "pchembl": 8.4,
       "assay_desc": "Binding affinity towards human 5-hydroxytryptamine 6 receptor",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -146,7 +145,7 @@
       "pchembl": 7.68,
       "assay_desc": "Binding affinity towards rat 5-hydroxytryptamine 7 receptor",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -158,7 +157,7 @@
       "pchembl": 5.96,
       "assay_desc": "Binding affinity against dextromethorpin binding site associated with N-methyl-D-aspartate glutamate receptor from guinea pig mitochondrial pellet P2 determined using [3H]1 as radioligand.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -170,7 +169,7 @@
       "pchembl": 6.22,
       "assay_desc": "Inhibition of [3H]1 binding to dextromethorpin binding site of guinea pig microsomal pellet P3 N-methyl-D-aspartate glutamate receptor",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -182,7 +181,7 @@
       "pchembl": 5.89,
       "assay_desc": "Binding affinity against dextromethorpin binding site of N-methyl-D-aspartate glutamate receptor from rat brain using [3H]1",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -194,7 +193,7 @@
       "pchembl": 6.93,
       "assay_desc": "Inhibitory activity against Dopamine sensitive adenylate cyclase in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "Volume of distribution in man (IV dose)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "Unbound fraction (plasma)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "Unbound fraction (tissues)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "HPLC capacity factor (k')",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "Fraction ionized (pH 7.4)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Binding energy by using the equation deltaG obsd = -RT ln KD",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -278,7 +277,7 @@
       "pchembl": 5.16,
       "assay_desc": "Inhibitory constant for cytochrome P450 2D6",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Observed volume of distribution",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Lethal dose in mice after perorla administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Lethal dose in mice after perorla administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Lethal dose after peroral administration in mouse",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "Selectivity index, ratio of CC50 for human WI38 cells preincubated for 2 hrs before viral infection measured after 7 days by real time PCR assay to EC50 for BKV Gardner ATCC VR837",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "Toxicity in rat assessed as time spent on rotarod at 4 mg/kg, ip by rotarod test",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "FDA Liver Toxicity Knowledge Base Benchmark Dataset (LTKB-BD) drugs of less concern for DILI",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -374,7 +373,7 @@
       "pchembl": null,
       "assay_desc": "Moderate liver toxicity, defined via clinical-chemistry results: ALT or AST serum activity 6 times the normal upper limit (N) or alkaline phosphatase serum activity of 1.7 N. Value is number of references indexed. [column 'BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -386,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of moderate liver toxicity observed during clinical trials, expressed as a percentage. [column '% BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Neuroleptic activity in vivo by ability to antagonise climbing in apomorphine dosed mice after intraperitoneal administration.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "In vivo inhibition of apomorphine-mediated stereotypy in rats administered subcutaneously at 20 mg/kg expressed as ED50 (mg/kg)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Mean residence time in human after iv administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

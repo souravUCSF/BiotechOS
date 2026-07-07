@@ -19,11 +19,8 @@ export type Assay = {
 export type Molecule = {
   id: number;
   program_id: string;
-  chembl_id: string;
-  name: string;
+  name: string; // proprietary compound code, e.g. BTX-1007
   smiles: string;
-  inchi_key: string | null;
-  max_phase: number;
   held_out: number;
   structure_cache_ref: string | null;
   adme_json: string | null;

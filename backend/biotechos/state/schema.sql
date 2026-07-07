@@ -16,16 +16,15 @@ CREATE TABLE IF NOT EXISTS programs (
 CREATE TABLE IF NOT EXISTS molecules (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     program_id          TEXT NOT NULL REFERENCES programs(id),
-    chembl_id           TEXT,
-    name                TEXT,
+    internal_ref        TEXT,                -- provenance only; never returned by the API
+    name                TEXT,                -- proprietary compound code (e.g. BTX-1007); demo-facing
     smiles              TEXT,
-    inchi_key           TEXT,
-    max_phase           REAL,
+    inchi_key           TEXT,                -- kept for internal dedup only, not API-exposed
     held_out            INTEGER DEFAULT 0,   -- 1 = data withheld from initial seed (arrives via CRO doc)
     structure_cache_ref TEXT,                -- path to cached Boltz .cif/.pdb
     adme_json           TEXT,                -- predicted ADME blob (JSON)
     created_at          TEXT DEFAULT (datetime('now')),
-    UNIQUE(program_id, chembl_id)
+    UNIQUE(program_id, internal_ref)
 );
 CREATE INDEX IF NOT EXISTS idx_molecules_program ON molecules(program_id);
 

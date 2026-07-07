@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL633",
-  "name": "AMIODARONE",
+  "code": "BTX-1040",
   "smiles": "CCCCc1oc2ccccc2c1C(=O)c1cc(I)c(OCCN(CC)CC)c(I)c1",
   "selectivity": null,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": null,
       "assay_desc": "Volume of distribution in man (IV dose)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -26,7 +25,7 @@
       "pchembl": null,
       "assay_desc": "Unbound fraction (plasma)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -38,7 +37,7 @@
       "pchembl": null,
       "assay_desc": "Unbound fraction (tissues)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -50,7 +49,7 @@
       "pchembl": null,
       "assay_desc": "HPLC capacity factor (k')",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -62,7 +61,7 @@
       "pchembl": null,
       "assay_desc": "Fraction ionized (pH 7.4)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -74,7 +73,7 @@
       "pchembl": null,
       "assay_desc": "Observed volume of distribution",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -86,7 +85,7 @@
       "pchembl": null,
       "assay_desc": "Unbound fraction (plasma)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -98,7 +97,7 @@
       "pchembl": null,
       "assay_desc": "Delta logD (logD6.5 - logD7.4)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -110,7 +109,7 @@
       "pchembl": null,
       "assay_desc": "Tested for the multidrug resistance reversal activity against P388 murine leukemia cell line, activity is expressed as RF(ED50 with no adriamycin (ADR)/ED50 with 200 nM ADR)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -122,7 +121,7 @@
       "pchembl": null,
       "assay_desc": "Antagonism of compound towards thyroid response element (TTGTA alpha) in CHO-K1 cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -134,7 +133,7 @@
       "pchembl": null,
       "assay_desc": "Antagonism of compound towards thyroid response element (TTGTA beta) in CHO-K1 cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -146,7 +145,7 @@
       "pchembl": null,
       "assay_desc": "Serum concentrations of Thyrotropin in rats after 2 weeks of daily oral administration of compound at 30 mg/kg (Control = 11.00+/-1.97)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -158,7 +157,7 @@
       "pchembl": null,
       "assay_desc": "Serum concentrations of T3 in rats after 2 weeks of daily oral administration of compound at 30 mg/kg (Control = 0.74+/-0.15)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -170,7 +169,7 @@
       "pchembl": null,
       "assay_desc": "Serum concentrations of T4 in rats after 2 weeks of daily oral administration of compound at 30 mg/kg (Control = 33.1+/-5.00)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -182,7 +181,7 @@
       "pchembl": null,
       "assay_desc": "Serum concentrations of Thyrotropin in rats after 2 weeks of daily oral administration of compound at 100 mg/kg (Control = 11.00+/-1.97)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -194,7 +193,7 @@
       "pchembl": null,
       "assay_desc": "Serum concentrations of T3 in rats after 2 weeks of daily oral administration of compound at 100 mg/kg (Control = 0.74+/-0.15)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -206,7 +205,7 @@
       "pchembl": 5.04,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, TGTA (TGTA) enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -218,7 +217,7 @@
       "pchembl": 6.19,
       "assay_desc": "Concentration required to inhibit 50% of binding of [125I]-T3 to human Thyroid hormone receptor alpha-1 in CHO-K1 cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -230,7 +229,7 @@
       "pchembl": 6.22,
       "assay_desc": "Concentration required to inhibit 50% of binding of [125I]T3 to human Thyroid hormone receptor beta 1 in CHO-K1 cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -242,7 +241,7 @@
       "pchembl": 5.0,
       "assay_desc": "Inhibition of human Potassium channel HERG expressed in mammalian cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -254,7 +253,7 @@
       "pchembl": 5.5,
       "assay_desc": "Concentration giving half of the maximal ATPase activity calculated for the high-affinity binding site of the CHO P-Glycoprotein (P-gp) in two-affinity model",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -266,7 +265,7 @@
       "pchembl": 7.6,
       "assay_desc": "Affinity for human EMP expressed in ERG2 deficient strain of Saccharomyces cerevisiae using [3H]ifenprodil or (+)-[3H]pentazocine as radioligand",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -278,7 +277,7 @@
       "pchembl": 9.0,
       "assay_desc": "Affinity for sigma receptor type 1 of guinea pig using [3H]ifenprodil or (+)-[3H]pentazocine radioligand",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -290,7 +289,7 @@
       "pchembl": 7.21,
       "assay_desc": "Affinity for ERG2 of Saccharomyces cerevisiae using [3H]ifenprodil or (+)-[3H]pentazocine radioligand",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Mean residence time in human after iv administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Mechanism based inhibition of human cytochrome P450 2C8 measured by paclitaxel hydroxylation using human liver microsomes",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Mechanism based inhibition of human cytochrome P450 2C8 measured by paclitaxel hydroxylation using a recombinant system",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "FDA Liver Toxicity Knowledge Base Benchmark Dataset (LTKB-BD) drugs of most concern for DILI",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "Moderate liver toxicity, defined via clinical-chemistry results: ALT or AST serum activity 6 times the normal upper limit (N) or alkaline phosphatase serum activity of 1.7 N. Value is number of references indexed. [column 'BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of moderate liver toxicity observed during clinical trials, expressed as a percentage. [column '% BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -374,7 +373,7 @@
       "pchembl": null,
       "assay_desc": "Acute liver toxicity defined via clinical observations and clear clinical-chemistry results: serum ALT or AST activity > 6 N or serum alkaline phosphatases activity > 1.7 N. This category includes cytolytic, choleostatic and mixed liver toxicity. Value is number of references indexed. [column 'AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -386,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of acute liver toxicity observed during clinical trials, expressed as a percentage. [column '% AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Cytolytic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is > 5 (see ACUTE). Value is number of references indexed. [column 'CYTOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Choleostatic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is < 2 (see ACUTE). Value is number of references indexed. [column 'CHOLE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Severe hepatitis, defined as possibly life-threatening liver failure or through clinical observations. Value is number of references indexed. [column 'MASS' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

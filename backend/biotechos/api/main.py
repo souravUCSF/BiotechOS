@@ -23,6 +23,18 @@ def get_conn():
     return db.connect()
 
 
+# Fields that carry provenance to the source dataset / real compound identity —
+# these demo molecules are presented as our own proprietary compounds, so this
+# never leaves the backend.
+_INTERNAL_ONLY_FIELDS = ("internal_ref", "inchi_key")
+
+
+def _scrub(mol: dict) -> dict:
+    for f in _INTERNAL_ONLY_FIELDS:
+        mol.pop(f, None)
+    return mol
+
+
 @app.get("/programs")
 def list_programs():
     conn = get_conn()
@@ -61,6 +73,7 @@ def get_state(program_id: str = Query(default=DEMO_PROGRAM_ID)):
                 m["adme"] = json.loads(m["adme_json"])
             except (TypeError, json.JSONDecodeError):
                 m["adme"] = None
+        _scrub(m)
 
     tpp_params = db.rows_to_dicts(conn.execute(
         "SELECT * FROM tpp_params WHERE program_id=?", (program_id,)
@@ -108,7 +121,7 @@ def get_molecule(molecule_id: int):
     conn.close()
     d = dict(mol)
     d["assays"] = assays
-    return d
+    return _scrub(d)
 
 
 @app.get("/healthz")

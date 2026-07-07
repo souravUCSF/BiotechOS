@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL83",
-  "name": "TAMOXIFEN",
+  "code": "BTX-1007",
   "smiles": "CC/C(=C(\\c1ccccc1)c1ccc(OCCN(C)C)cc1)c1ccccc1",
   "selectivity": 1.2048151915903695,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": 5.45,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, ligand-1 Receptor enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -26,7 +25,7 @@
       "pchembl": 5.53,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, TGTA (TGTA) enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -38,7 +37,7 @@
       "pchembl": 5.17,
       "assay_desc": "Inhibition of calmodulin dependent cAMP phosphodiesterase.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -50,7 +49,7 @@
       "pchembl": 5.7,
       "assay_desc": "Inhibition of [3H]E2 binding to estrogen receptor alpha in MCF-7 cell lysate",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -62,7 +61,7 @@
       "pchembl": 7.92,
       "assay_desc": "Displacement of [3H]tamoxifen from antiestrogen binding site (AEBS)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -74,7 +73,7 @@
       "pchembl": 5.41,
       "assay_desc": "Binding affinity for estrogen receptor, by competition with [3H]estradiol",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -86,7 +85,7 @@
       "pchembl": 8.08,
       "assay_desc": "Displacement of radioligand from Estrogen receptor alpha",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -98,7 +97,7 @@
       "pchembl": 6.8,
       "assay_desc": "Binding affinity for estrogen receptor",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -110,7 +109,7 @@
       "pchembl": 7.16,
       "assay_desc": "Inhibition of estrogen receptor positive MCF-7 breast cancer cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -122,7 +121,7 @@
       "pchembl": 5.7,
       "assay_desc": "Inhibition of MCF-7/Adr breast cancer cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -134,7 +133,7 @@
       "pchembl": 7.1,
       "assay_desc": "Inhibition of estrogen receptor negative MDA-MB-231 breast cancer cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -146,7 +145,7 @@
       "pchembl": 7.3,
       "assay_desc": "Inhibition of MDA-MB-435 breast cancer cell proliferation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -158,7 +157,7 @@
       "pchembl": 6.32,
       "assay_desc": "Inhibition of estrogen-induced proliferation in human MCF-7 breast cancer cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -170,7 +169,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of estrogen receptor positive MCF-7 cell proliferation as cell number after 10 days at 10e-6 M",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -182,7 +181,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of estrogen receptor positive MCF-7 cell proliferation as percent treated/control cell number after 10 days at 10e-6 M",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -194,7 +193,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of estrogen receptor positive MCF-7 cell proliferation as cell number after 10 days at 10e-7 M",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "In vivo inhibition of estrogen-stimulated uterine weight gain in immature rats on peroral administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "In vivo anti-estrogenic effect in immature mice at 5 ug",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "In vivo inhibition of hormone-dependent MXT mammary tumor in mice",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "In vivo inhibition of hormone-dependent MXT mammary tumor in mice",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antitumor activity against hormone-dependent MXT-M 3.2 mammary tumor in BDF1 mouse at a dose of 20 umol/kg.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Minimum effective dose at which significant increase in uterine weight/body weight in rat was determined (in vivo)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -278,7 +277,7 @@
       "pchembl": null,
       "assay_desc": "Minimum effective dose at which significant increase in uterine eosinophil peroxidase (EPO) activity in rat was determined (in vivo)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Percent decrease in serum cholesterol relative to OVX control at 0.1 mg/kg in rat was determined (in vivo)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Binding energy by using the equation deltaG obsd = -RT ln KD",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "log (1/Km) value for human liver microsome cytochrome P450 3A4",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Cell survival against human breast cancer MCF7 cell line after 72h at 10 uM",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "Decrease in doxorubicin uptake in MDA-MB-435 cells at 10 uM after 1 hr relative to DOX-TEG-TAM",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "Decrease doxorubicin-saliform uptake in MDA-MB-435 cells at 10 uM after 1 hr relative to DOX-TEG-TAM",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "Decrease DOX-TEG-TAM uptake in MDA-MB-435 cells at 10 uM after 1 hr relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -374,7 +373,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against rat L6 cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -386,7 +385,7 @@
       "pchembl": 5.0,
       "assay_desc": "Cytotoxicity against HEK293 cells after 24 hrs by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Mechanism based inhibition of human cytochrome P450 2B6 measured by 7-EFC O-deethylation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Mechanism based inhibition of human cytochrome P450 3A4 measured by testosterone 6-beta hydroxylation",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "FDA Liver Toxicity Knowledge Base Benchmark Dataset (LTKB-BD) drugs of most concern for DILI",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -434,7 +433,7 @@
       "pchembl": 4.62,
       "assay_desc": "Toxicity against human KIF5 cells incubated for 24 hrs by CellTiter Blue cell viability assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -446,7 +445,7 @@
       "pchembl": null,
       "assay_desc": "Moderate liver toxicity, defined via clinical-chemistry results: ALT or AST serum activity 6 times the normal upper limit (N) or alkaline phosphatase serum activity of 1.7 N. Value is number of references indexed. [column 'BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -458,7 +457,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of moderate liver toxicity observed during clinical trials, expressed as a percentage. [column '% BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -470,7 +469,7 @@
       "pchembl": null,
       "assay_desc": "Acute liver toxicity defined via clinical observations and clear clinical-chemistry results: serum ALT or AST activity > 6 N or serum alkaline phosphatases activity > 1.7 N. This category includes cytolytic, choleostatic and mixed liver toxicity. Value is number of references indexed. [column 'AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -482,7 +481,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of acute liver toxicity observed during clinical trials, expressed as a percentage. [column '% AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -494,7 +493,7 @@
       "pchembl": null,
       "assay_desc": "Cytolytic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is > 5 (see ACUTE). Value is number of references indexed. [column 'CYTOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -506,7 +505,7 @@
       "pchembl": null,
       "assay_desc": "Choleostatic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is < 2 (see ACUTE). Value is number of references indexed. [column 'CHOLE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

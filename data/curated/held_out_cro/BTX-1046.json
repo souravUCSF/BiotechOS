@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL1016",
-  "name": "CANDESARTAN",
+  "code": "BTX-1046",
   "smiles": "CCOc1nc2cccc(C(=O)O)c2n1Cc1ccc(-c2ccccc2-c2nnn[nH]2)cc1",
   "selectivity": 0.550998789346247,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": null,
       "assay_desc": "Acid dissociation value was evaluated",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -26,7 +25,7 @@
       "pchembl": null,
       "assay_desc": "Half life of compound was determined",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -38,7 +37,7 @@
       "pchembl": null,
       "assay_desc": "Renal clearance value was evaluated",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -50,7 +49,7 @@
       "pchembl": null,
       "assay_desc": "Total clearance value was evaluated",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -62,7 +61,7 @@
       "pchembl": null,
       "assay_desc": "Bioavailability determined from the ratio of AUC(plasma) for 0 to infinity after oral dosing of the test compound (10 mg/kg) to intravenous administration of CD-11194 (1 mg/kg) in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -74,7 +73,7 @@
       "pchembl": null,
       "assay_desc": "Bioavailability",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -86,7 +85,7 @@
       "pchembl": null,
       "assay_desc": "Time required for elimination of 50% of the compound",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -98,7 +97,7 @@
       "pchembl": null,
       "assay_desc": "Percentage modification of drug adsorbed after administration to human",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -110,7 +109,7 @@
       "pchembl": 5.49,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, ligand-1 Receptor enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -122,7 +121,7 @@
       "pchembl": 5.23,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, TGTA (TGTA) enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -134,7 +133,7 @@
       "pchembl": 6.96,
       "assay_desc": "Displacement of [125 I]-AII (0.2 nM) from bovine adrenal cortical membrane angiotensin II (AII) receptor at 10e-7 M",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -146,7 +145,7 @@
       "pchembl": 6.96,
       "assay_desc": "Inhibition of specific binding of [125 I ] Angiotensin-II (0.2 nM) to bovine adrenal cortex",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -158,7 +157,7 @@
       "pchembl": 9.19,
       "assay_desc": "Inhibitory activity against Angiotensin II receptor, type 1 in rat adrenal membrane",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -170,7 +169,7 @@
       "pchembl": 7.55,
       "assay_desc": "Inhibitory activity against Angiotensin II receptor, type 1 in rabbit aorta",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -182,7 +181,7 @@
       "pchembl": 6.96,
       "assay_desc": "Concentration required to inhibit [125I]AII binding to Angiotensin II receptor from membrane fractions of bovine adrenal cortex",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -194,7 +193,7 @@
       "pchembl": 6.96,
       "assay_desc": "Inhibition of specific binding of [125I]angiotensin II (0.2 nM) to angiotensin II receptor in bovine adrenal cortex",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "Inhibitory activity against the pressor response induced by angiotensin II (AII) in conscious rats, at 1 mg/kg p.o. at 3h",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "Inhibitory activity against the pressor response induced by angiotensin II (AII) in conscious rats, at 1 mg/kg p.o. at 7 hr",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "pD2 value of compound was determined",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "Percent inhibition of the Angiotensin-II (0.1ug/kg, iv) induced pressor response after 3 hours of administration (1 mg/kg po) in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "Percent inhibition of the Angiotensin-II (0.1ug/kg, iv) induced pressor response after 7 hours of administration (1 mg/kg po) in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Percent inhibition of the Angiotensin-II (0.1ug/kg, iv) induced pressor response after 3 hours of administration (3 mg/kg po) in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -278,7 +277,7 @@
       "pchembl": null,
       "assay_desc": "Percent inhibition of the Angiotensin-II (0.1micro g/kg, iv) induced pressor response after 7 hours of administration (3 mg/kg po) in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Percent inhibition of the Angiotensin-II (0.1micro g/kg, iv) induced pressor response after 3 hours of administration (10 mg/kg po) in rats",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Moderate liver toxicity, defined via clinical-chemistry results: ALT or AST serum activity 6 times the normal upper limit (N) or alkaline phosphatase serum activity of 1.7 N. Value is number of references indexed. [column 'BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of moderate liver toxicity observed during clinical trials, expressed as a percentage. [column '% BIOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Acute liver toxicity defined via clinical observations and clear clinical-chemistry results: serum ALT or AST activity > 6 N or serum alkaline phosphatases activity > 1.7 N. This category includes cytolytic, choleostatic and mixed liver toxicity. Value is number of references indexed. [column 'AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "Highest frequency of acute liver toxicity observed during clinical trials, expressed as a percentage. [column '% AIGUE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "Cytolytic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is > 5 (see ACUTE). Value is number of references indexed. [column 'CYTOL' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "Choleostatic liver toxicity, either proven histopathologically or where the ratio of maximal ALT or AST activity above normal to that of Alkaline Phosphatase is < 2 (see ACUTE). Value is number of references indexed. [column 'CHOLE' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -374,7 +373,7 @@
       "pchembl": null,
       "assay_desc": "Severe hepatitis, defined as possibly life-threatening liver failure or through clinical observations. Value is number of references indexed. [column 'MASS' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -386,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Chronic liver disease either proven histopathologically, or through a chonic elevation of serum amino-transferase activity after 6 months. Value is number of references indexed. [column 'CHRON' in source]",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Antagonist activity at human AT1 receptor expressed in CHO cells assessed as reduction in angiotensin 2-induced inositol phosphate accumulation by measuring residence time constant preincubated with cells followed by compound washout and subsequent addition of angiotensin 2 for 5 mins",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Antagonist activity at human AT1 receptor expressed in CHO cells assessed as reduction in angiotensin 2-induced inositol phosphate accumulation by measuring residence time constant preincubated with cells followed by compound washout in presence of losartan and subsequent addition of angiotensin 2 for 5 mins",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Displacement of [3H]-candesartan from human AT1 receptor expressed in CHO cells assessed as residence time at 1.5 nM pre-incubated with cells followed by compound washout and subsequent addition of [3H]-candesartan up to 60 mins",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -434,7 +433,7 @@
       "pchembl": null,
       "assay_desc": "Binding affinity to human AT1 receptor expressed in CHO cells assessed as residence time at 1.5 nM incubated for 60 mins followed by compound washout",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -446,7 +445,7 @@
       "pchembl": null,
       "assay_desc": "Binding affinity to human AT1 receptor expressed in CHO cells assessed as residence time at 1.5 nM incubated for 60 mins followed by compound washout in presence of losartan",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -458,7 +457,7 @@
       "pchembl": null,
       "assay_desc": "Binding affinity to human AT1 receptor expressed in CHO cells assessed as residence time at 1.5 nM incubated for 60 mins measured after isotopic dilution",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

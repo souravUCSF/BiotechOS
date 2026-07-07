@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL296419",
-  "name": "ASTEMIZOLE",
+  "code": "BTX-1049",
   "smiles": "COc1ccc(CCN2CCC(Nc3nc4ccccc4n3Cc3ccc(F)cc3)CC2)cc1",
   "selectivity": 0.4629318251299297,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": null,
       "assay_desc": "Binding energy by using the equation deltaG obsd = -RT ln KD",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -26,7 +25,7 @@
       "pchembl": null,
       "assay_desc": "Pharmacokinetic parameter :half life in humans was reported",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -38,7 +37,7 @@
       "pchembl": null,
       "assay_desc": "Pharmacokinetic parameter :drug bound to plasma was reported",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -50,7 +49,7 @@
       "pchembl": null,
       "assay_desc": "Pharmacokinetic parameter :volume apparent of distribution was reported",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -62,7 +61,7 @@
       "pchembl": 8.3,
       "assay_desc": "pA2 value is determined compared to standard H1-antagonists",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -74,7 +73,7 @@
       "pchembl": 5.48,
       "assay_desc": "Inhibition of human cytochrome P450 3A4",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -86,7 +85,7 @@
       "pchembl": null,
       "assay_desc": "Selectivity ratio of cytotoxicity for rat L6 cells to IC50 for Plasmodium falciparum K1",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -98,7 +97,7 @@
       "pchembl": null,
       "assay_desc": "Permeability across porcine brain lipid coated polyvinylidene fluoride membrane by PAMPA",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -110,7 +109,7 @@
       "pchembl": 9.05,
       "assay_desc": "K+ channel blocking activity in human embryonic kidney cells expressing HERG Kv11.1",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -122,7 +121,7 @@
       "pchembl": null,
       "assay_desc": "Percent inhibition of anti-CD3 mAb stimulated interleukin-4 release from mice splenocytes by 10 uM compound",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -134,7 +133,7 @@
       "pchembl": null,
       "assay_desc": "Percent inhibition of anti-CD3 mAb stimulated interleukin-5 release from mice splenocytes by 10 uM",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -146,7 +145,7 @@
       "pchembl": 5.19,
       "assay_desc": "Inhibition of histamine release in rat mast cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -158,7 +157,7 @@
       "pchembl": 5.1,
       "assay_desc": "Compound was evaluated for IL 4 production inhibition from mice splenocytes stimulated by anti-CD3 mAb",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -170,7 +169,7 @@
       "pchembl": 5.48,
       "assay_desc": "Compound was evaluated for IL 5 production inhibition from mice splenocytes stimulated by anti-CD3 mAb",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -182,7 +181,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of histamine skin reaction in rat after 2 hr of oral administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -194,7 +193,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of histamine skin reaction in rat after 2 hr of subcutaneous administration.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity after 1 hour of subcutaneous administration using 48/80 lethality test in rat.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity after 2 hours of oral administration using 48/80 lethality test in rat. ",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity after 3 hr of oral administration using histamine lethality test in guinea pig",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity after 24 hr of oral administration using histamine lethality test in guinea pig",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity after 48 hr of oral administration using histamine lethality test in guinea pig",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity after 96 hr of oral administration using histamine lethality test in guinea pig",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -278,7 +277,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity using compound 48/80 induced lethality test after 1 hr of subcutaneous administration in rat",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "In vivo antihistaminic activity using compound 48/80 induced lethality test in rat after 2 hr of oral administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -302,7 +301,7 @@
       "pchembl": 5.22,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, ligand-1 Receptor enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -314,7 +313,7 @@
       "pchembl": 4.88,
       "assay_desc": "DRUGMATRIX: Protein Tyrosine Kinase, TGTA (TGTA) enzyme inhibition (substrate: Poly(Glu:Tyr))",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -326,7 +325,7 @@
       "pchembl": 8.26,
       "assay_desc": "Dissociation constant (KD) of the compound",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -338,7 +337,7 @@
       "pchembl": 8.52,
       "assay_desc": "Binding affinity towards histamine H1 receptor",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -350,7 +349,7 @@
       "pchembl": 9.05,
       "assay_desc": "Inhibitory activity against Potassium channel HERG",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -362,7 +361,7 @@
       "pchembl": 8.22,
       "assay_desc": "Inhibition of human Potassium channel HERG expressed in mammalian cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -374,7 +373,7 @@
       "pchembl": 8.0,
       "assay_desc": "Inhibition of human Potassium channel HERG expressed in mammalian cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -386,7 +385,7 @@
       "pchembl": 8.82,
       "assay_desc": "Inhibitory concentration against IKr potassium channel",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -398,7 +397,7 @@
       "pchembl": 9.05,
       "assay_desc": "Inhibition of hERG potassium channel in HEK293 cells by patch clamp assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Cardiotoxicity in iv dosed Dunkin-Hartley guinea pig assessed as drug level required to evoke 50 ms QTc prolongation administered as 3 fold cumulative doses measured every 10 seconds at end of every 20 mins follow up period of individual dose by ECG",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Cardiotoxicity in Dunkin-Hartley guinea pig assessed as maximal QTc prolongation time at 10 mg/kg, iv administered as 3 fold cumulative doses measured every 10 seconds at end of every 20 mins follow up period of individual dose by ECG",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -434,7 +433,7 @@
       "pchembl": null,
       "assay_desc": "Cardiotoxicity in iv dosed Dunkin-Hartley guinea pig assessed as drug level required to evoke 50 ms QTc prolongation administered as 3 fold cumulative doses measured every 10 seconds at end of every 20 mins follow up period of individual dose by ECG",
       "flags": "Outside typical range",
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -446,7 +445,7 @@
       "pchembl": null,
       "assay_desc": "NOVARTIS: Cytotoxicity against human hepatocellular carcinoma cell line (Huh7)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -458,7 +457,7 @@
       "pchembl": 4.92,
       "assay_desc": "HARVARD: Cytotoxicity in HepG2 cell line",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -470,7 +469,7 @@
       "pchembl": null,
       "assay_desc": "Selectivity index, ratio of IC50 for inhibition of human ERG expressed in Xenopus laevis oocytes to IC50 for Plasmodium falciparum 3D7",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -482,7 +481,7 @@
       "pchembl": null,
       "assay_desc": "Toxicity CC50 against VERO-E6 cells determined at 48 hours by high content imaging (same conditions as IC50 assay without exposure to 0.01 MOI SARS CoV-2 virus)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

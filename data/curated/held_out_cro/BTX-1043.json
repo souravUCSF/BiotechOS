@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL428690",
-  "name": "ALVOCIDIB",
+  "code": "BTX-1043",
   "smiles": "CN1CC[C@H](c2c(O)cc(O)c3c(=O)cc(-c4ccccc4Cl)oc23)[C@H](O)C1",
   "selectivity": 0.385,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": 5.12,
       "assay_desc": "Inhibition of Kinase TGTB (TGTB/TGTB)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -26,7 +25,7 @@
       "pchembl": 4.8,
       "assay_desc": "Inhibition of TGTA kinase",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -38,7 +37,7 @@
       "pchembl": 4.66,
       "assay_desc": "Inhibition of Kinase TGTB",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -50,7 +49,7 @@
       "pchembl": null,
       "assay_desc": "Binding constant for TGTB kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -62,7 +61,7 @@
       "pchembl": null,
       "assay_desc": "Binding constant for TGTB(E746-A750del) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -74,7 +73,7 @@
       "pchembl": null,
       "assay_desc": "Binding constant for TGTB(G719C) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -86,7 +85,7 @@
       "pchembl": null,
       "assay_desc": "Binding constant for TGTB(G719S) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -98,7 +97,7 @@
       "pchembl": 5.64,
       "assay_desc": "Binding constant for TGTB(L747-E749del, A750P) kinase domain",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -110,7 +109,7 @@
       "pchembl": null,
       "assay_desc": "Percentage A2780 cells in G1 after 24 hr r at 330 nM (IC50)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -122,7 +121,7 @@
       "pchembl": null,
       "assay_desc": "Percentage A2780 cells in S-phase after 24 hr r at 330 nM (IC50)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -134,7 +133,7 @@
       "pchembl": null,
       "assay_desc": "Percentage A2780 cells in G2/M after 24 hr r at 330 nM (IC50)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -146,7 +145,7 @@
       "pchembl": null,
       "assay_desc": "Percentage A2780 cells in sb-G1 after 24 hr r at 330 nM (IC50)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -158,7 +157,7 @@
       "pchembl": null,
       "assay_desc": "Apoptotic A2780 cells after 24 hr r at 330 nM (IC50)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -170,7 +169,7 @@
       "pchembl": null,
       "assay_desc": "Percentage A2780 cells in G1 after 24 hr r at 2980 nM (IC90)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -182,7 +181,7 @@
       "pchembl": null,
       "assay_desc": "Percentage A2780 cells in S-phase after 24 hr r at 2980 nM (IC90)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -194,7 +193,7 @@
       "pchembl": null,
       "assay_desc": "Percentage A2780 cells in G2/M after 24 hr r at 2980 nM (IC90)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "At a dose 50 mg/kg (114 umol/kg) was administered intraperitoneally to mice and was evaluated for Cmax",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "At a dose 50 mg/kg (114 umol/kg) was administered intraperitoneally to mice and was evaluated for T max",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "At a dose 50 mg/kg (114 umol/kg) was administered intraperitoneally to mice and was evaluated for area under curve (AUCtot)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "At a dose 50 mg/kg (114 umol/kg) was administered intraperitoneally to mice and was evaluated for half life (T1/2)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "Metabolic rate in human",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Metabolic rate in mouse",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -278,7 +277,7 @@
       "pchembl": null,
       "assay_desc": "Fraction unbound in human after iv administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -290,7 +289,7 @@
       "pchembl": null,
       "assay_desc": "Volume of distribution at steady state in human after iv administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Mean residence time in human after iv administration",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human HeLa cells assessed as decrease in cell viability after 72 hrs by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human A549 cells",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }

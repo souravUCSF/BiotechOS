@@ -1,6 +1,5 @@
 {
-  "chembl_id": "CHEMBL2105717",
-  "name": "CABOZANTINIB",
+  "code": "BTX-1025",
   "smiles": "COc1cc2nccc(Oc3ccc(NC(=O)C4(C(=O)Nc5ccc(F)cc5)CC4)cc3)c2cc1OC",
   "selectivity": null,
   "assays": [
@@ -14,7 +13,7 @@
       "pchembl": 5.21,
       "assay_desc": "Compound was evaluated for inhibition of human TGTA in an in vitro cell free assay measured by Caliper microfluidic capillary electrophoresis, time-resolved fluorescence resonance energy transfer method",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -26,7 +25,7 @@
       "pchembl": 5.66,
       "assay_desc": "Compound was evaluated for inhibition of human TGTB in an in vitro cell free assay measured by Caliper microfluidic capillary electrophoresis, time-resolved fluorescence resonance energy transfer method",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -38,7 +37,7 @@
       "pchembl": null,
       "assay_desc": "PubChem BioAssay. Cell Proliferation Assay against the TMD8 Cell Line (Caspase readout at 16 hrs). (Class of assay: confirmatory) ",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -50,7 +49,7 @@
       "pchembl": null,
       "assay_desc": "PubChem BioAssay. qHTS Assay for Identification of Small Molecule Antagonists for NFkB Signaling Pathway. (Class of assay: confirmatory) ",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -62,7 +61,7 @@
       "pchembl": null,
       "assay_desc": "PubChem BioAssay. Cell Proliferation Assay against a hMSC Cell Line. (Class of assay: confirmatory) ",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -74,7 +73,7 @@
       "pchembl": null,
       "assay_desc": "PubChem BioAssay. Cytotoxicity counterscreen for NFkB agonists and antagonists. (Class of assay: confirmatory) ",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -86,7 +85,7 @@
       "pchembl": null,
       "assay_desc": "PubChem BioAssay. Cell Proliferation Assay against the TMD8 Cell Line (Caspase readout at 8 hrs). (Class of assay: confirmatory) ",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "cellular_antiprolif",
@@ -98,7 +97,7 @@
       "pchembl": null,
       "assay_desc": "PubChem BioAssay. qHTS for small molecule inhibitors of Yes1 kinase: Primary Screen.   (Class of assay: confirmatory) ",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -110,7 +109,7 @@
       "pchembl": null,
       "assay_desc": "Kinobeads (epsilon), multiple immobilized ATP-competitive broad spectrum kinase inhibitors, used to assess residual binding of ~300 proteins simultaneously from cell lysate in the presence of a compound. Quantitative readout performed by mass spectrometry.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -122,7 +121,7 @@
       "pchembl": 6.65,
       "assay_desc": "Inhibition of TGTB (unknown origin) by HTRF method",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -134,7 +133,7 @@
       "pchembl": 5.51,
       "assay_desc": "Inhibition of TGTB (unknown origin) using poly (Glu,Tyr) 4:1 as substrate after 1 hr by ELISA",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -146,7 +145,7 @@
       "pchembl": 7.72,
       "assay_desc": "Inhibition of c-MET (unknown origin) using FAM-labelled peptide as substrate measured after 10 mins by mobility shift assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -158,7 +157,7 @@
       "pchembl": 7.68,
       "assay_desc": "Inhibition of c-Met (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -170,7 +169,7 @@
       "pchembl": 8.15,
       "assay_desc": "Inhibition of VTGTB2 (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -182,7 +181,7 @@
       "pchembl": 8.1,
       "assay_desc": "Inhibition of recombinant MET kinase domain (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "biochemical_ic50",
@@ -194,7 +193,7 @@
       "pchembl": 8.15,
       "assay_desc": "Inhibition of recombinant VTGTB2 kinase domain (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -206,7 +205,7 @@
       "pchembl": null,
       "assay_desc": "ASTRAZENECA: Intrinsic clearance measured in rat hepatocytes following incubation at 37C. Experimental range <3 to >150 microL/min/1E6 cells. Rapid Commun. Mass Spectrom. 2010, 24, 1730-1736",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -218,7 +217,7 @@
       "pchembl": null,
       "assay_desc": "ASTRAZENECA: Intrinsic clearance measured in human hepatocytes following incubation at 37C. Experimental range <3 to >150 microL/min/1E6 cells. Rapid Commun. Mass Spectrom. 2010, 24, 1730-1736.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -230,7 +229,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human Nthy-ori 3-1 cells after 10 days by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -242,7 +241,7 @@
       "pchembl": null,
       "assay_desc": "Inhibition of TEL-fused VTGTB2 (unknown origin) expressed in mouse BA/F3 cells assessed as cell growth inhibition",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -254,7 +253,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human Nthy-ori 3-1 cells assessed as reduction in cell viability by CellTiter-Glo luminescence assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -266,7 +265,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against mouse BA/F3 cells assessed as reduction in cell viability by CellTiter-Glo luminescence assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -278,7 +277,7 @@
       "pchembl": 10.46,
       "assay_desc": "Inhibition of VTGTB-2 (unknown origin)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "adme",
@@ -290,7 +289,7 @@
       "pchembl": 10.07,
       "assay_desc": "Inhibition of VTGTB-2 (unknown origin) by HTRF method",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -302,7 +301,7 @@
       "pchembl": null,
       "assay_desc": "Further kinetic evaluation of compounds supplied by Sanofi against AuroraA within a BIAcore3000 instrument",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "kinetics",
@@ -314,7 +313,7 @@
       "pchembl": null,
       "assay_desc": "Further kinetic evaluation of compounds supplied by Sanofi against AuroraA within a BIAcore3000 instrument",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -326,7 +325,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human SNU5 cells xenografted in nude mouse assessed as delay in tumor tumor growth at 30 mg/kg, po qd for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -338,7 +337,7 @@
       "pchembl": null,
       "assay_desc": "Toxicity in nude mouse xenografted with human SNU5 cells assessed as body weight at 30 mg/kg, po qd for 21 days (Rvb = 19.6 g)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -350,7 +349,7 @@
       "pchembl": null,
       "assay_desc": "Antitumour activity against human U87MG cells xenografted in athymic nude mouse assessed as tumour growth inhibition at 12.5 mg/kg, po for 21 days relative to control",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -362,7 +361,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human A549 cells xenografted in BALB/c nude mouse assessed as tumor growth inhibition at 20 mg/kg, ip administered every two days for 18 days",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -374,7 +373,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human SEC cells xenografted in female Swiss albino mouse assessed as tumor weight at 6 mg/kg,ip measured for 24 days (Rvb = 28.5 g)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -386,7 +385,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human SEC cells xenografted in female Swiss albino mouse assessed as decrease in tumor weight at 6 mg/kg,ip measured for 24 days",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -398,7 +397,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human SEC cells xenografted in female Swiss albino mouse assessed as reduction in tumor volume at 6 mg/kg,ip measured for 24 days (Rvb = 350.5 mm3)",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "xenograft",
@@ -410,7 +409,7 @@
       "pchembl": null,
       "assay_desc": "Antitumor activity against human SEC cells xenografted in female Swiss albino mouse assessed as tumor inhibition ratio at 6 mg/kg,ip measured for 24 days",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -422,7 +421,7 @@
       "pchembl": null,
       "assay_desc": "Selectivity index, ratio of IC50 for human HEK293 cells to IC50 for human HepG2 cells assessed as reduction in cell viability measured after 48 hrs by MTT assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -434,7 +433,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity activity against human HepG2 cells assessed by CellTiter-Glo luminescent cell viability assay.",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -446,7 +445,7 @@
       "pchembl": null,
       "assay_desc": "Cytotoxicity against human L02 cells assessed as reduction in cell viability incubated for 72 hrs by CCK-8 assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     },
     {
       "modality": "tox",
@@ -458,7 +457,7 @@
       "pchembl": 8.7,
       "assay_desc": "Inhibition of VTGTB-2 (unknown origin) by cell based assay",
       "flags": NaN,
-      "source": "chembl"
+      "source": "internal_dataset"
     }
   ]
 }
