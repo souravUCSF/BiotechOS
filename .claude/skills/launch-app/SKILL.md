@@ -67,6 +67,32 @@ pkill -f "uvicorn biotechos" 2>/dev/null
 pkill -f "next dev" 2>/dev/null
 ```
 
+## Driving the demo
+
+The full closed loop lives on the **Inbox** (`/`). To run/record it:
+1. `POST /demo/reset` (or the "Reset demo" button) re-stages the inbox: two
+   biology-CRO items (lead-candidate flip + re-derivation QC catch), a chem
+   update, and a vendor quote.
+2. Approve the **lead-candidate** item → one molecule crosses to MEETS TPP
+   (visible on `/tpp` and `/molecules`), a go/no-go memo drafts, Decision Log
+   (`/ledger`) appends.
+3. The **QC catch** item shows the reported-vs-refit dose-response overlay.
+4. Approve the **vendor quote** → PO issues + vendor email draft + budget
+   commitment (`/cfo`); the matching invoice then appears — reconcile it to
+   release funds. All approvals land in the Decision Log.
+
+`/competitive` fetches live from ClinicalTrials.gov + PubMed (needs network);
+it caches to `data/cache/competitive.json` and falls back to cache/seed offline.
+
+## Deferred (wired behind interfaces)
+
+- **Boltz co-folds**: `engine/structure.py:enqueue_fold` is a no-op until
+  `boltz-api` is authenticated (`boltz-cli-setup`). Until then the 3D viewer
+  serves the real TGTA reference structure (`data/reference/placeholder_ref.pdb`).
+- **LLM features** (TPP Builder, memos, vendor email): use the real model when
+  `ANTHROPIC_API_KEY` is set, else a deterministic fallback — the demo runs keyless.
+- **Vendor email**: composed + shown as a draft; not sent.
+
 ## Known gotchas
 
 - **Port 8000 collision**: something else on this machine listens on 8000
