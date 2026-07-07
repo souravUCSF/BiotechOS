@@ -1,0 +1,104 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8010";
+
+// 3Dmol is loaded from CDN on demand.
+declare global {
+  interface Window {
+    $3Dmol?: {
+      createViewer: (el: HTMLElement, opts: Record<string, unknown>) => Viewer;
+    };
+  }
+}
+type Viewer = {
+  addModel: (data: string, fmt: string) => void;
+  setStyle: (sel: Record<string, unknown>, style: Record<string, unknown>) => void;
+  zoomTo: () => void;
+  render: () => void;
+  clear: () => void;
+  resize: () => void;
+};
+
+function ensure3Dmol(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.$3Dmol) return resolve();
+    // add the tag once; multiple callers (StrictMode double-mount) share it
+    if (!document.querySelector(`script[src="${src}"]`)) {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onerror = () => reject(new Error(`failed to load ${src}`));
+      document.head.appendChild(s);
+    }
+    // resolve only when the global is actually available, not just when the tag exists
+    const started = Date.now();
+    const poll = setInterval(() => {
+      if (window.$3Dmol) {
+        clearInterval(poll);
+        resolve();
+      } else if (Date.now() - started > 10000) {
+        clearInterval(poll);
+        reject(new Error("3Dmol did not initialize"));
+      }
+    }, 50);
+  });
+}
+
+export function Structure3D({ moleculeId }: { moleculeId: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [label, setLabel] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setState("loading");
+      const res = await fetch(`${API_BASE}/molecule/${moleculeId}/structure3d`);
+      if (!res.ok) {
+        if (!cancelled) setState("error");
+        return;
+      }
+      if (!cancelled) setLabel(res.headers.get("X-Structure-Label") ?? "");
+      const pdb = await res.text();
+      try {
+        await ensure3Dmol("https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js");
+      } catch {
+        if (!cancelled) setState("error");
+        return;
+      }
+      if (cancelled || !ref.current || !window.$3Dmol) return;
+      try {
+        const viewer = window.$3Dmol.createViewer(ref.current, { backgroundColor: "#0a0a0a" });
+        viewer.addModel(pdb, "pdb");
+        viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+        viewer.setStyle({ hetflag: true }, { stick: { colorscheme: "greenCarbon" } });
+        viewer.zoomTo();
+        viewer.render();
+        viewer.resize();
+        if (!cancelled) setState("ready");
+      } catch (e) {
+        console.error("3Dmol render failed:", e);
+        if (!cancelled) setState("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [moleculeId]);
+
+  return (
+    <div className="relative h-64 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950">
+      <div ref={ref} className="absolute inset-0" />
+      {state === "ready" && label && (
+        <div className="absolute bottom-1 left-2 text-[10px] text-neutral-500">{label}</div>
+      )}
+      {state !== "ready" && (
+        <div className="absolute inset-0 flex items-center justify-center text-center text-xs text-neutral-500">
+          {state === "loading" && "Loading structure…"}
+          {state === "error" && "Structure unavailable"}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-import type { StateResponse, Program } from "./types";
+import type { StateResponse, Program, Molecule } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8010";
 
@@ -60,6 +60,14 @@ export async function fetchHistogram(metric: string, programId: string): Promise
     { cache: "no-store" },
   );
   if (!res.ok) throw new Error(`GET /tpp/histogram failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchMolecule(id: number): Promise<
+  Molecule & { has_structure: boolean }
+> {
+  const res = await fetch(`${API_BASE}/molecule/${id}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /molecule/${id} failed: ${res.status}`);
   return res.json();
 }
 

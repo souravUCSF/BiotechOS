@@ -267,6 +267,16 @@ def load(reset: bool = True) -> dict:
     from ..engine import tpp as _tpp
     _tpp.seed_default_tpp(DEMO_PROGRAM_ID)
 
+    # predicted ADME (real RDKit descriptors) + enqueue structure folds
+    from ..engine import structure as _structure
+    _structure.compute_adme_for_program(DEMO_PROGRAM_ID)
+    _conn = db.connect()
+    for _r in _conn.execute(
+        "SELECT id FROM molecules WHERE program_id=?", (DEMO_PROGRAM_ID,)
+    ).fetchall():
+        _structure.enqueue_fold(_r["id"])
+    _conn.close()
+
     n_active = sum(1 for r in curated_rows if not r["held_out"])
     return {
         "molecules": len(curated_rows), "active": n_active,

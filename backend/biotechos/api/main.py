@@ -3,11 +3,16 @@ from __future__ import annotations
 
 import json
 
-from fastapi import FastAPI, HTTPException, Query
+import csv
+import io
+
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from ..config import DEMO_PROGRAM_ID
+from ..engine import structure as structure_engine
 from ..engine import tpp as tpp_engine
 from ..engine import tpp_builder
 from ..state import db
@@ -124,7 +129,74 @@ def get_molecule(molecule_id: int):
     conn.close()
     d = dict(mol)
     d["assays"] = assays
+    if d.get("adme_json"):
+        try:
+            d["adme"] = json.loads(d["adme_json"])
+        except (TypeError, json.JSONDecodeError):
+            d["adme"] = None
+    d["has_structure"] = structure_engine.structure_path(molecule_id).exists()
     return _scrub(d)
+
+
+@app.get("/molecule/{molecule_id}/structure2d")
+def molecule_structure2d(molecule_id: int):
+    conn = get_conn()
+    mol = conn.execute("SELECT smiles FROM molecules WHERE id=?", (molecule_id,)).fetchone()
+    conn.close()
+    if mol is None:
+        raise HTTPException(404, "molecule not found")
+    svg = structure_engine.structure_svg(mol["smiles"])
+    if svg is None:
+        raise HTTPException(422, "could not render structure")
+    return Response(content=svg, media_type="image/svg+xml")
+
+
+@app.get("/molecule/{molecule_id}/structure3d", response_class=PlainTextResponse)
+def molecule_structure3d(molecule_id: int):
+    """PDB text for the molecule's structure — a real Boltz co-fold once folded,
+    otherwise the TGTA reference placeholder (REF1). `X-Structure-Placeholder`
+    header + `X-Structure-Label` tell the UI which it is."""
+    result = structure_engine.get_cached_structure(molecule_id)
+    if result is None:
+        raise HTTPException(404, "no structure available")
+    pdb, is_placeholder = result
+    return Response(
+        content=pdb,
+        media_type="text/plain",
+        headers={
+            "X-Structure-Placeholder": "1" if is_placeholder else "0",
+            "X-Structure-Label": structure_engine.PLACEHOLDER_LABEL if is_placeholder
+            else "Boltz co-fold",
+            "Access-Control-Expose-Headers": "X-Structure-Placeholder,X-Structure-Label",
+        },
+    )
+
+
+@app.get("/molecule/{molecule_id}/data.csv")
+def molecule_data_csv(molecule_id: int):
+    conn = get_conn()
+    mol = conn.execute("SELECT name FROM molecules WHERE id=?", (molecule_id,)).fetchone()
+    if mol is None:
+        conn.close()
+        raise HTTPException(404, "molecule not found")
+    rows = conn.execute(
+        "SELECT modality, target, standard_type, value, units, relation, pchembl, "
+        "source, assay_desc FROM assays WHERE molecule_id=? ORDER BY modality, target",
+        (molecule_id,),
+    ).fetchall()
+    conn.close()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["modality", "target", "standard_type", "value", "units", "relation",
+                "pchembl", "source", "assay_desc"])
+    for r in rows:
+        w.writerow([r["modality"], r["target"], r["standard_type"], r["value"],
+                    r["units"], r["relation"], r["pchembl"], r["source"], r["assay_desc"]])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{mol["name"]}_data.csv"'},
+    )
 
 
 @app.get("/tpp/scores")
