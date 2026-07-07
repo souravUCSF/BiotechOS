@@ -63,6 +63,36 @@ export async function fetchHistogram(metric: string, programId: string): Promise
   return res.json();
 }
 
+export type RadarItem = {
+  axis: string;
+  title: string;
+  org: string | null;
+  stage: string | null;
+  status?: string | null;
+  event_date?: string | null;
+  threat_score: number | null;
+  source: string | null;
+  url: string | null;
+  detail?: string | null;
+};
+
+export type Radar = {
+  generated_at: string;
+  live: boolean;
+  axes: {
+    program: RadarItem[];
+    catalyst: RadarItem[];
+    financing: RadarItem[];
+    news: RadarItem[];
+  };
+};
+
+export async function fetchCompetitive(programId: string): Promise<Radar> {
+  const res = await fetch(`${API_BASE}/competitive?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /competitive failed: ${res.status}`);
+  return res.json();
+}
+
 export async function fetchMolecule(id: number): Promise<
   Molecule & { has_structure: boolean }
 > {

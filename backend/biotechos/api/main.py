@@ -16,6 +16,7 @@ from ..engine import inbox as inbox_engine
 from ..engine import structure as structure_engine
 from ..engine import tpp as tpp_engine
 from ..engine import tpp_builder
+from ..integrations import competitive as competitive_engine
 from ..state import db
 
 app = FastAPI(title="BiotechOS API")
@@ -276,6 +277,13 @@ def demo_reset(program_id: str = Query(default=DEMO_PROGRAM_ID)):
     conn.close()
     n = inbox_engine.seed_inbox(program_id)
     return {"reset": True, "inbox_items": n}
+
+
+@app.get("/competitive")
+def competitive(program_id: str = Query(default=DEMO_PROGRAM_ID),
+                refresh: bool = Query(default=False)):
+    """Structured competitive radar (programs / catalysts / financings / news)."""
+    return competitive_engine.build(program_id, use_cache=not refresh)
 
 
 @app.get("/healthz")
