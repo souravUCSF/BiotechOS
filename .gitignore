@@ -1,1 +1,21 @@
 .DS_Store
+
+# Raw data exports — large, regenerable; never commit
+data/raw/
+*.csv.gz
+
+# Processed/curated demo tables are committed from data/curated/ (keep those small)
+
+# Local state + compute cache
+data/biotechos.db
+data/cache/
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Node
+frontend/node_modules/
+frontend/.next/
+.claude/settings.local.json
