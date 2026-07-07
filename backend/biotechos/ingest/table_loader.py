@@ -263,6 +263,10 @@ def load(reset: bool = True) -> dict:
     pd.DataFrame(curated_rows).to_csv(CURATED_DIR / "demo_set.csv", index=False)
     conn.close()
 
+    # seed the default executable TPP so the app has a live TPP out of the box
+    from ..engine import tpp as _tpp
+    _tpp.seed_default_tpp(DEMO_PROGRAM_ID)
+
     n_active = sum(1 for r in curated_rows if not r["held_out"])
     return {
         "molecules": len(curated_rows), "active": n_active,

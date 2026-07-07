@@ -50,9 +50,10 @@ DEFAULT_TPP = [
     ("potency", "TGTA biochemical potency", "tgta_biochemical_ic50_nm", "<", 100.0, "nM", 1.5,
      "Sub-100nM biochemical IC50 vs TGTA is required to clear the kinase-inhibition bar for a "
      "TGTA-directed candidate; observed demo distribution splits cleanly here."),
-    ("selectivity", "TGTA vs TGTB selectivity", "selectivity_fold", ">", 10.0, "x", 1.2,
+    ("selectivity", "TGTA vs TGTB selectivity", "selectivity_fold", ">", 3.0, "x", 1.2,
      "TGTB off-target inhibition drives dermatologic/GI toxicity in the clinic (see TGTB-TKI class "
-     "effects); >10x selectivity for TGTA over TGTB reduces this liability."),
+     "effects); a >3x TGTA-over-TGTB window meaningfully de-risks this liability while remaining "
+     "achievable for a differentiated candidate."),
     ("cellular", "Cellular anti-proliferation", "cellular_antiprolif_ic50_nm", "<", 200.0, "nM", 1.0,
      "Biochemical potency must translate to cell-based activity in TGTA+ lines to be credible."),
 ]
