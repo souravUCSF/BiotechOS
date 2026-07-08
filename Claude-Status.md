@@ -2,11 +2,23 @@
 
 Project snapshot. **Read at session start; update at session end (and as you go).** Transient state and project-specific bugs live here; durable structure lives in `Architecture.md`.
 
-_Last updated: 2026-07-07._
+_Last updated: 2026-07-08._
 
 ## Current goal
 
-Hardening the hackathon demo into a real tool. Recent focus: curating the metric catalog (which properties are valid/selectable), running real Boltz predictions on lead molecules, and the molecule-dashboard configurator.
+Building **Inbox v2** — a document-driven business layer (corpus + knowledge store + decision loop) per the approved plan `~/.claude/plans/abundant-mapping-platypus.md`. Three tabs: Current Inbox / QueryOS / Tasks.
+
+## Inbox v2 progress (Phase 1)
+- **Done & pushed (commit dc9d912):**
+  - Schema: `documents`, `observations`, `facts` (bitemporal world model), `molecule_aliases`, `vendor_credentials`, `vendors` enrichment, `documents_fts` (FTS5); migrations on startup.
+  - `engine/identity.py` — canonical molecule id + alias resolution (norm key collapses dash/zero-pad drift; InChIKey merge; inline-declaration learning; passport). Corpus-learned only, no external seed.
+  - `ingest/mailbox.py` (Real/Anonymized sources over on-disk archive) + `ingest/decrypt.py` (password-protected attachments).
+  - `ingest/anonymize/` — one-way anonymizer (TGTA/TGTA→TGTA, TGTA→TGTB, TGTA→Kinase-C; surrogate codes; vendor+person PII masking; drop structures/figures; keep numbers). **Leak-scan clean across 617 threads (paths + contents).** Output committed to `data/corpus/` (TGTA program's business corpus); maps gitignored in `data/corpus_maps/`. Raw archive external at `~/DataStore` (never committed).
+  - `.claude/skills/anonymize-corpus` — reusable skill for new datasets.
+- **Next (Phase 1 remaining):** `engine/extract/` (triage + decision_state + classifier + vendor_capability/quote/cro_data/query), `engine/corpus/{store,qa}.py` (ingest pipeline: documents+observations→facts; grounded facts-first RAG), API `/corpus/ingest` + `/knowledge/ask`, frontend **QueryOS** tab. Then Phase 2 (Current Inbox) + Phase 3 (Tasks + remaining agents).
+- **Note:** molecule merge into existing BTX set happens during ingestion via `identity.resolve_molecule(create=True)` on surrogate codes (store.py, pending).
+
+## Prior phase (metric catalog + Boltz) — done
 
 ## What's done (this phase)
 
