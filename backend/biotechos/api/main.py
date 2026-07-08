@@ -22,6 +22,13 @@ from ..state import db
 
 app = FastAPI(title="BiotechOS API")
 
+
+@app.on_event("startup")
+def _startup() -> None:
+    # apply non-destructive schema migrations to an existing DB on boot so new
+    # columns (e.g. fold_settings.target_kind) exist without a data reload.
+    db.init_db(reset=False)
+
 app.add_middleware(
     CORSMiddleware,
     # Local single-user app reachable via localhost, claw.local, or a LAN IP —
@@ -190,7 +197,7 @@ def molecule_structure3d(molecule_id: int, program_id: str = Query(default=DEMO_
     result = structure_engine.get_cached_structure(molecule_id, program_id)
     if result is None:
         raise HTTPException(404, "no structure available")
-    pdb, is_placeholder, label = result
+    pdb, is_placeholder, label, fmt = result
     conn = get_conn()
     mrow = conn.execute("SELECT name FROM molecules WHERE id=?", (molecule_id,)).fetchone()
     conn.close()
@@ -198,11 +205,13 @@ def molecule_structure3d(molecule_id: int, program_id: str = Query(default=DEMO_
     headers = {
         "X-Structure-Placeholder": "1" if is_placeholder else "0",
         "X-Structure-Label": label,
-        "Access-Control-Expose-Headers": "X-Structure-Placeholder,X-Structure-Label",
+        "X-Structure-Format": fmt,
+        "Access-Control-Expose-Headers": "X-Structure-Placeholder,X-Structure-Label,X-Structure-Format",
     }
     if download:
-        headers["Content-Disposition"] = f'attachment; filename="{name}_structure.pdb"'
-    return Response(content=pdb, media_type="chemical/x-pdb" if download else "text/plain", headers=headers)
+        headers["Content-Disposition"] = f'attachment; filename="{name}_structure.{fmt}"'
+    media = ("chemical/x-cif" if fmt == "cif" else "chemical/x-pdb") if download else "text/plain"
+    return Response(content=pdb, media_type=media, headers=headers)
 
 
 @app.get("/fold-config")
@@ -211,16 +220,19 @@ def get_fold_config(program_id: str = Query(default=DEMO_PROGRAM_ID)):
 
 
 class FoldConfigRequest(BaseModel):
-    pdb_id: str
+    target_kind: str = "pdb"   # 'pdb' | 'uniprot' | 'sequence'
+    target_value: str = ""
+    pdb_id: str | None = None  # legacy alias for a PDB target_value
     constraints: str = ""
     program_id: str = DEMO_PROGRAM_ID
 
 
 @app.post("/fold-config")
 def set_fold_config(req: FoldConfigRequest):
-    """Set the protein/PDB (and folding constraints) used for this program's
-    co-folds and reference structure."""
-    return structure_engine.set_fold_config(req.program_id, req.pdb_id, req.constraints)
+    """Set the folding target (PDB id, UniProt id, or raw protein sequence) and
+    folding constraints used for this program's co-folds and reference structure."""
+    value = req.target_value or req.pdb_id or ""
+    return structure_engine.set_fold_config(req.program_id, req.target_kind, value, req.constraints)
 
 
 @app.get("/molecule/{molecule_id}/data.csv")

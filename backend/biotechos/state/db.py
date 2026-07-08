@@ -21,6 +21,10 @@ def connect(db_path: Path | str = DB_PATH) -> sqlite3.Connection:
 _MIGRATIONS = [
     ("molecules", "favorite", "INTEGER DEFAULT 0"),
     ("custom_metrics", "formula", "TEXT"),
+    ("assays", "cell_line", "TEXT"),
+    ("fold_settings", "target_kind", "TEXT"),   # 'pdb' | 'uniprot' | 'sequence'
+    ("fold_settings", "target_value", "TEXT"),  # the id or raw sequence
+    ("molecules", "boltz_json", "TEXT"),        # Boltz predicted props (SAB + ADME)
 ]
 
 

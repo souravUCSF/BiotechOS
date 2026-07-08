@@ -151,7 +151,14 @@ export async function fetchCompetitive(programId: string): Promise<Radar> {
   return res.json();
 }
 
-export type FoldConfig = { program_id: string; pdb_id: string; constraints: string };
+export type FoldTargetKind = "pdb" | "uniprot" | "sequence";
+export type FoldConfig = {
+  program_id: string;
+  target_kind: FoldTargetKind;
+  target_value: string;
+  pdb_id: string;
+  constraints: string;
+};
 
 export async function fetchFoldConfig(programId: string): Promise<FoldConfig> {
   const res = await fetch(`${API_BASE}/fold-config?program_id=${programId}`, { cache: "no-store" });
@@ -160,14 +167,18 @@ export async function fetchFoldConfig(programId: string): Promise<FoldConfig> {
 }
 
 export async function setFoldConfig(
-  pdbId: string,
+  targetKind: FoldTargetKind,
+  targetValue: string,
   constraints: string,
   programId: string,
 ): Promise<FoldConfig> {
   const res = await fetch(`${API_BASE}/fold-config`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pdb_id: pdbId, constraints, program_id: programId }),
+    body: JSON.stringify({
+      target_kind: targetKind, target_value: targetValue,
+      constraints, program_id: programId,
+    }),
   });
   if (!res.ok) throw new Error(`POST /fold-config failed: ${res.status}`);
   return res.json();

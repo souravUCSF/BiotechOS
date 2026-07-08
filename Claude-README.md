@@ -11,6 +11,9 @@ For that, see the two companion files:
 
 **Rule of thumb for which file gets updated:** transient state → `Claude-Status.md`; structural/conceptual truth → `Architecture.md`; nothing that's specific to one project belongs here.
 
+**Update these memory files AS YOU GO, not at the end.** When you learn something new, update immediately.
+**DO NOT ASK. Just update the files when you learn something.**
+
 ---
 
 ## How to communicate with me

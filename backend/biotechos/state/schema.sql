@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS assays (
     relation       TEXT,                 -- =, >, < ...
     pchembl        REAL,
     source         TEXT,                 -- chembl | cro_synthetic | ...
+    cell_line      TEXT,                 -- normalized cell line for cellular assays (CellLine-2, CellLine-1, ...)
     assay_desc     TEXT,
     flags          TEXT,                 -- JSON list of QC flags
     created_at     TEXT DEFAULT (datetime('now'))

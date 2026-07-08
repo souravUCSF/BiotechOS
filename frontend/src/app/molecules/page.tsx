@@ -15,24 +15,31 @@ import {
 } from "@/lib/api";
 import { Structure3D } from "@/components/Structure3D";
 import { PropertyScatter } from "@/components/PropertyScatter";
-import { MoleculeDashboardConfig, CARD_FIELD_OPTIONS } from "@/components/MoleculeDashboardConfig";
-import { moleculeProperties } from "@/lib/properties";
+import { MoleculeDashboardConfig } from "@/components/MoleculeDashboardConfig";
 import type { Molecule } from "@/lib/types";
 
 import { API_BASE } from "@/lib/apiBase";
 const fmt = (v: number | null) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(1);
 
-const DEFAULT_CARD_FIELDS = ["tgta_ic50", "selectivity", "cell_ic50", "QED"];
+// Retired metric keys still referenced by older TPP versions -> their current
+// catalog equivalents, so TPP-derived card defaults stay valid.
+const RETIRED_KEY_MAP: Record<string, string> = {
+  "assay:selectivity:TGTA/TGTB": "formula:tgta_vs_tgtb_selectivity",
+};
+const remapKey = (k: string) => RETIRED_KEY_MAP[k] ?? k;
 
-function AdvancingCard({ mol, status, cardFields }: { mol: Molecule; status: string; cardFields: string[] }) {
-  const p = moleculeProperties(mol);
+function AdvancingCard({ mol, status, cardFields, values, metrics }: {
+  mol: Molecule; status: string; cardFields: string[];
+  values: Record<string, number | null>; metrics: MetricDef[];
+}) {
   const [flipped, setFlipped] = useState(false);
 
   const fieldOf = (key: string) => {
-    const opt = CARD_FIELD_OPTIONS.find((f) => f.key === key);
-    const v = (p as Record<string, number | null>)[key];
-    return { label: opt?.label ?? key, value: v == null ? "—" : `${fmt(v)}${opt?.units ?? ""}` };
+    const meta = metrics.find((m) => m.key === key);
+    const v = values[key];
+    const units = meta?.units ? ` ${meta.units}` : "";
+    return { label: meta?.label ?? key, value: v == null ? "—" : `${fmt(v)}${units}` };
   };
 
   return (
@@ -108,7 +115,8 @@ export default function MoleculesPage() {
   const { state } = useAppState();
   const [scores, setScores] = useState<TppScores | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [cardFields, setCardFields] = useState<string[]>(DEFAULT_CARD_FIELDS);
+  const [cardFields, setCardFields] = useState<string[]>([]);
+  const [cardFieldsLoaded, setCardFieldsLoaded] = useState(false); // localStorage read done?
   const cfKey = `moldash.cardFields.${programId}`;
 
   // scatter interactivity + configurable "All molecules" table
@@ -125,11 +133,25 @@ export default function MoleculesPage() {
 
   useEffect(() => {
     fetchTppScores(programId).then(setScores).catch(() => setScores(null));
+    setCardFieldsLoaded(false);
     try {
       const saved = localStorage.getItem(cfKey);
       if (saved) setCardFields(JSON.parse(saved));
     } catch { /* ignore */ }
+    setCardFieldsLoaded(true);
   }, [programId, cfKey]);
+
+  // Default card fields to every metric used by the current TPP (retired keys
+  // remapped), pre-checking the TPP-associated properties. Only applies when the
+  // user has no saved selection for this program.
+  useEffect(() => {
+    if (!cardFieldsLoaded || !state) return;
+    if (localStorage.getItem(cfKey)) return; // user has an explicit selection
+    const tppFields = Array.from(
+      new Set((state.tpp_params ?? []).map((p) => remapKey(p.metric))),
+    );
+    if (tppFields.length) setCardFields(tppFields);
+  }, [cardFieldsLoaded, state, cfKey]);
 
   function updateCardFields(fields: string[]) {
     setCardFields(fields);
@@ -144,6 +166,21 @@ export default function MoleculesPage() {
     } catch { /* ignore */ }
   }, [programId, tcKey]);
 
+  // Drop any saved card fields that aren't real catalog keys (e.g. legacy
+  // alias-based keys) so the card only ever shows currently-checked metrics.
+  useEffect(() => {
+    if (metricsCatalog.length === 0) return;
+    const valid = new Set(metricsCatalog.map((m) => m.key));
+    const cleaned = cardFields.filter((k) => valid.has(k));
+    if (cleaned.length !== cardFields.length) updateCardFields(cleaned);
+  }, [metricsCatalog]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Only render fields that are both checked AND known to the catalog.
+  const validCardFields = useMemo(() => {
+    const valid = new Set(metricsCatalog.map((m) => m.key));
+    return cardFields.filter((k) => valid.has(k));
+  }, [cardFields, metricsCatalog]);
+
   useEffect(() => {
     fetchMoleculeValues(tableColumns, programId).then(setTableValues).catch(() => setTableValues([]));
   }, [tableColumns, programId]);
@@ -153,6 +190,18 @@ export default function MoleculesPage() {
     tableValues.forEach((r) => m.set(r.molecule_id, r.values));
     return m;
   }, [tableValues]);
+
+  // values for the configurable card fields (resolved metric keys)
+  const [cardValues, setCardValues] = useState<MoleculeValues[]>([]);
+  useEffect(() => {
+    if (cardFields.length === 0) { setCardValues([]); return; }
+    fetchMoleculeValues(cardFields, programId).then(setCardValues).catch(() => setCardValues([]));
+  }, [cardFields, programId]);
+  const cardValsByMol = useMemo(() => {
+    const m = new Map<number, Record<string, number | null>>();
+    cardValues.forEach((r) => m.set(r.molecule_id, r.values));
+    return m;
+  }, [cardValues]);
 
   function setTableCols(cols: string[]) {
     setTableColumns(cols);
@@ -208,7 +257,9 @@ export default function MoleculesPage() {
               key={mol.id}
               mol={mol}
               status={statusById.get(mol.id) ?? "no_data"}
-              cardFields={cardFields}
+              cardFields={validCardFields}
+              values={cardValsByMol.get(mol.id) ?? {}}
+              metrics={metricsCatalog}
             />
           ))}
         </div>

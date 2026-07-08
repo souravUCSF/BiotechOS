@@ -99,18 +99,38 @@ def get_fold_config(program_id: str = DEMO_PROGRAM_ID) -> dict:
     r = conn.execute("SELECT * FROM fold_settings WHERE program_id=?", (program_id,)).fetchone()
     conn.close()
     if r is None:
-        return {"program_id": program_id, "pdb_id": "REF1", "constraints": ""}
-    return dict(r)
+        return {"program_id": program_id, "target_kind": "pdb", "target_value": "REF1",
+                "pdb_id": "REF1", "constraints": ""}
+    d = dict(r)
+    # normalize: older rows only have pdb_id; treat that as a PDB target
+    kind = d.get("target_kind") or "pdb"
+    value = d.get("target_value") or d.get("pdb_id") or "REF1"
+    d["target_kind"] = kind
+    d["target_value"] = value
+    d["pdb_id"] = value if kind == "pdb" else ""
+    return d
 
 
-def set_fold_config(program_id: str, pdb_id: str, constraints: str = "") -> dict:
+def set_fold_config(program_id: str, target_kind: str, target_value: str,
+                    constraints: str = "") -> dict:
+    kind = (target_kind or "pdb").strip().lower()
+    if kind not in ("pdb", "uniprot", "sequence"):
+        kind = "pdb"
+    value = (target_value or "").strip()
+    if kind in ("pdb", "uniprot"):
+        value = value.upper()
+    else:  # sequence: strip whitespace/newlines, keep residues only
+        value = "".join(value.split())
+    pdb_id = value if kind == "pdb" else ""
     conn = db.connect()
     with conn:
         conn.execute(
-            "INSERT INTO fold_settings(program_id,pdb_id,constraints,updated_at) "
-            "VALUES (?,?,?,datetime('now')) ON CONFLICT(program_id) DO UPDATE SET "
-            "pdb_id=excluded.pdb_id, constraints=excluded.constraints, updated_at=excluded.updated_at",
-            (program_id, (pdb_id or "").strip().upper(), constraints or ""),
+            "INSERT INTO fold_settings(program_id,pdb_id,target_kind,target_value,constraints,updated_at) "
+            "VALUES (?,?,?,?,?,datetime('now')) ON CONFLICT(program_id) DO UPDATE SET "
+            "pdb_id=excluded.pdb_id, target_kind=excluded.target_kind, "
+            "target_value=excluded.target_value, constraints=excluded.constraints, "
+            "updated_at=excluded.updated_at",
+            (program_id, pdb_id, kind, value, constraints or ""),
         )
     conn.close()
     return get_fold_config(program_id)
@@ -143,24 +163,58 @@ def structure_path(molecule_id: int) -> Path:
     return STRUCT_DIR / f"mol_{molecule_id}.pdb"
 
 
-def get_cached_structure(molecule_id: int, program_id: str = DEMO_PROGRAM_ID) -> tuple[str, bool, str] | None:
-    """Return (pdb_text, is_placeholder, label) for a molecule's structure.
+def _cofold_label(molecule_id: int) -> str:
+    """Label for a real Boltz co-fold: show the ligand ipTM if we have it."""
+    import json
+    conn = db.connect()
+    row = conn.execute("SELECT boltz_json FROM molecules WHERE id=?", (molecule_id,)).fetchone()
+    conn.close()
+    if row and row["boltz_json"]:
+        try:
+            v = json.loads(row["boltz_json"]).get("ligand_iptm")
+            if v is not None:
+                return f"Boltz ligand ipTM {float(v):.2f}"
+        except (TypeError, ValueError, json.JSONDecodeError):
+            pass
+    return "Boltz co-fold"
 
-    Prefers a real per-compound Boltz co-fold; otherwise serves the program's
-    configured reference PDB (default REF1) so the viewer always shows something
-    real. Returns None only if nothing is available.
+
+def get_cached_structure(molecule_id: int, program_id: str = DEMO_PROGRAM_ID) -> tuple[str, bool, str, str] | None:
+    """Return (text, is_placeholder, label, fmt) for a molecule's structure.
+
+    Prefers a real per-compound Boltz co-fold (CIF, or legacy PDB); otherwise
+    serves the program's configured reference PDB (default REF1) so the viewer
+    always shows something real. Returns None only if nothing is available.
     """
-    p = structure_path(molecule_id)
+    label = _cofold_label(molecule_id)
+    p = structure_path(molecule_id)  # PDB (viewer-friendly) — preferred
     if p.exists():
-        return p.read_text(), False, "Boltz co-fold"
+        return p.read_text(), False, label, "pdb"
+    cif = structure_path(molecule_id).with_suffix(".cif")
+    if cif.exists():
+        return cif.read_text(), False, label, "cif"
     cfg = get_fold_config(program_id)
-    ref = fetch_reference_pdb(cfg.get("pdb_id") or "REF1")
+    # only a PDB target has a structure to fetch now; UniProt/sequence targets
+    # fold from sequence via Boltz (pending) — show the placeholder meanwhile.
+    ref = fetch_reference_pdb(cfg.get("pdb_id") or "REF1") if cfg.get("target_kind") == "pdb" else None
     if ref and ref.exists():
         # forward-looking label; the real per-compound Boltz co-fold replaces this
-        return ref.read_text(), True, "Predicted structure (co-fold pending)"
+        return ref.read_text(), True, "Predicted structure (co-fold pending)", "pdb"
     if PLACEHOLDER_PDB.exists():
-        return PLACEHOLDER_PDB.read_text(), True, "Predicted structure (co-fold pending)"
+        return PLACEHOLDER_PDB.read_text(), True, "Predicted structure (co-fold pending)", "pdb"
     return None
+
+
+def store_cofold_cif(molecule_id: int, cif_path: str | Path) -> Path:
+    """Convert a Boltz co-fold CIF to PDB (3Dmol parses PDB reliably; Boltz's
+    minimal mmCIF lacks the symmetry records 3Dmol's CIF reader expects) and
+    cache it as the molecule's structure. Returns the written PDB path."""
+    import gemmi
+    st = gemmi.read_structure(str(cif_path))
+    st.setup_entities()
+    dest = structure_path(molecule_id)
+    dest.write_text(st.make_pdb_string())
+    return dest
 
 
 def enqueue_fold(molecule_id: int) -> None:

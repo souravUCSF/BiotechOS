@@ -1,8 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProgram } from "@/lib/ProgramContext";
-import { fetchMetrics, addTppParam, type MetricDef } from "@/lib/api";
+import { fetchMetrics, addTppParam, defineCustomMetric, type MetricDef } from "@/lib/api";
+
+const ARITH = [
+  { sym: "÷", op: "/" },
+  { sym: "×", op: "*" },
+  { sym: "−", op: "-" },
+  { sym: "+", op: "+" },
+];
+
+// grouped <select> over the catalog, reused for single + composite pickers
+function MetricSelect({
+  metrics,
+  value,
+  onChange,
+}: {
+  metrics: MetricDef[];
+  value: string;
+  onChange: (key: string) => void;
+}) {
+  const groups: [string, MetricDef[]][] = [
+    ["Assays", metrics.filter((m) => m.kind === "assay" && !m.key.startsWith("cell:"))],
+    ["Anti-proliferation by cell line", metrics.filter((m) => m.key.startsWith("cell:"))],
+    ["Computed (ADME / physchem)", metrics.filter((m) => m.kind === "adme")],
+    ["Derived (formulas)", metrics.filter((m) => m.kind === "formula")],
+    ["Custom", metrics.filter((m) => m.kind === "custom")],
+  ];
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}
+      className="rounded border border-borderStrong bg-panel px-2 py-1.5 text-sm">
+      <option value="" disabled>Select a property…</option>
+      {groups.map(([label, ms]) => ms.length > 0 && (
+        <optgroup key={label} label={label}>
+          {ms.map((m) => <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>)}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
 
 export function TppAddCriterion({
   existingMetrics,
@@ -15,7 +52,15 @@ export function TppAddCriterion({
 }) {
   const { programId } = useProgram();
   const [metrics, setMetrics] = useState<MetricDef[]>([]);
-  const [metric, setMetric] = useState<string>("");
+  const [mode, setMode] = useState<"single" | "composite">("single");
+
+  // single
+  const [metric, setMetric] = useState("");
+  // composite
+  const [metricA, setMetricA] = useState("");
+  const [arith, setArith] = useState("/");
+  const [metricB, setMetricB] = useState("");
+
   const [operator, setOperator] = useState("<");
   const [threshold, setThreshold] = useState("");
   const [rationale, setRationale] = useState("");
@@ -25,48 +70,50 @@ export function TppAddCriterion({
 
   useEffect(() => {
     fetchMetrics(programId).then((all) => {
-      const avail = all.filter((m) => !existingMetrics.includes(m.key));
+      const avail = all.filter((m) => m.kind === "formula" || !existingMetrics.includes(m.key));
       setMetrics(avail);
-      if (avail[0]) {
-        setMetric(avail[0].key);
-        setOperator(avail[0].higher_is_better ? ">" : "<");
-      }
     });
   }, [programId, existingMetrics]);
 
-  const def = metrics.find((m) => m.key === metric);
+  const byKey = useMemo(() => new Map(metrics.map((m) => [m.key, m])), [metrics]);
+  const defA = byKey.get(metricA);
+  const defB = byKey.get(metricB);
+  const arithSym = ARITH.find((a) => a.op === arith)?.sym ?? arith;
+  const compositeLabel = defA && defB ? `${defA.label} ${arithSym} ${defB.label}` : "";
 
-  function pick(key: string) {
+  function pickSingle(key: string) {
     setMetric(key);
-    const d = metrics.find((m) => m.key === key);
+    const d = byKey.get(key);
     if (d) setOperator(d.higher_is_better ? ">" : "<");
   }
 
   async function save() {
-    if (!metric || threshold === "") {
-      setError("Pick a property and enter a threshold.");
-      return;
-    }
-    if (!justification.trim()) {
-      setError("A written justification is required.");
-      return;
-    }
+    if (!justification.trim()) return setError("A written justification is required.");
+    if (threshold === "") return setError("Enter a threshold.");
     setBusy(true);
     setError(null);
     try {
+      let key = metric;
+      let label = byKey.get(metric)?.label ?? metric;
+      let units = byKey.get(metric)?.units ?? "";
+
+      if (mode === "composite") {
+        if (!defA || !defB || !defA.alias || !defB.alias)
+          throw new Error("Pick both properties.");
+        const formula = `${defA.alias} ${arith} ${defB.alias}`;
+        label = compositeLabel;
+        units = arith === "/" ? "ratio" : "";
+        const created = await defineCustomMetric(
+          { label, units, formula, higher_is_better: operator === ">" }, programId);
+        key = created.key;
+      } else if (!metric) {
+        throw new Error("Pick a property.");
+      }
+
       const r = await addTppParam(
-        {
-          axis: def?.kind === "adme" ? "adme" : "custom",
-          label: def?.label ?? metric,
-          metric,
-          operator,
-          threshold: Number(threshold),
-          units: def?.units ?? "",
-          rationale,
-        },
-        justification,
-        programId,
-      );
+        { axis: "custom", label, metric: key, operator, threshold: Number(threshold),
+          units, rationale },
+        justification, programId);
       onVersioned(r.new_version);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
@@ -75,43 +122,54 @@ export function TppAddCriterion({
     }
   }
 
+  const units = mode === "composite" ? (arith === "/" ? "ratio" : "") : (byKey.get(metric)?.units ?? "");
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-lg border border-borderStrong bg-panel p-6"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-xl rounded-lg border border-borderStrong bg-panel p-6"
         onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Add a TPP criterion</h2>
           <button onClick={onClose} className="text-inkMuted hover:text-ink">✕</button>
         </div>
 
-        <label className="mb-1 block text-xs text-inkMuted">Property</label>
-        <select value={metric} onChange={(e) => pick(e.target.value)}
-          className="mb-3 w-full rounded border border-borderStrong bg-panel px-2 py-1.5 text-sm">
-          <optgroup label="Assays">
-            {metrics.filter((m) => m.kind === "assay").map((m) => (
-              <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0} molecules)</option>
-            ))}
-          </optgroup>
-          <optgroup label="Computed (ADME / physchem)">
-            {metrics.filter((m) => m.kind === "adme").map((m) => (
-              <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
-            ))}
-          </optgroup>
-          {metrics.some((m) => m.kind === "formula") && (
-            <optgroup label="Derived (formulas)">
-              {metrics.filter((m) => m.kind === "formula").map((m) => (
-                <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
-              ))}
-            </optgroup>
-          )}
-          {metrics.some((m) => m.kind === "custom") && (
-            <optgroup label="Custom">
-              {metrics.filter((m) => m.kind === "custom").map((m) => (
-                <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
-              ))}
-            </optgroup>
-          )}
-        </select>
+        {/* mode toggle */}
+        <div className="mb-4 inline-flex rounded border border-borderStrong text-sm">
+          <button onClick={() => setMode("single")}
+            className={`px-3 py-1 ${mode === "single" ? "bg-emerald-600 text-white" : "text-ink"}`}>
+            Single property
+          </button>
+          <button onClick={() => setMode("composite")}
+            className={`px-3 py-1 ${mode === "composite" ? "bg-emerald-600 text-white" : "text-ink"}`}>
+            Composite (A ∘ B)
+          </button>
+        </div>
+
+        {mode === "single" ? (
+          <div className="mb-4">
+            <label className="mb-1 block text-xs text-inkMuted">Property</label>
+            <MetricSelect metrics={metrics} value={metric} onChange={pickSingle} />
+          </div>
+        ) : (
+          <div className="mb-4">
+            <label className="mb-1 block text-xs text-inkMuted">
+              Build a value from two properties
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <MetricSelect metrics={metrics} value={metricA} onChange={setMetricA} />
+              <select value={arith} onChange={(e) => setArith(e.target.value)}
+                className="rounded border border-borderStrong bg-panel px-2 py-1.5 text-sm">
+                {ARITH.map((a) => <option key={a.op} value={a.op}>{a.sym}</option>)}
+              </select>
+              <MetricSelect metrics={metrics} value={metricB} onChange={setMetricB} />
+            </div>
+            {compositeLabel && (
+              <div className="mt-2 text-xs text-inkMuted">
+                New property: <span className="font-medium text-ink">{compositeLabel}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mb-3 flex items-center gap-2 text-sm">
           <span className="text-inkMuted">Criterion:</span>
@@ -122,7 +180,7 @@ export function TppAddCriterion({
           </select>
           <input value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="threshold"
             className="w-28 rounded border border-borderStrong bg-panel px-2 py-1 font-mono" />
-          <span className="text-inkMuted">{def?.units}</span>
+          <span className="text-inkMuted">{units}</span>
         </div>
 
         <label className="mb-1 block text-xs text-inkMuted">Rationale (optional)</label>

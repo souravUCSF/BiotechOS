@@ -62,6 +62,7 @@ export function Structure3D({ moleculeId, className = "h-64" }: { moleculeId: nu
         return;
       }
       if (!cancelled) setLabel(res.headers.get("X-Structure-Label") ?? "");
+      const fmt = res.headers.get("X-Structure-Format") ?? "pdb";
       const pdb = await res.text();
       try {
         await ensure3Dmol("https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js");
@@ -72,7 +73,7 @@ export function Structure3D({ moleculeId, className = "h-64" }: { moleculeId: nu
       if (cancelled || !ref.current || !window.$3Dmol) return;
       try {
         const viewer = window.$3Dmol.createViewer(ref.current, { backgroundColor: "#f7f9fb" });
-        viewer.addModel(pdb, "pdb");
+        viewer.addModel(pdb, fmt);
         viewer.setStyle({}, { cartoon: { color: "spectrum" } });
         viewer.setStyle({ hetflag: true }, { stick: { colorscheme: "greenCarbon" } });
         viewer.zoomTo();
