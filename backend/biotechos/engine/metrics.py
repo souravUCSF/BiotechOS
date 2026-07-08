@@ -158,6 +158,22 @@ def resolve(conn, program_id: str, molecule_id: int, key: str) -> float | None:
     return None
 
 
+def values_table(program_id: str, keys: list[str]) -> list[dict]:
+    """For every active molecule, resolve the requested metric keys -> a value matrix
+    for the Molecule Database's configurable columns."""
+    conn = db.connect()
+    mols = conn.execute(
+        "SELECT id, name FROM molecules WHERE program_id=? AND held_out=0 ORDER BY id",
+        (program_id,),
+    ).fetchall()
+    out = []
+    for m in mols:
+        vals = {k: resolve(conn, program_id, m["id"], k) for k in keys}
+        out.append({"molecule_id": m["id"], "name": m["name"], "values": vals})
+    conn.close()
+    return out
+
+
 def get_meta(program_id: str, key: str) -> dict | None:
     for m in catalog(program_id, include_counts=False):
         if m["key"] == key:

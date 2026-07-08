@@ -152,6 +152,23 @@ def current_tpp(program_id: str = DEMO_PROGRAM_ID) -> dict:
     return {"version": ver, "params": params}
 
 
+def version_detail(program_id: str, version_number: int) -> dict:
+    """A specific TPP version's metadata + parameters (read-only history view)."""
+    conn = db.connect()
+    ver = conn.execute(
+        "SELECT * FROM tpp_versions WHERE program_id=? AND version=?",
+        (program_id, version_number),
+    ).fetchone()
+    if ver is None:
+        conn.close()
+        raise ValueError("version not found")
+    params = db.rows_to_dicts(conn.execute(
+        "SELECT * FROM tpp_params WHERE version_id=? ORDER BY id", (ver["id"],)
+    ).fetchall())
+    conn.close()
+    return {"version": dict(ver), "params": params}
+
+
 def add_param(program_id: str, spec: dict, justification: str) -> dict:
     """Add a new criterion to the TPP -> clones the active version's params and
     appends the new one, creating a NEW version. Justification required."""

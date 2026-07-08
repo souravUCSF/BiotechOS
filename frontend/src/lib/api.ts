@@ -71,6 +71,18 @@ export async function fetchMetrics(programId: string): Promise<MetricDef[]> {
   return res.json();
 }
 
+export type MoleculeValues = { molecule_id: number; name: string; values: Record<string, number | null> };
+
+export async function fetchMoleculeValues(keys: string[], programId: string): Promise<MoleculeValues[]> {
+  if (keys.length === 0) return [];
+  const res = await fetch(
+    `${API_BASE}/molecules/values?metrics=${encodeURIComponent(keys.join(","))}&program_id=${programId}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`GET /molecules/values failed: ${res.status}`);
+  return res.json();
+}
+
 export async function defineCustomMetric(
   body: {
     label: string;
@@ -273,6 +285,12 @@ export async function fetchCurrentTpp(programId: string): Promise<CurrentTpp> {
 export async function fetchTppVersions(programId: string): Promise<TppVersion[]> {
   const res = await fetch(`${API_BASE}/tpp/versions?program_id=${programId}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`GET /tpp/versions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchTppVersion(version: number, programId: string): Promise<CurrentTpp> {
+  const res = await fetch(`${API_BASE}/tpp/version/${version}?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /tpp/version failed: ${res.status}`);
   return res.json();
 }
 

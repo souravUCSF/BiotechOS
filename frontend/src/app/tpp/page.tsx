@@ -7,13 +7,14 @@ import { useAppState } from "@/lib/useAppState";
 import {
   fetchTppScores,
   fetchMetrics,
+  fetchMoleculeValues,
   defineCustomMetric,
   type TppScores,
   type MetricDef,
-  type Histogram,
+  type MoleculeValues,
 } from "@/lib/api";
 import { InteractiveHistogram } from "@/components/InteractiveHistogram";
-import { moleculeProperties } from "@/lib/properties";
+import { SparkDensity } from "@/components/SparkDensity";
 
 const STATUS_STYLE: Record<string, string> = {
   pass: "bg-emerald-600 text-white",
@@ -80,8 +81,18 @@ export default function MoleculeDatabasePage() {
   const [metric, setMetric] = useState<string>("assay:biochemical_ic50:TGTA");
   const [selectedBin, setSelectedBin] = useState<number | null>(null);
   const [binMemberIds, setBinMemberIds] = useState<number[]>([]);
-  const [hist, setHist] = useState<Histogram | null>(null);
   const [showDefine, setShowDefine] = useState(false);
+
+  // configurable table columns (persisted per program as the default view)
+  const DEFAULT_COLUMNS = [
+    "assay:biochemical_ic50:TGTA",
+    "assay:selectivity:TGTA/TGTB",
+    "assay:cellular_antiprolif:TGTA",
+  ];
+  const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
+  const [valueRows, setValueRows] = useState<MoleculeValues[]>([]);
+  const [showColPicker, setShowColPicker] = useState(false);
+  const colKey = `moldb.columns.${programId}`;
 
   const loadMetrics = useCallback(() => {
     fetchMetrics(programId).then(setMetrics).catch(() => setMetrics([]));
@@ -90,7 +101,54 @@ export default function MoleculeDatabasePage() {
   useEffect(() => {
     fetchTppScores(programId).then(setScores).catch(() => setScores(null));
     loadMetrics();
-  }, [programId, loadMetrics]);
+    // restore saved default view
+    try {
+      const saved = localStorage.getItem(colKey);
+      if (saved) setColumns(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, [programId, loadMetrics, colKey]);
+
+  // fetch the value matrix whenever the visible columns change
+  useEffect(() => {
+    fetchMoleculeValues(columns, programId).then(setValueRows).catch(() => setValueRows([]));
+  }, [columns, programId]);
+
+  const valuesByMol = useMemo(() => {
+    const m = new Map<number, Record<string, number | null>>();
+    valueRows.forEach((r) => m.set(r.molecule_id, r.values));
+    return m;
+  }, [valueRows]);
+
+  const metricLabel = useCallback(
+    (key: string) => metrics.find((mm) => mm.key === key)?.label ?? key,
+    [metrics],
+  );
+  const metricUnits = useCallback(
+    (key: string) => metrics.find((mm) => mm.key === key)?.units ?? "",
+    [metrics],
+  );
+
+  function addColumn(key: string) {
+    if (!columns.includes(key)) setColumns([...columns, key]);
+    setShowColPicker(false);
+  }
+  function removeColumn(key: string) {
+    setColumns(columns.filter((c) => c !== key));
+  }
+  function saveDefaultView() {
+    try { localStorage.setItem(colKey, JSON.stringify(columns)); } catch { /* ignore */ }
+    setFlashSaved(true);
+    setTimeout(() => setFlashSaved(false), 2500);
+  }
+  const [flashSaved, setFlashSaved] = useState(false);
+
+  const PRESETS: { name: string; cols: string[] }[] = [
+    { name: "Potency & selectivity", cols: DEFAULT_COLUMNS },
+    { name: "ADME / physchem", cols: ["adme:MW", "adme:cLogP", "adme:TPSA", "adme:QED"] },
+    { name: "In-vitro panel", cols: [
+      "assay:biochemical_ic50:TGTA", "assay:biochemical_ic50:TGTB",
+      "assay:cellular_antiprolif:TGTA", "assay:tox:*"] },
+  ];
 
   // reset filter when metric changes
   useEffect(() => {
@@ -102,14 +160,6 @@ export default function MoleculeDatabasePage() {
     () => new Map((scores?.molecules ?? []).map((m) => [m.molecule_id, m.status])),
     [scores],
   );
-  const valueById = useMemo(() => {
-    const m = new Map<number, number>();
-    (hist?.members ?? []).forEach((x) => m.set(x.molecule_id, x.value));
-    return m;
-  }, [hist]);
-
-  const metricDef = metrics.find((m) => m.key === metric);
-
   const rows = useMemo(() => {
     let mols = state?.molecules ?? [];
     if (selectedBin != null) {
@@ -138,6 +188,15 @@ export default function MoleculeDatabasePage() {
         Explore any property in the system. TPP criteria are shown up top; pick a bar in a
         histogram to filter the molecules below to that range.
       </p>
+
+      {/* at-a-glance density: where most molecules sit for each TPP criterion */}
+      {scores && scores.molecules[0] && (
+        <div className="mb-4 flex flex-wrap gap-x-8 gap-y-3 rounded border border-border bg-panel p-4">
+          {scores.molecules[0].params.map((p) => (
+            <SparkDensity key={p.param_id} metric={p.metric} label={p.label} />
+          ))}
+        </div>
+      )}
 
       {/* TPP snapshot */}
       {scores && scores.molecules[0] && (
@@ -195,42 +254,82 @@ export default function MoleculeDatabasePage() {
             metric={metric}
             selectedBin={selectedBin}
             onSelectBin={(bin, ids) => { setSelectedBin(bin); setBinMemberIds(ids); }}
-            onData={setHist}
             height={140}
           />
         </div>
       </div>
 
-      <div className="mb-2 text-sm text-inkMuted">
-        {selectedBin != null
-          ? `Showing ${rows.length} molecule${rows.length === 1 ? "" : "s"} in the selected range`
-          : `All ${rows.length} molecules`}
+      {/* table controls: default view presets + save */}
+      <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
+        <span className="text-inkMuted">
+          {selectedBin != null
+            ? `Showing ${rows.length} molecule${rows.length === 1 ? "" : "s"} in the selected range`
+            : `All ${rows.length} molecules`}
+        </span>
+        <span className="ml-auto text-xs text-inkMuted">Default view:</span>
+        <select
+          onChange={(e) => { const pr = PRESETS.find((x) => x.name === e.target.value); if (pr) setColumns(pr.cols); }}
+          value=""
+          className="rounded border border-borderStrong bg-panel px-2 py-1 text-xs"
+        >
+          <option value="" disabled>Presets…</option>
+          {PRESETS.map((pr) => <option key={pr.name} value={pr.name}>{pr.name}</option>)}
+        </select>
+        <button onClick={saveDefaultView}
+          className="rounded border border-borderStrong px-2 py-1 text-xs text-ink hover:bg-panel2">
+          {flashSaved ? "✓ Saved" : "Save as default"}
+        </button>
       </div>
 
-      <div className="overflow-x-auto rounded border border-border">
+      <div className="relative overflow-x-auto rounded border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-panel text-inkMuted">
+          <thead className="bg-panel2 text-inkMuted">
             <tr>
-              <th className="px-3 py-2">Compound</th>
-              <th className="px-3 py-2">{metricDef?.label ?? "Property"}</th>
-              <th className="px-3 py-2">TGTA IC50</th>
-              <th className="px-3 py-2">Selectivity</th>
-              <th className="px-3 py-2">TPP status</th>
+              <th className="px-3 py-2 font-medium">Compound</th>
+              {columns.map((key) => (
+                <th key={key} className="group px-3 py-2 font-medium">
+                  <span className="inline-flex items-center gap-1">
+                    {metricLabel(key)}
+                    <button
+                      onClick={() => removeColumn(key)}
+                      title="Remove column"
+                      className="text-inkFaint opacity-0 group-hover:opacity-100 hover:text-red-600"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </th>
+              ))}
+              <th className="px-3 py-2">
+                <button
+                  onClick={() => setShowColPicker((s) => !s)}
+                  className="rounded border border-borderStrong px-2 py-0.5 text-xs text-ink hover:bg-panel"
+                  title="Add a column from the database"
+                >
+                  + Column
+                </button>
+              </th>
+              <th className="px-3 py-2 font-medium">TPP status</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((mo) => {
-              const props = moleculeProperties(mo);
-              const val = valueById.get(mo.id);
               const status = statusById.get(mo.id) ?? "no_data";
+              const vals = valuesByMol.get(mo.id) ?? {};
               return (
                 <tr key={mo.id} className="border-t border-border hover:bg-panel2/60">
                   <td className="px-3 py-2 font-medium">
                     <Link href={`/molecules/${mo.id}`} className="hover:text-emerald-700">{mo.name}</Link>
                   </td>
-                  <td className="px-3 py-2 font-mono">{val != null ? `${fmt(val)}${metricDef?.units ?? ""}` : "—"}</td>
-                  <td className="px-3 py-2 font-mono">{fmt(props.tgta_ic50)}nM</td>
-                  <td className="px-3 py-2 font-mono">{fmt(props.selectivity)}x</td>
+                  {columns.map((key) => {
+                    const v = vals[key];
+                    return (
+                      <td key={key} className="px-3 py-2 font-mono">
+                        {v != null ? `${fmt(v)}${metricUnits(key)}` : "—"}
+                      </td>
+                    );
+                  })}
+                  <td />
                   <td className="px-3 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs ${STATUS_STYLE[status]}`}>
                       {status === "pass" ? "MEETS TPP" : status.toUpperCase()}
@@ -241,6 +340,20 @@ export default function MoleculeDatabasePage() {
             })}
           </tbody>
         </table>
+
+        {/* column picker popover */}
+        {showColPicker && (
+          <div className="absolute right-2 top-10 z-20 max-h-80 w-72 overflow-y-auto rounded border border-borderStrong bg-panel p-2 shadow-lg">
+            <div className="mb-1 px-1 text-xs font-medium text-inkMuted">Add a column</div>
+            {metrics.filter((m) => !columns.includes(m.key)).map((m) => (
+              <button key={m.key} onClick={() => addColumn(m.key)}
+                className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm hover:bg-panel2">
+                <span>{m.label}</span>
+                <span className="text-xs text-inkFaint">{m.count ?? 0}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

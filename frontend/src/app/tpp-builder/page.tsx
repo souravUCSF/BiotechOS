@@ -12,6 +12,7 @@ import {
 import { TppParamModal } from "@/components/TppParamModal";
 import { TppBuilderDialog } from "@/components/TppBuilderDialog";
 import { TppAddCriterion } from "@/components/TppAddCriterion";
+import { TppVersionModal } from "@/components/TppVersionModal";
 
 const fmt = (v: number, u: string | null) =>
   `${v >= 1000 ? (v / 1000).toFixed(1) + "k" : v}${u ?? ""}`;
@@ -23,6 +24,7 @@ export default function TppPage() {
   const [selected, setSelected] = useState<TppParam | null>(null);
   const [building, setBuilding] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -119,20 +121,22 @@ export default function TppPage() {
           <h2 className="mb-2 text-sm font-semibold text-ink">Version history</h2>
           <ol className="space-y-2">
             {versions.map((v) => (
-              <li
-                key={v.id}
-                className="rounded border border-border bg-panel p-3 text-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">
-                    v{v.version}{" "}
-                    {v.active ? (
-                      <span className="ml-1 rounded bg-emerald-700 px-1.5 py-0.5 text-xs text-white">active</span>
-                    ) : null}
-                  </span>
-                  <span className="text-xs text-inkMuted">{v.created_at} · {v.author}</span>
-                </div>
-                {v.notes && <p className="mt-1 text-xs text-inkMuted">{v.notes}</p>}
+              <li key={v.id}>
+                <button
+                  onClick={() => setViewVersion(v.version)}
+                  className="block w-full rounded border border-border bg-panel p-3 text-left text-sm hover:border-borderStrong hover:bg-panel2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">
+                      v{v.version}{" "}
+                      {v.active ? (
+                        <span className="ml-1 rounded bg-emerald-600 px-1.5 py-0.5 text-xs text-white">active</span>
+                      ) : null}
+                    </span>
+                    <span className="text-xs text-inkMuted">{v.created_at} · {v.author} · view →</span>
+                  </div>
+                  {v.notes && <p className="mt-1 text-xs text-inkMuted">{v.notes}</p>}
+                </button>
               </li>
             ))}
           </ol>
@@ -151,6 +155,9 @@ export default function TppPage() {
           onClose={() => setAdding(false)}
           onVersioned={onVersioned}
         />
+      )}
+      {viewVersion != null && (
+        <TppVersionModal version={viewVersion} onClose={() => setViewVersion(null)} />
       )}
     </div>
   );

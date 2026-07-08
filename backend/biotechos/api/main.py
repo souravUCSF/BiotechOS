@@ -240,6 +240,14 @@ class CustomMetricRequest(BaseModel):
     program_id: str = DEMO_PROGRAM_ID
 
 
+@app.get("/molecules/values")
+def molecules_values(metrics: str = Query(...), program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Value matrix (molecule × requested metric keys) for the configurable table."""
+    from ..engine import metrics as metrics_engine
+    keys = [k for k in metrics.split(",") if k]
+    return metrics_engine.values_table(program_id, keys)
+
+
 @app.post("/metrics/custom")
 def metrics_define(req: CustomMetricRequest):
     """Define a new molecule property (may have no data yet)."""
@@ -258,6 +266,14 @@ def tpp_current(program_id: str = Query(default=DEMO_PROGRAM_ID)):
 @app.get("/tpp/versions")
 def tpp_versions(program_id: str = Query(default=DEMO_PROGRAM_ID)):
     return tpp_engine.list_versions(program_id)
+
+
+@app.get("/tpp/version/{version_number}")
+def tpp_version_detail(version_number: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    try:
+        return tpp_engine.version_detail(program_id, version_number)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 class UpdateParamRequest(BaseModel):
