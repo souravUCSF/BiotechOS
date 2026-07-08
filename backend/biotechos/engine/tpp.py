@@ -6,12 +6,13 @@ line" moment the Tracker highlights).
 """
 from __future__ import annotations
 
-import statistics
+import math
 from dataclasses import dataclass
 from enum import Enum
 
 from ..config import DEMO_PROGRAM_ID
 from ..state import db
+from . import metrics
 
 
 class Status(str, Enum):
@@ -34,47 +35,22 @@ class ParamScore:
     units: str | None
 
 
-# metric -> (modality, target) lookup used to pull a molecule's value for a param
-METRIC_SOURCES = {
-    "tgta_biochemical_ic50_nm": ("biochemical_ic50", "TGTA"),
-    "egfr_biochemical_ic50_nm": ("biochemical_ic50", "TGTB"),
-    "cellular_antiprolif_ic50_nm": ("cellular_antiprolif", "TGTA"),
-    "selectivity_fold": ("selectivity", None),
-    "adme_clearance": ("adme", None),
-    "tox_flag": ("tox", None),
-    "xenograft_tgi": ("xenograft", None),
-}
-
 DEFAULT_TPP = [
     # axis, label, metric, operator, threshold, units, weight, rationale
-    ("potency", "TGTA biochemical potency", "tgta_biochemical_ic50_nm", "<", 100.0, "nM", 1.5,
+    ("potency", "TGTA biochemical potency", "assay:biochemical_ic50:TGTA", "<", 100.0, "nM", 1.5,
      "Sub-100nM biochemical IC50 vs TGTA is required to clear the kinase-inhibition bar for a "
      "TGTA-directed candidate; observed demo distribution splits cleanly here."),
-    ("selectivity", "TGTA vs TGTB selectivity", "selectivity_fold", ">", 3.0, "x", 1.2,
+    ("selectivity", "TGTA vs TGTB selectivity", "assay:selectivity:TGTA/TGTB", ">", 3.0, "x", 1.2,
      "TGTB off-target inhibition drives dermatologic/GI toxicity in the clinic (see TGTB-TKI class "
      "effects); a >3x TGTA-over-TGTB window meaningfully de-risks this liability while remaining "
      "achievable for a differentiated candidate."),
-    ("cellular", "Cellular anti-proliferation", "cellular_antiprolif_ic50_nm", "<", 200.0, "nM", 1.0,
+    ("cellular", "Cellular anti-proliferation", "assay:cellular_antiprolif:TGTA", "<", 200.0, "nM", 1.0,
      "Biochemical potency must translate to cell-based activity in TGTA+ lines to be credible."),
 ]
 
 
-def _molecule_value(conn, molecule_id: int, metric: str) -> float | None:
-    modality, target = METRIC_SOURCES.get(metric, (None, None))
-    if modality is None:
-        return None
-    if target:
-        rows = conn.execute(
-            "SELECT value FROM assays WHERE molecule_id=? AND modality=? AND target=?",
-            (molecule_id, modality, target),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT value FROM assays WHERE molecule_id=? AND modality=?",
-            (molecule_id, modality),
-        ).fetchall()
-    vals = [r["value"] for r in rows if r["value"] is not None]
-    return statistics.median(vals) if vals else None
+def _molecule_value(conn, molecule_id: int, metric: str, program_id: str = DEMO_PROGRAM_ID) -> float | None:
+    return metrics.resolve(conn, program_id, molecule_id, metric)
 
 
 def _status_for(value: float | None, operator: str, threshold: float, near_frac: float) -> Status:
@@ -207,10 +183,11 @@ def update_param(program_id: str, param_id: int, changes: dict, justification: s
     return {"new_version": ver["version"], "notes_recorded": justification.strip()}
 
 
-def score_molecule(conn, molecule_id: int, params: list[dict]) -> list[ParamScore]:
+def score_molecule(conn, molecule_id: int, params: list[dict],
+                   program_id: str = DEMO_PROGRAM_ID) -> list[ParamScore]:
     out = []
     for p in params:
-        value = _molecule_value(conn, molecule_id, p["metric"])
+        value = _molecule_value(conn, molecule_id, p["metric"], program_id)
         status = _status_for(value, p["operator"], p["threshold"], p["near_frac"])
         out.append(ParamScore(
             param_id=p["id"], label=p["label"], axis=p["axis"], metric=p["metric"],
@@ -249,7 +226,7 @@ def recompute(program_id: str = DEMO_PROGRAM_ID) -> dict:
     results = {}
     meets_tpp = []
     for m in molecules:
-        scores = score_molecule(conn, m["id"], params)
+        scores = score_molecule(conn, m["id"], params, program_id)
         status = overall_status(scores)
         results[m["id"]] = {
             "molecule_id": m["id"], "name": m["name"], "status": status.value,
@@ -267,55 +244,57 @@ def recompute(program_id: str = DEMO_PROGRAM_ID) -> dict:
     return {"molecules": list(results.values()), "meets_tpp": meets_tpp}
 
 
-import math
-
-# metrics that span orders of magnitude read far better on a log axis
-_LOG_METRICS = {
-    "tgta_biochemical_ic50_nm", "egfr_biochemical_ic50_nm",
-    "cellular_antiprolif_ic50_nm", "selectivity_fold",
-}
-
-
 def population_histogram(metric: str, program_id: str = DEMO_PROGRAM_ID, bins: int = 12) -> dict:
-    """All-molecule distribution for a metric, for the Tracker's per-parameter histogram.
-    Uses log-spaced bins for concentration/ratio metrics that span decades."""
+    """All-molecule distribution for ANY catalog metric. Uses log-spaced bins for
+    metrics flagged log in the catalog. Includes each molecule's bin index so the
+    UI can click a bar to filter. Overlays the TPP threshold if this metric is a
+    criterion in the active version."""
     conn = db.connect()
     molecules = conn.execute(
-        "SELECT id FROM molecules WHERE program_id=? AND held_out=0", (program_id,)
+        "SELECT id, name FROM molecules WHERE program_id=? AND held_out=0", (program_id,)
     ).fetchall()
     ver = active_version(conn, program_id)
     param = conn.execute(
         "SELECT threshold, operator, units FROM tpp_params WHERE version_id=? AND metric=?",
         (ver["id"] if ver else -1, metric),
     ).fetchone()
-    values = []
+    meta = metrics.get_meta(program_id, metric) or {}
+
+    pairs = []  # (molecule_id, name, value)
     for m in molecules:
-        v = _molecule_value(conn, m["id"], metric)
+        v = _molecule_value(conn, m["id"], metric, program_id)
         if v is not None:
-            values.append(v)
+            pairs.append((m["id"], m["name"], v))
     conn.close()
 
+    units = (param["units"] if param else None) or meta.get("units")
     result = {"metric": metric, "counts": [], "edges": [], "log_scale": False,
               "threshold": param["threshold"] if param else None,
               "operator": param["operator"] if param else None,
-              "units": param["units"] if param else None}
-    if not values:
+              "units": units, "members": []}
+    if not pairs:
         return result
 
-    use_log = metric in _LOG_METRICS and min(values) > 0
+    values = [v for _, _, v in pairs]
+    use_log = bool(meta.get("log")) and min(values) > 0
     result["log_scale"] = use_log
     xs = [math.log10(v) for v in values] if use_log else list(values)
     lo, hi = min(xs), max(xs)
     if lo == hi:
+        result["members"] = [{"molecule_id": mid, "name": n, "value": v, "bin": 0}
+                             for (mid, n, v) in pairs]
         edges = [10 ** lo, 10 ** hi] if use_log else [lo, hi]
         return {**result, "counts": [len(values)], "edges": edges}
 
     width = (hi - lo) / bins
     counts = [0] * bins
-    for x in xs:
-        counts[min(int((x - lo) / width), bins - 1)] += 1
+    members = []
+    for (mid, n, v), x in zip(pairs, xs):
+        b = min(int((x - lo) / width), bins - 1)
+        counts[b] += 1
+        members.append({"molecule_id": mid, "name": n, "value": v, "bin": b})
     edges = [(10 ** (lo + i * width)) if use_log else (lo + i * width) for i in range(bins + 1)]
-    return {**result, "counts": counts, "edges": edges}
+    return {**result, "counts": counts, "edges": edges, "members": members}
 
 
 if __name__ == "__main__":

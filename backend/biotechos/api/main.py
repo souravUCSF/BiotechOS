@@ -219,6 +219,33 @@ def tpp_histogram(metric: str, program_id: str = Query(default=DEMO_PROGRAM_ID))
     return tpp_engine.population_histogram(metric, program_id)
 
 
+@app.get("/metrics")
+def metrics_catalog(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """All available molecule properties (assay + ADME + custom), with data counts."""
+    from ..engine import metrics as metrics_engine
+    return metrics_engine.catalog(program_id)
+
+
+class CustomMetricRequest(BaseModel):
+    label: str
+    units: str = ""
+    log: bool = False
+    higher_is_better: bool = False
+    target: str = "TGTA"
+    modality: str | None = None
+    description: str | None = None
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/metrics/custom")
+def metrics_define(req: CustomMetricRequest):
+    """Define a new molecule property (may have no data yet)."""
+    from ..engine import metrics as metrics_engine
+    return metrics_engine.define_custom(
+        req.program_id, req.label, req.units, req.log, req.higher_is_better,
+        req.target, req.modality, req.description)
+
+
 @app.get("/tpp/current")
 def tpp_current(program_id: str = Query(default=DEMO_PROGRAM_ID)):
     """The active TPP version + its parameters (for the TPP page)."""
@@ -276,7 +303,7 @@ def tpp_builder_greeting():
 @app.post("/tpp/builder/chat")
 def tpp_builder_chat(req: TppChatRequest):
     msgs = [{"role": m.role, "content": m.content} for m in req.messages]
-    return tpp_builder.chat(msgs, api_key=req.api_key)
+    return tpp_builder.chat(msgs, api_key=req.api_key, program_id=req.program_id)
 
 
 @app.post("/tpp/builder/finalize")

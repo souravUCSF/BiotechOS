@@ -10,16 +10,13 @@ from pydantic import BaseModel, Field
 
 from ..config import DEMO_PROGRAM_ID, MODEL_TPP_BUILDER
 from ..state import db
-from . import llm, tpp
-
-# Metrics the scoring engine knows how to read (must match tpp.METRIC_SOURCES)
-ALLOWED_METRICS = list(tpp.METRIC_SOURCES.keys())
+from . import llm, metrics, tpp
 
 
 class TppParamSpec(BaseModel):
     axis: str = Field(description="short axis name, e.g. potency, selectivity, cellular, adme, tox")
     label: str = Field(description="human-readable parameter label")
-    metric: str = Field(description=f"one of: {', '.join(ALLOWED_METRICS)}")
+    metric: str = Field(description="the metric key this scores, from the catalog provided")
     operator: str = Field(description="'<' if lower is better, '>' if higher is better")
     threshold: float = Field(description="the go/no-go threshold value in the metric's units")
     units: str
@@ -31,19 +28,31 @@ class TppSpec(BaseModel):
     params: list[TppParamSpec]
 
 
-SYSTEM = """You are the TPP (Target Product Profile) builder inside BiotechOS, an \
-operating system for preclinical drug programs. You design a rigorous, executable \
-TPP: a small set of quantitative go/no-go criteria a molecule must meet to advance.
+def _catalog_lines(program_id: str) -> str:
+    lines = []
+    for m in metrics.catalog(program_id):
+        n = m.get("count", 0)
+        lines.append(f"  {m['key']} — {m['label']} ({m['units'] or 'unitless'}; "
+                     f"{'higher better' if m['higher_is_better'] else 'lower better'}; "
+                     f"data on {n} molecules)")
+    return "\n".join(lines)
 
-Rules:
-- Only use these metrics (the scoring engine can read no others): {metrics}.
-- Each parameter needs an operator ('<' means lower is better, '>' means higher is better), \
-a numeric threshold in sensible units, a weight (0.5-2.0), and a rationale grounded in \
-biology, the competitive bar, or known class liabilities.
-- Prefer 3-5 parameters spanning potency, selectivity, cellular activity, and (where relevant) ADME/tox.
-- Thresholds should be ambitious but achievable for a best-in-class candidate.""".format(
-    metrics=", ".join(ALLOWED_METRICS)
-)
+
+def _system(program_id: str) -> str:
+    return (
+        "You are the TPP (Target Product Profile) builder inside BiotechOS, an operating "
+        "system for preclinical drug programs. You design a rigorous, executable TPP: a small "
+        "set of quantitative go/no-go criteria a molecule must meet to advance.\n\n"
+        "Available metrics (use the exact `key`; the scoring engine reads only these):\n"
+        f"{_catalog_lines(program_id)}\n\n"
+        "Rules:\n"
+        "- Each parameter needs an operator ('<' lower is better, '>' higher is better), a numeric "
+        "threshold in the metric's units, a weight (0.5-2.0), and a rationale grounded in biology, "
+        "the competitive bar, or known class liabilities.\n"
+        "- Prefer 3-6 parameters spanning potency, selectivity, cellular activity, and (where "
+        "relevant) ADME/tox. You may use any metric above, including ones with sparse data.\n"
+        "- Thresholds should be ambitious but achievable for a best-in-class candidate."
+    )
 
 
 def _default_spec() -> TppSpec:
@@ -60,7 +69,7 @@ def build(brief: str, program_id: str = DEMO_PROGRAM_ID,
     fallback = _default_spec()
     spec, used_llm = llm.structured(
         model=MODEL_TPP_BUILDER,
-        system=SYSTEM,
+        system=_system(program_id),
         user=f"Program brief:\n{brief}\n\nDesign the TPP.",
         schema=TppSpec,
         fallback=fallback,
@@ -68,8 +77,9 @@ def build(brief: str, program_id: str = DEMO_PROGRAM_ID,
         api_key=api_key,
     )
 
-    # keep only params whose metric the engine can score
-    valid = [p for p in spec.params if p.metric in tpp.METRIC_SOURCES]
+    # keep only params whose metric exists in the catalog (any real or custom property)
+    valid_keys = {m["key"] for m in metrics.catalog(program_id, include_counts=False)}
+    valid = [p for p in spec.params if p.metric in valid_keys]
     if not valid:
         valid = fallback.params
 
@@ -94,21 +104,21 @@ def build(brief: str, program_id: str = DEMO_PROGRAM_ID,
     }
 
 
-CHAT_SYSTEM = """You are the TPP Builder agent inside BiotechOS, guiding a biotech \
-founder through designing an effective Target Product Profile for their program in a \
-conversation. A TPP is a small set of quantitative go/no-go criteria a molecule must meet \
-to advance.
-
-Your job: ask focused questions and give expert guidance to arrive at a rigorous, \
-achievable TPP. Cover potency, selectivity (especially anti-target liabilities), cellular \
-translation, and ADME/tox where relevant. Ground thresholds in the competitive bar and \
-known class effects. Be concise and consultative — one or two questions at a time, not a \
-wall of text. When you and the user have converged, tell them they can click \
-"Create this TPP" to finalize it into a new version.
-
-The scoring engine can only use these metrics, so steer the TPP toward them: {metrics}.""".format(
-    metrics=", ".join(ALLOWED_METRICS)
-)
+def _chat_system(program_id: str) -> str:
+    return (
+        "You are the TPP Builder agent inside BiotechOS, guiding a biotech founder through "
+        "designing an effective Target Product Profile for their program in a conversation. A TPP "
+        "is a small set of quantitative go/no-go criteria a molecule must meet to advance.\n\n"
+        "Your job: ask focused questions and give expert guidance to arrive at a rigorous, "
+        "achievable TPP. Cover potency, selectivity (especially anti-target liabilities), cellular "
+        "translation, and ADME/tox where relevant. Ground thresholds in the competitive bar and "
+        "known class effects. Be concise and consultative — one or two questions at a time, not a "
+        "wall of text. When you and the user have converged, tell them they can click "
+        "\"Create this TPP\" to finalize it into a new version.\n\n"
+        "The scoring engine reads these metrics (steer the TPP toward them; you may use any, "
+        "including sparse ones, and can suggest the user define a new property if needed):\n"
+        f"{_catalog_lines(program_id)}"
+    )
 
 GREETING = (
     "Let's design the TPP for the TGTA program. The current v1 sets TGTA biochemical "
@@ -120,7 +130,8 @@ GREETING = (
 )
 
 
-def chat(messages: list[dict], api_key: str | None = None) -> dict:
+def chat(messages: list[dict], api_key: str | None = None,
+         program_id: str = DEMO_PROGRAM_ID) -> dict:
     """One turn of the conversational builder. `messages` = prior turns
     [{role, content}]. Returns the assistant reply + whether a live model was used."""
     fallback = (
@@ -132,7 +143,7 @@ def chat(messages: list[dict], api_key: str | None = None) -> dict:
         "\"Create this TPP\" to finalize."
     )
     reply, used_llm = llm.chat(
-        model=MODEL_TPP_BUILDER, system=CHAT_SYSTEM, messages=messages,
+        model=MODEL_TPP_BUILDER, system=_chat_system(program_id), messages=messages,
         fallback=fallback, max_tokens=1024, api_key=api_key,
     )
     return {"reply": reply, "used_llm": used_llm}

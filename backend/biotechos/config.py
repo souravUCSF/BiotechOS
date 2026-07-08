@@ -1,8 +1,28 @@
 """Central paths and constants."""
+import os
 from pathlib import Path
 
 # repo_root/backend/biotechos/config.py -> repo_root
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_secrets() -> None:
+    """Load KEY=VALUE lines from backend/secrets.env into the environment (if not
+    already set). This file is gitignored — paste local keys there."""
+    secrets = REPO_ROOT / "backend" / "secrets.env"
+    if not secrets.exists():
+        return
+    for line in secrets.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip().strip('"').strip("'")
+        if val and not os.environ.get(key):
+            os.environ[key] = val
+
+
+_load_secrets()
 DATA_DIR = REPO_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 CURATED_DIR = DATA_DIR / "curated"

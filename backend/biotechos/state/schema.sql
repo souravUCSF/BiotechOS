@@ -80,6 +80,23 @@ CREATE TABLE IF NOT EXISTS tpp_params (
 CREATE INDEX IF NOT EXISTS idx_tpp_program ON tpp_params(program_id);
 CREATE INDEX IF NOT EXISTS idx_tpp_version ON tpp_params(version_id);
 
+-- User-defined molecule properties (metrics) — may have no data yet; data
+-- arrives later via CRO assays matching (modality, target).
+CREATE TABLE IF NOT EXISTS custom_metrics (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id  TEXT NOT NULL REFERENCES programs(id),
+    key         TEXT NOT NULL,          -- e.g. assay:nanobret_ec50:TGTA
+    label       TEXT NOT NULL,
+    modality    TEXT,
+    target      TEXT,
+    units       TEXT,
+    log         INTEGER DEFAULT 0,
+    higher_is_better INTEGER DEFAULT 0,
+    description TEXT,
+    created_at  TEXT DEFAULT (datetime('now')),
+    UNIQUE(program_id, key)
+);
+
 CREATE TABLE IF NOT EXISTS tasks (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     program_id   TEXT NOT NULL REFERENCES programs(id),

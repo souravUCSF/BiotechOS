@@ -19,3 +19,7 @@ __pycache__/
 frontend/node_modules/
 frontend/.next/
 .claude/settings.local.json
+
+# Local secrets — never commit
+backend/secrets.env
+.env
