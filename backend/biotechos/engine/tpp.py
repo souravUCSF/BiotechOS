@@ -152,6 +152,36 @@ def current_tpp(program_id: str = DEMO_PROGRAM_ID) -> dict:
     return {"version": ver, "params": params}
 
 
+def add_param(program_id: str, spec: dict, justification: str) -> dict:
+    """Add a new criterion to the TPP -> clones the active version's params and
+    appends the new one, creating a NEW version. Justification required."""
+    if not justification or not justification.strip():
+        raise ValueError("a written justification is required to change the TPP")
+    if not spec.get("metric") or spec.get("threshold") is None:
+        raise ValueError("a metric and threshold are required")
+    conn = db.connect()
+    params = _active_params(conn, program_id)
+    new_params = [{k: p[k] for k in ("axis", "label", "metric", "operator", "threshold",
+                                     "near_frac", "units", "weight", "rationale")} for p in params]
+    new_params.append({
+        "axis": spec.get("axis", "custom"),
+        "label": spec.get("label") or spec["metric"],
+        "metric": spec["metric"],
+        "operator": spec.get("operator", "<"),
+        "threshold": float(spec["threshold"]),
+        "near_frac": 0.5,
+        "units": spec.get("units", ""),
+        "weight": float(spec.get("weight", 1.0)),
+        "rationale": spec.get("rationale") or "",
+    })
+    with conn:
+        ver = _create_version(conn, program_id, new_params,
+                              notes=f"Added criterion “{new_params[-1]['label']}”. "
+                                    f"Justification: {justification.strip()}")
+    conn.close()
+    return {"new_version": ver["version"]}
+
+
 def update_param(program_id: str, param_id: int, changes: dict, justification: str) -> dict:
     """Edit one parameter -> clone the active version's params into a NEW version
     with the change applied. Requires a justification (recorded on the version)."""

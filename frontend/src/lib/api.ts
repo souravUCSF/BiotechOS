@@ -291,6 +291,20 @@ export async function updateTppParam(
   return res.json();
 }
 
+export async function addTppParam(
+  spec: Record<string, unknown>,
+  justification: string,
+  programId: string,
+): Promise<{ new_version: number }> {
+  const res = await fetch(`${API_BASE}/tpp/param/add`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spec, justification, program_id: programId }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? `add failed: ${res.status}`);
+  return res.json();
+}
+
 export async function tppBuilderGreeting(): Promise<string> {
   const res = await fetch(`${API_BASE}/tpp/builder/greeting`, { cache: "no-store" });
   return (await res.json()).greeting;

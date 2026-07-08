@@ -275,6 +275,21 @@ def tpp_update_param(param_id: int, req: UpdateParamRequest):
         raise HTTPException(400, str(e))
 
 
+class AddParamRequest(BaseModel):
+    spec: dict
+    justification: str
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/tpp/param/add")
+def tpp_add_param(req: AddParamRequest):
+    """Add a new criterion to the TPP -> creates a new version."""
+    try:
+        return tpp_engine.add_param(req.program_id, req.spec, req.justification)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 class BuildTppRequest(BaseModel):
     brief: str
     program_id: str = DEMO_PROGRAM_ID
