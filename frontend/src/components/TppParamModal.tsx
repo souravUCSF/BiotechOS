@@ -20,6 +20,7 @@ export function TppParamModal({
   const [justification, setJustification] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
 
   const changed =
     operator !== param.operator || Number(threshold) !== param.threshold;
@@ -73,8 +74,16 @@ export function TppParamModal({
         </div>
 
         <div className="rounded border border-border bg-panel p-4">
-          <div className="mb-3 text-sm font-medium">Change this criterion</div>
-          <div className="mb-3 flex items-center gap-2 text-sm">
+          <button
+            onClick={() => setShowEdit((s) => !s)}
+            className="flex w-full items-center justify-between text-sm font-medium"
+          >
+            <span>Change this criterion</span>
+            <span className="text-inkFaint">{showEdit ? "▲" : "▼"}</span>
+          </button>
+          {showEdit && (
+          <>
+          <div className="mb-3 mt-3 flex items-center gap-2 text-sm">
             <select
               value={operator}
               onChange={(e) => setOperator(e.target.value)}
@@ -119,6 +128,8 @@ export function TppParamModal({
             </button>
             {!changed && <span className="text-xs text-inkFaint">No change yet</span>}
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

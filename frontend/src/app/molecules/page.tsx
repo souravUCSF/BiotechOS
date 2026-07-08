@@ -7,8 +7,8 @@ import { useProgram } from "@/lib/ProgramContext";
 import { useAppState } from "@/lib/useAppState";
 import { fetchTppScores, type TppScores } from "@/lib/api";
 import { Structure3D } from "@/components/Structure3D";
-import { AdmePanel } from "@/components/AdmePanel";
 import { PropertyScatter } from "@/components/PropertyScatter";
+import { MoleculeDashboardConfig, CARD_FIELD_OPTIONS } from "@/components/MoleculeDashboardConfig";
 import { moleculeProperties } from "@/lib/properties";
 import type { Molecule } from "@/lib/types";
 
@@ -17,9 +17,18 @@ const fmt = (v: number | null) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(1);
 
 const STATUS_RANK = { pass: 0, near: 1, fail: 2, no_data: 3 } as Record<string, number>;
+const DEFAULT_CARD_FIELDS = ["tgta_ic50", "selectivity", "cell_ic50", "QED"];
 
-function AdvancingCard({ mol, status }: { mol: Molecule; status: string }) {
+function AdvancingCard({ mol, status, cardFields }: { mol: Molecule; status: string; cardFields: string[] }) {
   const p = moleculeProperties(mol);
+  const [flipped, setFlipped] = useState(false);
+
+  const fieldOf = (key: string) => {
+    const opt = CARD_FIELD_OPTIONS.find((f) => f.key === key);
+    const v = (p as Record<string, number | null>)[key];
+    return { label: opt?.label ?? key, value: v == null ? "—" : `${fmt(v)}${opt?.units ?? ""}` };
+  };
+
   return (
     <div className="rounded border border-border bg-panel p-4">
       <div className="mb-2 flex items-center justify-between">
@@ -38,24 +47,51 @@ function AdvancingCard({ mol, status }: { mol: Molecule; status: string }) {
           {status === "pass" ? "MEETS TPP" : status.toUpperCase()}
         </span>
       </div>
-      <Structure3D moleculeId={mol.id} />
-      <div className="mt-2 flex justify-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`${API_BASE}/molecule/${mol.id}/structure2d`}
-          alt={`${mol.name} 2D`}
-          className="h-24"
-        />
+
+      {/* flip card: 2D chemical structure (front) ⇄ 3D protein co-fold (back) */}
+      <div style={{ perspective: "1200px" }}>
+        <div
+          className="relative h-72 transition-transform duration-500"
+          style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "none" }}
+        >
+          {/* FRONT — chemical structure, prominent */}
+          <div className="absolute inset-0 flex flex-col" style={{ backfaceVisibility: "hidden" }}>
+            <button
+              onClick={() => setFlipped(true)}
+              title="Click to flip to the 3D protein co-fold"
+              className="flex flex-1 items-center justify-center overflow-hidden rounded border border-border bg-white"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`${API_BASE}/molecule/${mol.id}/structure2d`} alt={`${mol.name} 2D`} className="max-h-full max-w-full" />
+            </button>
+            <div className="mt-1 text-center text-[10px] text-inkFaint">
+              click structure → flip to 3D docking
+            </div>
+          </div>
+          {/* BACK — Boltz-docked protein structure */}
+          <div
+            className="absolute inset-0 flex flex-col"
+            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          >
+            <button onClick={() => setFlipped(false)} className="flex-1 cursor-pointer" title="Click to flip back">
+              <Structure3D moleculeId={mol.id} className="h-full" />
+            </button>
+            <div className="mt-1 text-center text-[10px] text-inkFaint">click to flip back to structure</div>
+          </div>
+        </div>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-ink">
-        <div>TGTA IC50: <span className="font-mono">{fmt(p.tgta_ic50)}nM</span></div>
-        <div>Selectivity: <span className="font-mono">{fmt(p.selectivity)}x</span></div>
-        <div>Cellular: <span className="font-mono">{fmt(p.cell_ic50)}nM</span></div>
-        <div>QED: <span className="font-mono">{p.QED ?? "—"}</span></div>
-      </div>
-      <div className="mt-3">
-        <AdmePanel adme={mol.adme} />
-      </div>
+
+      {/* configurable data fields */}
+      {cardFields.length > 0 && (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-ink">
+          {cardFields.map((key) => {
+            const f = fieldOf(key);
+            return (
+              <div key={key}>{f.label}: <span className="font-mono">{f.value}</span></div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -65,10 +101,22 @@ export default function MoleculesPage() {
   const router = useRouter();
   const { state } = useAppState();
   const [scores, setScores] = useState<TppScores | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
+  const [cardFields, setCardFields] = useState<string[]>(DEFAULT_CARD_FIELDS);
+  const cfKey = `moldash.cardFields.${programId}`;
 
   useEffect(() => {
     fetchTppScores(programId).then(setScores).catch(() => setScores(null));
-  }, [programId]);
+    try {
+      const saved = localStorage.getItem(cfKey);
+      if (saved) setCardFields(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, [programId, cfKey]);
+
+  function updateCardFields(fields: string[]) {
+    setCardFields(fields);
+    try { localStorage.setItem(cfKey, JSON.stringify(fields)); } catch { /* ignore */ }
+  }
 
   if (!state) return <p className="text-inkMuted">Loading…</p>;
 
@@ -90,7 +138,20 @@ export default function MoleculesPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-semibold">Molecule Tracking Dashboard</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-semibold">Molecule Tracking Dashboard</h1>
+        <button
+          onClick={() => setShowConfig(true)}
+          title="Dashboard configuration"
+          className="text-inkMuted hover:text-ink"
+          aria-label="Dashboard configuration"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </div>
       <p className="mb-6 text-sm text-inkMuted">
         {state.molecules.length} active molecules · {state.program.target} vs.{" "}
         {state.program.anti_target}
@@ -103,9 +164,18 @@ export default function MoleculesPage() {
             key={mol.id}
             mol={mol}
             status={statusById.get(mol.id) ?? "no_data"}
+            cardFields={cardFields}
           />
         ))}
       </div>
+
+      {showConfig && (
+        <MoleculeDashboardConfig
+          cardFields={cardFields}
+          onCardFields={updateCardFields}
+          onClose={() => setShowConfig(false)}
+        />
+      )}
 
       <h2 className="mb-3 text-sm font-semibold text-ink">
         Compare all molecules — any property vs. any property

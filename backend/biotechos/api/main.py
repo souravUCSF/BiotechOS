@@ -158,24 +158,41 @@ def molecule_structure2d(molecule_id: int):
 
 
 @app.get("/molecule/{molecule_id}/structure3d", response_class=PlainTextResponse)
-def molecule_structure3d(molecule_id: int):
+def molecule_structure3d(molecule_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
     """PDB text for the molecule's structure — a real Boltz co-fold once folded,
-    otherwise the TGTA reference placeholder (REF1). `X-Structure-Placeholder`
-    header + `X-Structure-Label` tell the UI which it is."""
-    result = structure_engine.get_cached_structure(molecule_id)
+    otherwise the program's configured reference PDB. `X-Structure-Placeholder`
+    + `X-Structure-Label` headers tell the UI which it is."""
+    result = structure_engine.get_cached_structure(molecule_id, program_id)
     if result is None:
         raise HTTPException(404, "no structure available")
-    pdb, is_placeholder = result
+    pdb, is_placeholder, label = result
     return Response(
         content=pdb,
         media_type="text/plain",
         headers={
             "X-Structure-Placeholder": "1" if is_placeholder else "0",
-            "X-Structure-Label": structure_engine.PLACEHOLDER_LABEL if is_placeholder
-            else "Boltz co-fold",
+            "X-Structure-Label": label,
             "Access-Control-Expose-Headers": "X-Structure-Placeholder,X-Structure-Label",
         },
     )
+
+
+@app.get("/fold-config")
+def get_fold_config(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    return structure_engine.get_fold_config(program_id)
+
+
+class FoldConfigRequest(BaseModel):
+    pdb_id: str
+    constraints: str = ""
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/fold-config")
+def set_fold_config(req: FoldConfigRequest):
+    """Set the protein/PDB (and folding constraints) used for this program's
+    co-folds and reference structure."""
+    return structure_engine.set_fold_config(req.program_id, req.pdb_id, req.constraints)
 
 
 @app.get("/molecule/{molecule_id}/data.csv")

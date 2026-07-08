@@ -88,32 +88,86 @@ def compute_adme_for_program(program_id: str) -> int:
     return n
 
 
+# --- Fold configuration (which protein / PDB to fold against) --------------
+import urllib.request
+
+from ..config import DEMO_PROGRAM_ID
+
+
+def get_fold_config(program_id: str = DEMO_PROGRAM_ID) -> dict:
+    conn = db.connect()
+    r = conn.execute("SELECT * FROM fold_settings WHERE program_id=?", (program_id,)).fetchone()
+    conn.close()
+    if r is None:
+        return {"program_id": program_id, "pdb_id": "REF1", "constraints": ""}
+    return dict(r)
+
+
+def set_fold_config(program_id: str, pdb_id: str, constraints: str = "") -> dict:
+    conn = db.connect()
+    with conn:
+        conn.execute(
+            "INSERT INTO fold_settings(program_id,pdb_id,constraints,updated_at) "
+            "VALUES (?,?,?,datetime('now')) ON CONFLICT(program_id) DO UPDATE SET "
+            "pdb_id=excluded.pdb_id, constraints=excluded.constraints, updated_at=excluded.updated_at",
+            (program_id, (pdb_id or "").strip().upper(), constraints or ""),
+        )
+    conn.close()
+    return get_fold_config(program_id)
+
+
+def fetch_reference_pdb(pdb_id: str) -> Path | None:
+    """Fetch a PDB structure from RCSB and cache it. REF1 ships bundled."""
+    pdb_id = (pdb_id or "").strip().upper()
+    if not pdb_id:
+        return None
+    if pdb_id == "REF1" and PLACEHOLDER_PDB.exists():
+        return PLACEHOLDER_PDB
+    cached = STRUCT_DIR / f"ref_{pdb_id}.pdb"
+    if cached.exists():
+        return cached
+    try:
+        req = urllib.request.Request(f"https://files.rcsb.org/download/{pdb_id}.pdb",
+                                     headers={"User-Agent": "BiotechOS/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            cached.write_bytes(r.read())
+        return cached
+    except Exception as e:
+        print(f"[structure] fetch {pdb_id} failed: {e}")
+        return None
+
+
 # --- Boltz co-fold cache (folding wired in later) --------------------------
 
 def structure_path(molecule_id: int) -> Path:
     return STRUCT_DIR / f"mol_{molecule_id}.pdb"
 
 
-def get_cached_structure(molecule_id: int) -> tuple[str, bool] | None:
-    """Return (pdb_text, is_placeholder) for a molecule's structure.
+def get_cached_structure(molecule_id: int, program_id: str = DEMO_PROGRAM_ID) -> tuple[str, bool, str] | None:
+    """Return (pdb_text, is_placeholder, label) for a molecule's structure.
 
-    Prefers a real per-compound Boltz co-fold; falls back to the TGTA reference
-    structure (REF1) so the viewer always has something real to show. Returns
-    None only if even the placeholder is missing.
+    Prefers a real per-compound Boltz co-fold; otherwise serves the program's
+    configured reference PDB (default REF1) so the viewer always shows something
+    real. Returns None only if nothing is available.
     """
     p = structure_path(molecule_id)
     if p.exists():
-        return p.read_text(), False
+        return p.read_text(), False, "Boltz co-fold"
+    cfg = get_fold_config(program_id)
+    ref = fetch_reference_pdb(cfg.get("pdb_id") or "REF1")
+    if ref and ref.exists():
+        pid = (cfg.get("pdb_id") or "REF1").upper()
+        return ref.read_text(), True, f"Reference: PDB {pid}"
     if PLACEHOLDER_PDB.exists():
-        return PLACEHOLDER_PDB.read_text(), True
+        return PLACEHOLDER_PDB.read_text(), True, PLACEHOLDER_LABEL
     return None
 
 
 def enqueue_fold(molecule_id: int) -> None:
     """Hook the ingest job calls to precompute a Boltz co-fold. No-op until the
-    boltz-api CLI is authenticated (see boltz-cli-setup)."""
-    # Deferred: run boltz-structure-and-binding for (TGTA seq + molecule SMILES),
-    # write result to structure_path(molecule_id), update molecules.structure_cache_ref.
+    boltz-api CLI is authenticated (see boltz-cli-setup). When wired, it will fold
+    the configured protein (get_fold_config) + molecule SMILES with the given
+    constraints, and write to structure_path(molecule_id)."""
     return None
 
 

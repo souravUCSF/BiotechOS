@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { API_BASE } from "@/lib/apiBase";
+import { useProgram } from "@/lib/ProgramContext";
 
 // 3Dmol is loaded from CDN on demand.
 declare global {
@@ -45,8 +46,9 @@ function ensure3Dmol(src: string): Promise<void> {
   });
 }
 
-export function Structure3D({ moleculeId }: { moleculeId: number }) {
+export function Structure3D({ moleculeId, className = "h-64" }: { moleculeId: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { programId } = useProgram();
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [label, setLabel] = useState<string>("");
 
@@ -54,7 +56,7 @@ export function Structure3D({ moleculeId }: { moleculeId: number }) {
     let cancelled = false;
     (async () => {
       setState("loading");
-      const res = await fetch(`${API_BASE}/molecule/${moleculeId}/structure3d`);
+      const res = await fetch(`${API_BASE}/molecule/${moleculeId}/structure3d?program_id=${programId}`);
       if (!res.ok) {
         if (!cancelled) setState("error");
         return;
@@ -85,10 +87,10 @@ export function Structure3D({ moleculeId }: { moleculeId: number }) {
     return () => {
       cancelled = true;
     };
-  }, [moleculeId]);
+  }, [moleculeId, programId]);
 
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded border border-border bg-bg">
+    <div className={`relative ${className} w-full overflow-hidden rounded border border-border bg-bg`}>
       <div ref={ref} className="absolute inset-0" />
       {state === "ready" && label && (
         <div className="absolute bottom-1 left-2 text-[10px] text-inkMuted">{label}</div>

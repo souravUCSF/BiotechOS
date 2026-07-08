@@ -97,6 +97,15 @@ CREATE TABLE IF NOT EXISTS custom_metrics (
     UNIQUE(program_id, key)
 );
 
+-- Per-program folding configuration for Boltz co-folds: which protein / PDB to
+-- fold against and any simple constraints. Drives the 3D reference structure too.
+CREATE TABLE IF NOT EXISTS fold_settings (
+    program_id  TEXT PRIMARY KEY REFERENCES programs(id),
+    pdb_id      TEXT,
+    constraints TEXT,
+    updated_at  TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS tasks (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     program_id   TEXT NOT NULL REFERENCES programs(id),
