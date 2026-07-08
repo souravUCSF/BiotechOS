@@ -10,6 +10,11 @@ data/raw/
 data/biotechos.db
 data/cache/
 
+# Anonymization maps (real_InChIKey→surrogate, target, vendor) — SECRET.
+# NOTE: data/corpus/ (anonymized emails+attachments) IS committed & safe to sync;
+# the raw archive lives OUTSIDE the repo (~/DataStore) and is never here.
+data/corpus_maps/
+
 # Python
 backend/.venv/
 __pycache__/

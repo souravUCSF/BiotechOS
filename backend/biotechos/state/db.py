@@ -25,6 +25,10 @@ _MIGRATIONS = [
     ("fold_settings", "target_kind", "TEXT"),   # 'pdb' | 'uniprot' | 'sequence'
     ("fold_settings", "target_value", "TEXT"),  # the id or raw sequence
     ("molecules", "boltz_json", "TEXT"),        # Boltz predicted props (SAB + ADME)
+    ("vendors", "capabilities", "TEXT"),         # JSON: services/cell-lines/proteins offered
+    ("vendors", "contacts", "TEXT"),             # JSON list of {name,email,role}
+    ("vendors", "pricing_bands", "TEXT"),        # JSON: service -> price band
+    ("vendors", "domain", "TEXT"),               # email domain, for credential matching
 ]
 
 

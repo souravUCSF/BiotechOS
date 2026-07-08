@@ -217,3 +217,90 @@ CREATE TABLE IF NOT EXISTS budget (
     actual      REAL DEFAULT 0,
     monthly_burn REAL DEFAULT 0
 );
+
+-- ===================================================================
+-- Corpus / knowledge / identity layer (Inbox v2 — document-driven)
+-- ===================================================================
+
+-- Molecule identity: one canonical molecules.id, many names/aliases.
+CREATE TABLE IF NOT EXISTS molecule_aliases (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id         TEXT NOT NULL REFERENCES programs(id),
+    molecule_id        INTEGER NOT NULL REFERENCES molecules(id),
+    alias              TEXT NOT NULL,          -- as written, e.g. "PH-PGMA-L2-2026-08B-7-0"
+    alias_norm         TEXT NOT NULL,          -- normalized key, e.g. "CLO|3"
+    alias_type         TEXT,                   -- internal | request_id | cro_project_code | vendor_code | common_name
+    vendor             TEXT,
+    source_document_id INTEGER,                -- REFERENCES documents(id)
+    confidence         REAL DEFAULT 1.0,
+    verified           INTEGER DEFAULT 0,
+    created_at         TEXT DEFAULT (datetime('now')),
+    UNIQUE(program_id, alias_norm, molecule_id)
+);
+CREATE INDEX IF NOT EXISTS idx_molalias_norm ON molecule_aliases(program_id, alias_norm);
+CREATE INDEX IF NOT EXISTS idx_molalias_mol ON molecule_aliases(molecule_id);
+
+-- Every ingested email + attachment (the corpus).
+CREATE TABLE IF NOT EXISTS documents (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id     TEXT NOT NULL REFERENCES programs(id),
+    source_ref     TEXT,                       -- mailbox slug / path
+    org            TEXT,
+    direction      TEXT,                       -- inbound | outbound
+    email_from     TEXT,
+    email_to       TEXT,
+    subject        TEXT,
+    sent_at        TEXT,
+    doc_type       TEXT,                        -- quote|invoice|cro_data|project_update|query|vendor_capability|contract|logistics|other|noise|fyi
+    triage         TEXT,                        -- actionable|fyi|noise
+    raw_text       TEXT,                        -- email body + attachment text (anonymized if synthetic)
+    extraction_json TEXT,                       -- typed extraction result
+    created_at     TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_documents_program ON documents(program_id);
+
+-- Immutable log of every extracted claim.
+CREATE TABLE IF NOT EXISTS observations (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id         TEXT NOT NULL REFERENCES programs(id),
+    subject_type       TEXT NOT NULL,           -- vendor|molecule|material|contract|assay|budget
+    subject_key        TEXT NOT NULL,
+    predicate          TEXT NOT NULL,
+    value              TEXT,
+    source_document_id INTEGER REFERENCES documents(id),
+    decision_state     TEXT DEFAULT 'proposed', -- proposed|under_consideration|agreed|superseded
+    confidence         REAL DEFAULT 0.7,
+    recorded_at        TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_obs_subject ON observations(program_id, subject_type, subject_key, predicate);
+
+-- Derived world model: current believed value per (subject, predicate). Bitemporal.
+CREATE TABLE IF NOT EXISTS facts (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id     TEXT NOT NULL REFERENCES programs(id),
+    subject_type   TEXT NOT NULL,
+    subject_key    TEXT NOT NULL,
+    predicate      TEXT NOT NULL,
+    value          TEXT,
+    observation_id INTEGER REFERENCES observations(id),
+    valid_from     TEXT DEFAULT (datetime('now')),
+    valid_to       TEXT,                         -- NULL = current
+    status         TEXT DEFAULT 'current'        -- current | superseded
+);
+CREATE INDEX IF NOT EXISTS idx_facts_subject ON facts(program_id, subject_type, subject_key, predicate, status);
+
+-- Discovered attachment passwords, keyed by vendor domain. LOCAL ONLY.
+CREATE TABLE IF NOT EXISTS vendor_credentials (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id         TEXT NOT NULL REFERENCES programs(id),
+    domain             TEXT NOT NULL,
+    password           TEXT NOT NULL,
+    source_document_id INTEGER,
+    confidence         REAL DEFAULT 0.8,
+    created_at         TEXT DEFAULT (datetime('now'))
+);
+
+-- Full-text search over documents (keyword/BM25 retrieval for Q&A fallback).
+CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
+    subject, raw_text, content='documents', content_rowid='id'
+);

@@ -49,5 +49,18 @@ MODEL_TPP_BUILDER = "claude-opus-4-8"
 MODEL_ARTIFACTS = "claude-sonnet-4-6"
 MODEL_EXTRACTION = "claude-haiku-4-5-20251001"
 
-for _d in (CURATED_DIR, CACHE_DIR):
+# --- Corpus / mailbox ingestion (Inbox v2) --------------------------------
+# Raw real archive: LOCAL ONLY, lives OUTSIDE the repo, never committed.
+DATASTORE_ROOT = Path(os.environ.get("DATASTORE_ROOT", str(Path.home() / "DataStore")))
+CORPUS_ORG = os.environ.get("CORPUS_ORG", "Program A")
+# 'anonymized' (default; safe → committed, feeds TGTA) | 'real' (raw, local only)
+MAILBOX_SOURCE = os.environ.get("MAILBOX_SOURCE", "anonymized")
+
+# Anonymized corpus output — INSIDE the repo so it syncs to GitHub (safe: surrogate
+# structures, TGTA/TGTB targets, masked vendors, real numbers).
+CORPUS_DIR = DATA_DIR / "corpus"
+# Anonymization maps (real_InChIKey→surrogate, target, vendor) — SECRET, gitignored.
+CORPUS_MAPS_DIR = DATA_DIR / "corpus_maps"
+
+for _d in (CURATED_DIR, CACHE_DIR, CORPUS_DIR, CORPUS_MAPS_DIR):
     _d.mkdir(parents=True, exist_ok=True)
