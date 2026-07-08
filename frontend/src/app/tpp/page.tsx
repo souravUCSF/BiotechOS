@@ -1,95 +1,244 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useProgram } from "@/lib/ProgramContext";
-import { fetchTppScores, type TppScores, type MoleculeScore } from "@/lib/api";
-import { ParamHistogram } from "@/components/ParamHistogram";
+import { useAppState } from "@/lib/useAppState";
+import {
+  fetchTppScores,
+  fetchMetrics,
+  defineCustomMetric,
+  type TppScores,
+  type MetricDef,
+  type Histogram,
+} from "@/lib/api";
+import { InteractiveHistogram } from "@/components/InteractiveHistogram";
+import { moleculeProperties } from "@/lib/properties";
 
 const STATUS_STYLE: Record<string, string> = {
-  pass: "bg-emerald-600/90 text-white",
-  near: "bg-amber-500/90 text-black",
+  pass: "bg-emerald-600 text-white",
+  near: "bg-amber-500 text-black",
   fail: "bg-neutral-800 text-neutral-500",
   no_data: "bg-neutral-900 text-neutral-700",
 };
+const fmt = (v: number | null | undefined) =>
+  v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(1);
 
-const fmt = (v: number | null, units: string | null) =>
-  v == null ? "—" : `${v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(1)}${units ?? ""}`;
-
-export default function TppTrackerPage() {
+function DefinePropertyForm({ onDone }: { onDone: (key: string) => void }) {
   const { programId } = useProgram();
-  const [scores, setScores] = useState<TppScores | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [label, setLabel] = useState("");
+  const [units, setUnits] = useState("");
+  const [higher, setHigher] = useState(false);
+  const [log, setLog] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    fetchTppScores(programId).then(setScores).catch((e) => setError(String(e)));
+  async function submit() {
+    if (!label.trim()) return;
+    setBusy(true);
+    try {
+      const r = await defineCustomMetric(
+        { label: label.trim(), units, higher_is_better: higher, log },
+        programId,
+      );
+      onDone(r.key);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded border border-neutral-800 bg-neutral-900 p-3">
+      <div className="mb-2 text-xs font-medium text-neutral-300">
+        Define a new molecule property (no data yet — arrives later via CRO assays)
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <input value={label} onChange={(e) => setLabel(e.target.value)}
+          placeholder="Property name (e.g. NanoBRET target engagement)"
+          className="min-w-[16rem] flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1" />
+        <input value={units} onChange={(e) => setUnits(e.target.value)} placeholder="units"
+          className="w-20 rounded border border-neutral-700 bg-neutral-950 px-2 py-1" />
+        <label className="flex items-center gap-1 text-xs text-neutral-400">
+          <input type="checkbox" checked={higher} onChange={(e) => setHigher(e.target.checked)} /> higher is better
+        </label>
+        <label className="flex items-center gap-1 text-xs text-neutral-400">
+          <input type="checkbox" checked={log} onChange={(e) => setLog(e.target.checked)} /> log scale
+        </label>
+        <button onClick={submit} disabled={busy || !label.trim()}
+          className="rounded bg-emerald-600 px-3 py-1 text-sm text-white disabled:opacity-50">
+          {busy ? "Adding…" : "Add property"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function MoleculeDatabasePage() {
+  const { programId } = useProgram();
+  const { state } = useAppState();
+  const [scores, setScores] = useState<TppScores | null>(null);
+  const [metrics, setMetrics] = useState<MetricDef[]>([]);
+  const [metric, setMetric] = useState<string>("assay:biochemical_ic50:TGTA");
+  const [selectedBin, setSelectedBin] = useState<number | null>(null);
+  const [binMemberIds, setBinMemberIds] = useState<number[]>([]);
+  const [hist, setHist] = useState<Histogram | null>(null);
+  const [showDefine, setShowDefine] = useState(false);
+
+  const loadMetrics = useCallback(() => {
+    fetchMetrics(programId).then(setMetrics).catch(() => setMetrics([]));
   }, [programId]);
 
-  if (error) return <p className="text-red-400">Error: {error}</p>;
-  if (!scores) return <p className="text-neutral-400">Loading…</p>;
+  useEffect(() => {
+    fetchTppScores(programId).then(setScores).catch(() => setScores(null));
+    loadMetrics();
+  }, [programId, loadMetrics]);
 
-  // parameter columns come from the first molecule's param list
-  const params = scores.molecules[0]?.params ?? [];
-  const sorted = [...scores.molecules].sort((a, b) => {
-    const order = { pass: 0, near: 1, fail: 2, no_data: 3 } as Record<string, number>;
-    return order[a.status] - order[b.status];
-  });
+  // reset filter when metric changes
+  useEffect(() => {
+    setSelectedBin(null);
+    setBinMemberIds([]);
+  }, [metric]);
+
+  const statusById = useMemo(
+    () => new Map((scores?.molecules ?? []).map((m) => [m.molecule_id, m.status])),
+    [scores],
+  );
+  const valueById = useMemo(() => {
+    const m = new Map<number, number>();
+    (hist?.members ?? []).forEach((x) => m.set(x.molecule_id, x.value));
+    return m;
+  }, [hist]);
+
+  const metricDef = metrics.find((m) => m.key === metric);
+
+  const rows = useMemo(() => {
+    let mols = state?.molecules ?? [];
+    if (selectedBin != null) {
+      const set = new Set(binMemberIds);
+      mols = mols.filter((mo) => set.has(mo.id));
+    }
+    return mols;
+  }, [state, selectedBin, binMemberIds]);
+
+  if (!state) return <p className="text-neutral-400">Loading…</p>;
 
   return (
     <div>
-      <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">TPP Tracker</h1>
+      <div className="mb-1 flex items-baseline justify-between">
+        <h1 className="text-xl font-semibold">Molecule Database</h1>
         <div className="text-sm text-neutral-400">
-          <span className="font-medium text-emerald-400">{scores.meets_tpp.length}</span>{" "}
-          molecule{scores.meets_tpp.length === 1 ? "" : "s"} meet the TPP:{" "}
-          <span className="text-emerald-300">{scores.meets_tpp.join(", ") || "none"}</span>
+          {scores && (
+            <>
+              <span className="font-medium text-emerald-400">{scores.meets_tpp.length}</span> meet the
+              TPP · {state.molecules.length} molecules
+            </>
+          )}
+        </div>
+      </div>
+      <p className="mb-5 text-sm text-neutral-400">
+        Explore any property in the system. TPP criteria are shown up top; pick a bar in a
+        histogram to filter the molecules below to that range.
+      </p>
+
+      {/* TPP snapshot */}
+      {scores && scores.molecules[0] && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {scores.molecules[0].params.map((p) => (
+            <span key={p.param_id} className="rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs">
+              {p.label}: <span className="font-mono text-emerald-300">{p.operator} {fmt(p.threshold)}{p.units}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* property explorer */}
+      <div className="mb-4 rounded border border-neutral-800 bg-neutral-950 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm text-neutral-400">
+            Property:{" "}
+            <select value={metric} onChange={(e) => setMetric(e.target.value)}
+              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100">
+              <optgroup label="Assays">
+                {metrics.filter((m) => m.kind === "assay").map((m) => (
+                  <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
+                ))}
+              </optgroup>
+              <optgroup label="Computed (ADME / physchem)">
+                {metrics.filter((m) => m.kind === "adme").map((m) => (
+                  <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
+                ))}
+              </optgroup>
+              {metrics.some((m) => m.kind === "custom") && (
+                <optgroup label="Custom">
+                  {metrics.filter((m) => m.kind === "custom").map((m) => (
+                    <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </label>
+          <button onClick={() => setShowDefine((s) => !s)}
+            className="text-xs text-emerald-400 hover:underline">
+            + Define new property
+          </button>
+          {selectedBin != null && (
+            <button onClick={() => { setSelectedBin(null); setBinMemberIds([]); }}
+              className="ml-auto rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800">
+              Clear filter ✕
+            </button>
+          )}
+        </div>
+
+        {showDefine && <DefinePropertyForm onDone={(key) => { setShowDefine(false); loadMetrics(); setMetric(key); }} />}
+
+        <div className="mt-4">
+          <InteractiveHistogram
+            metric={metric}
+            selectedBin={selectedBin}
+            onSelectBin={(bin, ids) => { setSelectedBin(bin); setBinMemberIds(ids); }}
+            onData={setHist}
+            height={140}
+          />
         </div>
       </div>
 
-      {/* per-parameter population histograms vs. threshold */}
-      <div className="mb-6 grid gap-4" style={{ gridTemplateColumns: `repeat(${params.length}, minmax(0, 1fr))` }}>
-        {params.map((p) => (
-          <div key={p.param_id} className="rounded border border-neutral-800 bg-neutral-900 p-3">
-            <div className="mb-2 text-xs font-medium text-neutral-300">{p.label}</div>
-            <ParamHistogram metric={p.metric} />
-          </div>
-        ))}
+      <div className="mb-2 text-sm text-neutral-400">
+        {selectedBin != null
+          ? `Showing ${rows.length} molecule${rows.length === 1 ? "" : "s"} in the selected range`
+          : `All ${rows.length} molecules`}
       </div>
 
-      {/* molecule × parameter grid */}
       <div className="overflow-x-auto rounded border border-neutral-800">
         <table className="w-full text-left text-sm">
           <thead className="bg-neutral-900 text-neutral-400">
             <tr>
               <th className="px-3 py-2">Compound</th>
-              <th className="px-3 py-2">Overall</th>
-              {params.map((p) => (
-                <th key={p.param_id} className="px-3 py-2">
-                  {p.label}
-                  <span className="ml-1 text-[10px] text-neutral-600">
-                    {p.operator} {fmt(p.threshold, p.units)}
-                  </span>
-                </th>
-              ))}
+              <th className="px-3 py-2">{metricDef?.label ?? "Property"}</th>
+              <th className="px-3 py-2">TGTA IC50</th>
+              <th className="px-3 py-2">Selectivity</th>
+              <th className="px-3 py-2">TPP status</th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((mol: MoleculeScore) => (
-              <tr key={mol.molecule_id} className="border-t border-neutral-800">
-                <td className="px-3 py-2 font-medium">{mol.name}</td>
-                <td className="px-3 py-2">
-                  <span className={`rounded px-2 py-0.5 text-xs ${STATUS_STYLE[mol.status]}`}>
-                    {mol.status === "pass" ? "MEETS TPP" : mol.status.toUpperCase()}
-                  </span>
-                </td>
-                {mol.params.map((p) => (
-                  <td key={p.param_id} className="px-3 py-2">
-                    <span className={`rounded px-2 py-0.5 text-xs ${STATUS_STYLE[p.status]}`}>
-                      {fmt(p.value, p.units)}
+            {rows.map((mo) => {
+              const props = moleculeProperties(mo);
+              const val = valueById.get(mo.id);
+              const status = statusById.get(mo.id) ?? "no_data";
+              return (
+                <tr key={mo.id} className="border-t border-neutral-800 hover:bg-neutral-900/50">
+                  <td className="px-3 py-2 font-medium">
+                    <Link href={`/molecules/${mo.id}`} className="hover:text-emerald-400">{mo.name}</Link>
+                  </td>
+                  <td className="px-3 py-2 font-mono">{val != null ? `${fmt(val)}${metricDef?.units ?? ""}` : "—"}</td>
+                  <td className="px-3 py-2 font-mono">{fmt(props.tgta_ic50)}nM</td>
+                  <td className="px-3 py-2 font-mono">{fmt(props.selectivity)}x</td>
+                  <td className="px-3 py-2">
+                    <span className={`rounded px-2 py-0.5 text-xs ${STATUS_STYLE[status]}`}>
+                      {status === "pass" ? "MEETS TPP" : status.toUpperCase()}
                     </span>
                   </td>
-                ))}
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
