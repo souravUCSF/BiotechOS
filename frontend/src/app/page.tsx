@@ -55,10 +55,10 @@ function InboxCard({
   }
 
   return (
-    <div className="rounded border border-neutral-800 bg-neutral-900 p-4">
+    <div className="rounded border border-border bg-panel p-4">
       <div className="flex items-start justify-between">
         <div>
-          <span className="text-xs uppercase tracking-wide text-neutral-500">
+          <span className="text-xs uppercase tracking-wide text-inkMuted">
             {item.kind.replace(/_/g, " ")}
           </span>
           <h3 className="text-sm font-medium">{item.title}</h3>
@@ -67,11 +67,11 @@ function InboxCard({
           <span className="rounded bg-emerald-700 px-2 py-0.5 text-xs text-white">approved</span>
         )}
       </div>
-      {item.summary && <p className="mt-2 text-sm text-neutral-400">{item.summary}</p>}
+      {item.summary && <p className="mt-2 text-sm text-inkMuted">{item.summary}</p>}
 
       {rederiv?.flagged && (
-        <div className="mt-3 rounded border border-amber-700/50 bg-amber-950/30 p-3">
-          <div className="mb-2 text-xs font-medium text-amber-400">
+        <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3">
+          <div className="mb-2 text-xs font-medium text-amber-600">
             ⚠ Data QC — reported IC50 disagrees with the raw curve
           </div>
           <DoseResponse rederiv={rederiv} />
@@ -87,29 +87,29 @@ function InboxCard({
           >
             {busy ? "Processing…" : (action.label ?? "Approve")}
           </button>
-          {action.note && <span className="text-xs text-neutral-500">{action.note}</span>}
+          {action.note && <span className="text-xs text-inkMuted">{action.note}</span>}
         </div>
       )}
 
       {result && (
-        <div className="mt-3 rounded border border-neutral-800 bg-neutral-950 p-3 text-sm">
+        <div className="mt-3 rounded border border-border bg-bg p-3 text-sm">
           {result.crossed.length > 0 ? (
-            <div className="text-emerald-400">
+            <div className="text-emerald-700">
               ✓ {result.loaded} measurements loaded · <b>{result.crossed.join(", ")}</b> crossed to
               MEETS TPP
             </div>
           ) : (
-            <div className="text-neutral-300">
+            <div className="text-ink">
               ✓ {result.loaded > 0 ? `${result.loaded} measurements loaded` : "Acknowledged"} ·
               logged to Decision Log
             </div>
           )}
           {result.memo && (
-            <div className="mt-2 border-t border-neutral-800 pt-2">
-              <div className="mb-1 text-xs text-neutral-500">
+            <div className="mt-2 border-t border-border pt-2">
+              <div className="mb-1 text-xs text-inkMuted">
                 Drafted go/no-go memo {result.memo.used_llm ? "" : "(fallback)"}
               </div>
-              <pre className="whitespace-pre-wrap font-sans text-xs text-neutral-300">
+              <pre className="whitespace-pre-wrap font-sans text-xs text-ink">
                 {result.memo.text}
               </pre>
             </div>
@@ -117,24 +117,24 @@ function InboxCard({
           {result.financial && (
             <div className="mt-1">
               {result.financial.po_number && (
-                <div className="text-emerald-400">
+                <div className="text-emerald-700">
                   ✓ Issued {result.financial.po_number} · committed{" "}
                   ${result.financial.amount?.toLocaleString()} · available now $
                   {result.financial.budget.available.toLocaleString()}
                 </div>
               )}
               {result.financial.matched != null && (
-                <div className={result.financial.matched ? "text-emerald-400" : "text-red-400"}>
+                <div className={result.financial.matched ? "text-emerald-700" : "text-red-600"}>
                   {result.financial.matched ? "✓" : "⚠"} {result.financial.note} · actual spend $
                   {result.financial.budget.actual.toLocaleString()}
                 </div>
               )}
               {result.financial.email && (
-                <div className="mt-2 border-t border-neutral-800 pt-2">
-                  <div className="mb-1 text-xs text-neutral-500">
+                <div className="mt-2 border-t border-border pt-2">
+                  <div className="mb-1 text-xs text-inkMuted">
                     Vendor email — Gmail draft (composed, not sent)
                   </div>
-                  <pre className="whitespace-pre-wrap font-sans text-xs text-neutral-300">
+                  <pre className="whitespace-pre-wrap font-sans text-xs text-ink">
                     {result.financial.email}
                   </pre>
                 </div>
@@ -162,7 +162,7 @@ export default function InboxPage() {
     }
   }
 
-  if (loading) return <p className="text-neutral-400">Loading…</p>;
+  if (loading) return <p className="text-inkMuted">Loading…</p>;
   if (!state) return null;
 
   return (
@@ -170,21 +170,21 @@ export default function InboxPage() {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Monday-morning Inbox</h1>
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-inkMuted">
             {state.program.name} · the OS has pre-triaged each item and proposed an action.
           </p>
         </div>
         <button
           onClick={doReset}
           disabled={resetting}
-          className="rounded border border-neutral-700 px-3 py-1.5 text-xs text-neutral-400 hover:bg-neutral-800"
+          className="rounded border border-borderStrong px-3 py-1.5 text-xs text-inkMuted hover:bg-panel2"
         >
           {resetting ? "Resetting…" : "Reset demo"}
         </button>
       </div>
 
       {state.inbox_items.length === 0 ? (
-        <div className="rounded border border-dashed border-neutral-700 p-8 text-center text-neutral-500">
+        <div className="rounded border border-dashed border-borderStrong p-8 text-center text-inkMuted">
           Inbox empty. Click “Reset demo” to re-stage the incoming CRO datasets.
         </div>
       ) : (

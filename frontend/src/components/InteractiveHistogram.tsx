@@ -34,7 +34,7 @@ export function InteractiveHistogram({
   }, [metric, programId]);
 
   if (!hist || hist.counts.length === 0)
-    return <div className="text-xs text-neutral-600">No distribution for this property yet.</div>;
+    return <div className="text-xs text-inkFaint">No distribution for this property yet.</div>;
 
   const max = Math.max(...hist.counts, 1);
   let thresholdBin = -1;
@@ -90,10 +90,10 @@ export function InteractiveHistogram({
           );
         })}
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-neutral-500">
+      <div className="mt-1 flex justify-between text-[10px] text-inkMuted">
         <span>{fmt(hist.edges[0])}{hist.units}</span>
         {hist.threshold != null && (
-          <span className="text-amber-400">
+          <span className="text-amber-600">
             TPP {hist.operator} {fmt(hist.threshold)}{hist.units}
           </span>
         )}

@@ -43,7 +43,7 @@ export default function TppPage() {
     setTimeout(() => setFlash(null), 6000);
   }
 
-  if (!tpp) return <p className="text-neutral-400">Loading…</p>;
+  if (!tpp) return <p className="text-inkMuted">Loading…</p>;
 
   return (
     <div className="max-w-3xl">
@@ -55,25 +55,25 @@ export default function TppPage() {
           </span>
         )}
       </div>
-      <p className="mb-5 text-sm text-neutral-400">
+      <p className="mb-5 text-sm text-inkMuted">
         The current go/no-go criteria for this program. Click any criterion to see what it means,
         where the molecules sit, and to change it (which creates a new version).
       </p>
 
       {flash && (
-        <div className="mb-4 rounded border border-emerald-700/50 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+        <div className="mb-4 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">
           {flash}
         </div>
       )}
 
       {/* the TPP as a single cohesive table */}
-      <div className="overflow-hidden rounded-lg border border-neutral-700">
+      <div className="overflow-hidden rounded-lg border border-borderStrong">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-900 text-neutral-300">
+          <thead className="bg-panel text-ink">
             <tr>
-              <th className="w-56 border-b border-neutral-700 px-4 py-3 font-semibold">Parameter</th>
-              <th className="w-40 border-b border-neutral-700 px-4 py-3 font-semibold">Criterion</th>
-              <th className="border-b border-neutral-700 px-4 py-3 font-semibold">Rationale</th>
+              <th className="w-56 border-b border-borderStrong px-4 py-3 font-semibold">Parameter</th>
+              <th className="w-40 border-b border-borderStrong px-4 py-3 font-semibold">Criterion</th>
+              <th className="border-b border-borderStrong px-4 py-3 font-semibold">Rationale</th>
             </tr>
           </thead>
           <tbody>
@@ -81,34 +81,34 @@ export default function TppPage() {
               <tr
                 key={p.id}
                 onClick={() => setSelected(p)}
-                className="cursor-pointer border-b border-neutral-800 last:border-b-0 hover:bg-neutral-900/60"
+                className="cursor-pointer border-b border-border last:border-b-0 hover:bg-panel2/60"
               >
-                <td className="px-4 py-3 align-top font-medium text-neutral-100">{p.label}</td>
-                <td className="px-4 py-3 align-top font-mono text-emerald-300">
+                <td className="px-4 py-3 align-top font-medium text-ink">{p.label}</td>
+                <td className="px-4 py-3 align-top font-mono text-emerald-700">
                   {p.operator} {fmt(p.threshold, p.units)}
                 </td>
-                <td className="px-4 py-3 align-top text-xs text-neutral-400">{p.rationale}</td>
+                <td className="px-4 py-3 align-top text-xs text-inkMuted">{p.rationale}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <button
           onClick={() => setAdding(true)}
-          className="w-full border-t border-neutral-800 bg-neutral-950 px-4 py-2.5 text-left text-sm text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200"
+          className="w-full border-t border-border bg-bg px-4 py-2.5 text-left text-sm text-inkMuted hover:bg-panel2 hover:text-ink"
         >
           + Add a criterion
         </button>
       </div>
 
-      <p className="mt-2 text-xs text-neutral-600">
+      <p className="mt-2 text-xs text-inkFaint">
         Click any row to see what it means, where the molecules sit, and to change it.
       </p>
 
       {/* demoted: rebuild from scratch with Opus */}
-      <hr className="my-8 border-neutral-800" />
-      <div className="text-sm text-neutral-500">
+      <hr className="my-8 border-border" />
+      <div className="text-sm text-inkMuted">
         Or{" "}
-        <button onClick={() => setBuilding(true)} className="text-neutral-300 underline hover:text-emerald-400">
+        <button onClick={() => setBuilding(true)} className="text-ink underline hover:text-emerald-700">
           rebuild the whole TPP from scratch with Opus
         </button>{" "}
         — a guided conversation that finalizes into a new version.
@@ -116,12 +116,12 @@ export default function TppPage() {
 
       {versions.length > 0 && (
         <div className="mt-8">
-          <h2 className="mb-2 text-sm font-semibold text-neutral-300">Version history</h2>
+          <h2 className="mb-2 text-sm font-semibold text-ink">Version history</h2>
           <ol className="space-y-2">
             {versions.map((v) => (
               <li
                 key={v.id}
-                className="rounded border border-neutral-800 bg-neutral-900 p-3 text-sm"
+                className="rounded border border-border bg-panel p-3 text-sm"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">
@@ -130,9 +130,9 @@ export default function TppPage() {
                       <span className="ml-1 rounded bg-emerald-700 px-1.5 py-0.5 text-xs text-white">active</span>
                     ) : null}
                   </span>
-                  <span className="text-xs text-neutral-500">{v.created_at} · {v.author}</span>
+                  <span className="text-xs text-inkMuted">{v.created_at} · {v.author}</span>
                 </div>
-                {v.notes && <p className="mt-1 text-xs text-neutral-400">{v.notes}</p>}
+                {v.notes && <p className="mt-1 text-xs text-inkMuted">{v.notes}</p>}
               </li>
             ))}
           </ol>

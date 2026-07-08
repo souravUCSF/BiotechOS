@@ -9,7 +9,7 @@ export function ProgramSwitcher() {
     <select
       value={programId}
       onChange={(e) => setProgramId(e.target.value)}
-      className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100"
+      className="rounded border border-borderStrong bg-panel px-3 py-1.5 text-sm text-ink"
     >
       {programs.length === 0 ? (
         <option value={programId}>{programId}</option>

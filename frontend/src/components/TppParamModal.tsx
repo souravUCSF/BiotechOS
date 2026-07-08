@@ -52,33 +52,33 @@ export function TppParamModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-neutral-700 bg-neutral-950 p-6"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-borderStrong bg-panel p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-1 flex items-start justify-between">
           <h2 className="text-lg font-semibold">{param.label}</h2>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-300">✕</button>
+          <button onClick={onClose} className="text-inkMuted hover:text-ink">✕</button>
         </div>
-        <div className="mb-4 text-xs uppercase tracking-wide text-neutral-500">
+        <div className="mb-4 text-xs uppercase tracking-wide text-inkMuted">
           {param.axis} · metric <span className="font-mono">{param.metric}</span>
         </div>
 
-        <p className="mb-4 text-sm text-neutral-300">{param.rationale}</p>
+        <p className="mb-4 text-sm text-ink">{param.rationale}</p>
 
         <div className="mb-4">
-          <div className="mb-2 text-xs font-medium text-neutral-400">
+          <div className="mb-2 text-xs font-medium text-inkMuted">
             Where the current molecules sit vs. this criterion
           </div>
           <ParamHistogram metric={param.metric} />
         </div>
 
-        <div className="rounded border border-neutral-800 bg-neutral-900 p-4">
+        <div className="rounded border border-border bg-panel p-4">
           <div className="mb-3 text-sm font-medium">Change this criterion</div>
           <div className="mb-3 flex items-center gap-2 text-sm">
             <select
               value={operator}
               onChange={(e) => setOperator(e.target.value)}
-              className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1"
+              className="rounded border border-borderStrong bg-bg px-2 py-1"
             >
               <option value="<">&lt; (lower is better)</option>
               <option value=">">&gt; (higher is better)</option>
@@ -86,17 +86,17 @@ export function TppParamModal({
             <input
               value={threshold}
               onChange={(e) => setThreshold(e.target.value)}
-              className="w-28 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 font-mono"
+              className="w-28 rounded border border-borderStrong bg-bg px-2 py-1 font-mono"
             />
-            <span className="text-neutral-500">{param.units}</span>
+            <span className="text-inkMuted">{param.units}</span>
           </div>
 
-          <div className="mb-2 rounded border border-amber-700/40 bg-amber-950/20 p-2 text-xs text-amber-300">
+          <div className="mb-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-700">
             ⚠ Changing this updates the TPP <b>globally for this program</b> and creates a new
             version. All molecules are re-scored against it.
           </div>
 
-          <label className="mb-1 block text-xs text-neutral-400">
+          <label className="mb-1 block text-xs text-inkMuted">
             Justification (required — recorded on the new version)
           </label>
           <textarea
@@ -104,10 +104,10 @@ export function TppParamModal({
             onChange={(e) => setJustification(e.target.value)}
             rows={3}
             placeholder="Why is this change warranted?"
-            className="w-full rounded border border-neutral-700 bg-neutral-950 p-2 text-sm"
+            className="w-full rounded border border-borderStrong bg-bg p-2 text-sm"
           />
 
-          {error && <div className="mt-2 text-xs text-red-400">{error}</div>}
+          {error && <div className="mt-2 text-xs text-red-600">{error}</div>}
 
           <div className="mt-3 flex items-center gap-3">
             <button
@@ -117,7 +117,7 @@ export function TppParamModal({
             >
               {busy ? "Saving…" : "Save as new version"}
             </button>
-            {!changed && <span className="text-xs text-neutral-600">No change yet</span>}
+            {!changed && <span className="text-xs text-inkFaint">No change yet</span>}
           </div>
         </div>
       </div>

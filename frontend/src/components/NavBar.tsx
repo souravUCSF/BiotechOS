@@ -17,9 +17,9 @@ const LINKS = [
 export function NavBar() {
   const pathname = usePathname();
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-800 bg-neutral-950 px-6 py-3">
+    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-panel px-6 py-3">
       <div className="flex items-center gap-6">
-        <span className="text-sm font-semibold tracking-wide text-neutral-100">BiotechOS</span>
+        <span className="text-sm font-semibold tracking-wide text-ink">BiotechOS</span>
         <nav className="flex gap-4">
           {LINKS.map((l) => (
             <Link
@@ -27,8 +27,8 @@ export function NavBar() {
               href={l.href}
               className={`text-sm ${
                 pathname === l.href
-                  ? "text-white font-medium"
-                  : "text-neutral-400 hover:text-neutral-200"
+                  ? "text-ink font-semibold"
+                  : "text-inkMuted hover:text-ink"
               }`}
             >
               {l.label}

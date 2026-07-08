@@ -16,7 +16,7 @@ export function ParamHistogram({ metric }: { metric: string }) {
   }, [metric, programId]);
 
   if (!hist || hist.counts.length === 0)
-    return <div className="h-16 text-xs text-neutral-600">no distribution</div>;
+    return <div className="h-16 text-xs text-inkFaint">no distribution</div>;
 
   const max = Math.max(...hist.counts);
   // find which bin the threshold falls into (edges has counts.length + 1 entries)
@@ -61,13 +61,13 @@ export function ParamHistogram({ metric }: { metric: string }) {
           );
         })}
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-neutral-500">
+      <div className="mt-1 flex justify-between text-[10px] text-inkMuted">
         <span>
           {fmt(hist.edges[0])}
           {hist.units}
         </span>
         {hist.threshold != null && (
-          <span className="text-amber-400">
+          <span className="text-amber-600">
             TPP {hist.operator} {fmt(hist.threshold)}
             {hist.units}
           </span>

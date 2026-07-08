@@ -18,8 +18,8 @@ import { moleculeProperties } from "@/lib/properties";
 const STATUS_STYLE: Record<string, string> = {
   pass: "bg-emerald-600 text-white",
   near: "bg-amber-500 text-black",
-  fail: "bg-neutral-800 text-neutral-500",
-  no_data: "bg-neutral-900 text-neutral-700",
+  fail: "bg-panel2 text-inkMuted",
+  no_data: "bg-panel text-neutral-700",
 };
 const fmt = (v: number | null | undefined) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(1);
@@ -47,20 +47,20 @@ function DefinePropertyForm({ onDone }: { onDone: (key: string) => void }) {
   }
 
   return (
-    <div className="mt-3 rounded border border-neutral-800 bg-neutral-900 p-3">
-      <div className="mb-2 text-xs font-medium text-neutral-300">
+    <div className="mt-3 rounded border border-border bg-panel p-3">
+      <div className="mb-2 text-xs font-medium text-ink">
         Define a new molecule property (no data yet — arrives later via CRO assays)
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <input value={label} onChange={(e) => setLabel(e.target.value)}
           placeholder="Property name (e.g. NanoBRET target engagement)"
-          className="min-w-[16rem] flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1" />
+          className="min-w-[16rem] flex-1 rounded border border-borderStrong bg-bg px-2 py-1" />
         <input value={units} onChange={(e) => setUnits(e.target.value)} placeholder="units"
-          className="w-20 rounded border border-neutral-700 bg-neutral-950 px-2 py-1" />
-        <label className="flex items-center gap-1 text-xs text-neutral-400">
+          className="w-20 rounded border border-borderStrong bg-bg px-2 py-1" />
+        <label className="flex items-center gap-1 text-xs text-inkMuted">
           <input type="checkbox" checked={higher} onChange={(e) => setHigher(e.target.checked)} /> higher is better
         </label>
-        <label className="flex items-center gap-1 text-xs text-neutral-400">
+        <label className="flex items-center gap-1 text-xs text-inkMuted">
           <input type="checkbox" checked={log} onChange={(e) => setLog(e.target.checked)} /> log scale
         </label>
         <button onClick={submit} disabled={busy || !label.trim()}
@@ -119,22 +119,22 @@ export default function MoleculeDatabasePage() {
     return mols;
   }, [state, selectedBin, binMemberIds]);
 
-  if (!state) return <p className="text-neutral-400">Loading…</p>;
+  if (!state) return <p className="text-inkMuted">Loading…</p>;
 
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between">
         <h1 className="text-xl font-semibold">Molecule Database</h1>
-        <div className="text-sm text-neutral-400">
+        <div className="text-sm text-inkMuted">
           {scores && (
             <>
-              <span className="font-medium text-emerald-400">{scores.meets_tpp.length}</span> meet the
+              <span className="font-medium text-emerald-700">{scores.meets_tpp.length}</span> meet the
               TPP · {state.molecules.length} molecules
             </>
           )}
         </div>
       </div>
-      <p className="mb-5 text-sm text-neutral-400">
+      <p className="mb-5 text-sm text-inkMuted">
         Explore any property in the system. TPP criteria are shown up top; pick a bar in a
         histogram to filter the molecules below to that range.
       </p>
@@ -143,20 +143,20 @@ export default function MoleculeDatabasePage() {
       {scores && scores.molecules[0] && (
         <div className="mb-6 flex flex-wrap gap-2">
           {scores.molecules[0].params.map((p) => (
-            <span key={p.param_id} className="rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs">
-              {p.label}: <span className="font-mono text-emerald-300">{p.operator} {fmt(p.threshold)}{p.units}</span>
+            <span key={p.param_id} className="rounded border border-border bg-panel px-2 py-1 text-xs">
+              {p.label}: <span className="font-mono text-emerald-700">{p.operator} {fmt(p.threshold)}{p.units}</span>
             </span>
           ))}
         </div>
       )}
 
       {/* property explorer */}
-      <div className="mb-4 rounded border border-neutral-800 bg-neutral-950 p-4">
+      <div className="mb-4 rounded border border-border bg-bg p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm text-neutral-400">
+          <label className="text-sm text-inkMuted">
             Property:{" "}
             <select value={metric} onChange={(e) => setMetric(e.target.value)}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100">
+              className="rounded border border-borderStrong bg-panel px-2 py-1 text-sm text-ink">
               <optgroup label="Assays">
                 {metrics.filter((m) => m.kind === "assay").map((m) => (
                   <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
@@ -177,12 +177,12 @@ export default function MoleculeDatabasePage() {
             </select>
           </label>
           <button onClick={() => setShowDefine((s) => !s)}
-            className="text-xs text-emerald-400 hover:underline">
+            className="text-xs text-emerald-700 hover:underline">
             + Define new property
           </button>
           {selectedBin != null && (
             <button onClick={() => { setSelectedBin(null); setBinMemberIds([]); }}
-              className="ml-auto rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800">
+              className="ml-auto rounded border border-borderStrong px-2 py-1 text-xs text-ink hover:bg-panel2">
               Clear filter ✕
             </button>
           )}
@@ -201,15 +201,15 @@ export default function MoleculeDatabasePage() {
         </div>
       </div>
 
-      <div className="mb-2 text-sm text-neutral-400">
+      <div className="mb-2 text-sm text-inkMuted">
         {selectedBin != null
           ? `Showing ${rows.length} molecule${rows.length === 1 ? "" : "s"} in the selected range`
           : `All ${rows.length} molecules`}
       </div>
 
-      <div className="overflow-x-auto rounded border border-neutral-800">
+      <div className="overflow-x-auto rounded border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-900 text-neutral-400">
+          <thead className="bg-panel text-inkMuted">
             <tr>
               <th className="px-3 py-2">Compound</th>
               <th className="px-3 py-2">{metricDef?.label ?? "Property"}</th>
@@ -224,9 +224,9 @@ export default function MoleculeDatabasePage() {
               const val = valueById.get(mo.id);
               const status = statusById.get(mo.id) ?? "no_data";
               return (
-                <tr key={mo.id} className="border-t border-neutral-800 hover:bg-neutral-900/50">
+                <tr key={mo.id} className="border-t border-border hover:bg-panel2/60">
                   <td className="px-3 py-2 font-medium">
-                    <Link href={`/molecules/${mo.id}`} className="hover:text-emerald-400">{mo.name}</Link>
+                    <Link href={`/molecules/${mo.id}`} className="hover:text-emerald-700">{mo.name}</Link>
                   </td>
                   <td className="px-3 py-2 font-mono">{val != null ? `${fmt(val)}${metricDef?.units ?? ""}` : "—"}</td>
                   <td className="px-3 py-2 font-mono">{fmt(props.tgta_ic50)}nM</td>

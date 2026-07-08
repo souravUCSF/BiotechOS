@@ -21,9 +21,9 @@ const STATUS_RANK = { pass: 0, near: 1, fail: 2, no_data: 3 } as Record<string, 
 function AdvancingCard({ mol, status }: { mol: Molecule; status: string }) {
   const p = moleculeProperties(mol);
   return (
-    <div className="rounded border border-neutral-800 bg-neutral-900 p-4">
+    <div className="rounded border border-border bg-panel p-4">
       <div className="mb-2 flex items-center justify-between">
-        <Link href={`/molecules/${mol.id}`} className="font-medium hover:text-emerald-400">
+        <Link href={`/molecules/${mol.id}`} className="font-medium hover:text-emerald-700">
           {mol.name}
         </Link>
         <span
@@ -32,7 +32,7 @@ function AdvancingCard({ mol, status }: { mol: Molecule; status: string }) {
               ? "bg-emerald-600 text-white"
               : status === "near"
                 ? "bg-amber-500 text-black"
-                : "bg-neutral-800 text-neutral-400"
+                : "bg-panel2 text-inkMuted"
           }`}
         >
           {status === "pass" ? "MEETS TPP" : status.toUpperCase()}
@@ -47,7 +47,7 @@ function AdvancingCard({ mol, status }: { mol: Molecule; status: string }) {
           className="h-24"
         />
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-neutral-300">
+      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-ink">
         <div>TGTA IC50: <span className="font-mono">{fmt(p.tgta_ic50)}nM</span></div>
         <div>Selectivity: <span className="font-mono">{fmt(p.selectivity)}x</span></div>
         <div>Cellular: <span className="font-mono">{fmt(p.cell_ic50)}nM</span></div>
@@ -70,7 +70,7 @@ export default function MoleculesPage() {
     fetchTppScores(programId).then(setScores).catch(() => setScores(null));
   }, [programId]);
 
-  if (!state) return <p className="text-neutral-400">Loading…</p>;
+  if (!state) return <p className="text-inkMuted">Loading…</p>;
 
   const statusById = new Map(
     (scores?.molecules ?? []).map((m) => [m.molecule_id, m.status]),
@@ -91,12 +91,12 @@ export default function MoleculesPage() {
   return (
     <div>
       <h1 className="mb-1 text-xl font-semibold">Molecule Tracking Dashboard</h1>
-      <p className="mb-6 text-sm text-neutral-400">
+      <p className="mb-6 text-sm text-inkMuted">
         {state.molecules.length} active molecules · {state.program.target} vs.{" "}
         {state.program.anti_target}
       </p>
 
-      <h2 className="mb-3 text-sm font-semibold text-neutral-300">Advancing molecules</h2>
+      <h2 className="mb-3 text-sm font-semibold text-ink">Advancing molecules</h2>
       <div className="mb-8 grid gap-4 md:grid-cols-3">
         {advancing.map((mol) => (
           <AdvancingCard
@@ -107,7 +107,7 @@ export default function MoleculesPage() {
         ))}
       </div>
 
-      <h2 className="mb-3 text-sm font-semibold text-neutral-300">
+      <h2 className="mb-3 text-sm font-semibold text-ink">
         Compare all molecules — any property vs. any property
       </h2>
       <div className="mb-8">
@@ -118,10 +118,10 @@ export default function MoleculesPage() {
         />
       </div>
 
-      <h2 className="mb-3 text-sm font-semibold text-neutral-300">All molecules</h2>
-      <div className="overflow-x-auto rounded border border-neutral-800">
+      <h2 className="mb-3 text-sm font-semibold text-ink">All molecules</h2>
+      <div className="overflow-x-auto rounded border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-900 text-neutral-400">
+          <thead className="bg-panel text-inkMuted">
             <tr>
               <th className="px-3 py-2">Compound</th>
               <th className="px-3 py-2">TGTA IC50</th>
@@ -136,9 +136,9 @@ export default function MoleculesPage() {
             {state.molecules.map((mol) => {
               const p = moleculeProperties(mol);
               return (
-                <tr key={mol.id} className="border-t border-neutral-800 hover:bg-neutral-900/50">
+                <tr key={mol.id} className="border-t border-border hover:bg-panel2/60">
                   <td className="px-3 py-2 font-medium">
-                    <Link href={`/molecules/${mol.id}`} className="hover:text-emerald-400">
+                    <Link href={`/molecules/${mol.id}`} className="hover:text-emerald-700">
                       {mol.name}
                     </Link>
                   </td>

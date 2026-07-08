@@ -69,7 +69,7 @@ export function Structure3D({ moleculeId }: { moleculeId: number }) {
       }
       if (cancelled || !ref.current || !window.$3Dmol) return;
       try {
-        const viewer = window.$3Dmol.createViewer(ref.current, { backgroundColor: "#0a0a0a" });
+        const viewer = window.$3Dmol.createViewer(ref.current, { backgroundColor: "#f7f9fb" });
         viewer.addModel(pdb, "pdb");
         viewer.setStyle({}, { cartoon: { color: "spectrum" } });
         viewer.setStyle({ hetflag: true }, { stick: { colorscheme: "greenCarbon" } });
@@ -88,13 +88,13 @@ export function Structure3D({ moleculeId }: { moleculeId: number }) {
   }, [moleculeId]);
 
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950">
+    <div className="relative h-64 w-full overflow-hidden rounded border border-border bg-bg">
       <div ref={ref} className="absolute inset-0" />
       {state === "ready" && label && (
-        <div className="absolute bottom-1 left-2 text-[10px] text-neutral-500">{label}</div>
+        <div className="absolute bottom-1 left-2 text-[10px] text-inkMuted">{label}</div>
       )}
       {state !== "ready" && (
-        <div className="absolute inset-0 flex items-center justify-center text-center text-xs text-neutral-500">
+        <div className="absolute inset-0 flex items-center justify-center text-center text-xs text-inkMuted">
           {state === "loading" && "Loading structure…"}
           {state === "error" && "Structure unavailable"}
         </div>

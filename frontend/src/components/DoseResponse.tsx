@@ -26,13 +26,13 @@ export function DoseResponse({ rederiv }: { rederiv: Rederivation }) {
 
   return (
     <div>
-      <svg width={W} height={H} className="rounded border border-neutral-800 bg-neutral-950">
-        <line x1={PAD} y1={H - PAD} x2={W - 12} y2={H - PAD} stroke="#404040" />
-        <line x1={PAD} y1={12} x2={PAD} y2={H - PAD} stroke="#404040" />
-        <text x={(W + PAD) / 2} y={H - 8} fill="#a3a3a3" fontSize="10" textAnchor="middle">
+      <svg width={W} height={H} className="rounded border border-border bg-bg">
+        <line x1={PAD} y1={H - PAD} x2={W - 12} y2={H - PAD} stroke="#cbd3df" />
+        <line x1={PAD} y1={12} x2={PAD} y2={H - PAD} stroke="#cbd3df" />
+        <text x={(W + PAD) / 2} y={H - 8} fill="#5b6472" fontSize="10" textAnchor="middle">
           [compound] nM (log)
         </text>
-        <text x={12} y={(H - PAD) / 2} fill="#a3a3a3" fontSize="10" textAnchor="middle"
+        <text x={12} y={(H - PAD) / 2} fill="#5b6472" fontSize="10" textAnchor="middle"
           transform={`rotate(-90 12 ${(H - PAD) / 2})`}>% inhibition</text>
 
         {/* re-fitted curve */}
@@ -53,8 +53,8 @@ export function DoseResponse({ rederiv }: { rederiv: Rederivation }) {
         )}
       </svg>
       <div className="mt-2 flex gap-4 text-xs">
-        <span className="text-emerald-400">● re-derived IC50 {rederiv.fitted_ic50} nM (R²={rederiv.fit.r2})</span>
-        <span className="text-amber-400">● reported IC50 {rederiv.reported_ic50} nM</span>
+        <span className="text-emerald-700">● re-derived IC50 {rederiv.fitted_ic50} nM (R²={rederiv.fit.r2})</span>
+        <span className="text-amber-600">● reported IC50 {rederiv.reported_ic50} nM</span>
       </div>
     </div>
   );

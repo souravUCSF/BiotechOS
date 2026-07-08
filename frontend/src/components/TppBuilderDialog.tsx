@@ -61,26 +61,26 @@ export function TppBuilderDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
-        className="flex h-[85vh] w-full max-w-2xl flex-col rounded-lg border border-neutral-700 bg-neutral-950"
+        className="flex h-[85vh] w-full max-w-2xl flex-col rounded-lg border border-borderStrong bg-panel"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-neutral-800 p-4">
+        <div className="flex items-center justify-between border-b border-border p-4">
           <div>
             <h2 className="text-lg font-semibold">Build a new TPP with Opus</h2>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-inkMuted">
               A guided conversation to design an effective TPP for this program.
             </p>
           </div>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-300">✕</button>
+          <button onClick={onClose} className="text-inkMuted hover:text-ink">✕</button>
         </div>
 
-        <div className="border-b border-neutral-800 p-3">
+        <div className="border-b border-border p-3">
           <input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="Anthropic API key (optional — enables live Opus reasoning)"
-            className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm"
+            className="w-full rounded border border-borderStrong bg-panel px-3 py-1.5 text-sm"
           />
         </div>
 
@@ -90,36 +90,36 @@ export function TppBuilderDialog({
               <div
                 className={`inline-block max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${
                   m.role === "user"
-                    ? "bg-emerald-700 text-white"
-                    : "bg-neutral-900 text-neutral-200"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-panel2 text-ink"
                 }`}
               >
                 {m.content}
               </div>
             </div>
           ))}
-          {busy && <div className="text-xs text-neutral-500">TPP Builder is thinking…</div>}
+          {busy && <div className="text-xs text-inkMuted">TPP Builder is thinking…</div>}
         </div>
 
-        <div className="border-t border-neutral-800 p-3">
+        <div className="border-t border-border p-3">
           <div className="flex gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !busy && send()}
               placeholder="Reply to the TPP Builder…"
-              className="flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+              className="flex-1 rounded border border-borderStrong bg-panel px-3 py-2 text-sm"
             />
             <button
               onClick={send}
               disabled={busy || !input.trim()}
-              className="rounded bg-neutral-700 px-4 py-2 text-sm text-white disabled:opacity-50"
+              className="rounded border border-borderStrong bg-panel2 px-4 py-2 text-sm text-ink disabled:opacity-50"
             >
               Send
             </button>
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-neutral-600">
+            <span className="text-xs text-inkFaint">
               When you&apos;ve converged, finalize into a new TPP version.
             </span>
             <button

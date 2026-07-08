@@ -5,7 +5,7 @@ import { useProgram } from "@/lib/ProgramContext";
 import { fetchCompetitive, type Radar, type RadarItem } from "@/lib/api";
 
 function threatColor(t: number | null) {
-  if (t == null) return "bg-neutral-700";
+  if (t == null) return "bg-panel2";
   if (t >= 0.75) return "bg-red-600";
   if (t >= 0.55) return "bg-amber-500";
   return "bg-neutral-600";
@@ -13,10 +13,10 @@ function threatColor(t: number | null) {
 
 function ItemRow({ i }: { i: RadarItem }) {
   const inner = (
-    <div className="flex items-start justify-between gap-3 rounded border border-neutral-800 bg-neutral-900 p-3 hover:bg-neutral-800/50">
+    <div className="flex items-start justify-between gap-3 rounded border border-border bg-panel p-3 hover:bg-panel2">
       <div className="min-w-0">
-        <div className="truncate text-sm text-neutral-200">{i.title}</div>
-        <div className="mt-0.5 text-xs text-neutral-500">
+        <div className="truncate text-sm text-ink">{i.title}</div>
+        <div className="mt-0.5 text-xs text-inkMuted">
           {[i.org, i.stage, i.status, i.event_date].filter(Boolean).join(" · ")}
           {i.source ? ` · ${i.source}` : ""}
         </div>
@@ -39,11 +39,11 @@ function Column({ title, items, hint }: { title: string; items: RadarItem[]; hin
   const sorted = [...items].sort((a, b) => (b.threat_score ?? 0) - (a.threat_score ?? 0));
   return (
     <div>
-      <div className="mb-1 text-sm font-semibold text-neutral-200">{title}</div>
-      <div className="mb-2 text-xs text-neutral-500">{hint}</div>
+      <div className="mb-1 text-sm font-semibold text-ink">{title}</div>
+      <div className="mb-2 text-xs text-inkMuted">{hint}</div>
       <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
         {sorted.length === 0 ? (
-          <div className="text-xs text-neutral-600">none</div>
+          <div className="text-xs text-inkFaint">none</div>
         ) : (
           sorted.map((i, n) => <ItemRow key={n} i={i} />)
         )}
@@ -60,16 +60,16 @@ function CatalystTimeline({ items }: { items: RadarItem[] }) {
   if (!dated.length) return null;
   return (
     <div className="mb-8">
-      <div className="mb-3 text-sm font-semibold text-neutral-200">
+      <div className="mb-3 text-sm font-semibold text-ink">
         Catalyst timeline — upcoming inflection points
       </div>
-      <div className="relative border-l border-neutral-700 pl-5">
+      <div className="relative border-l border-borderStrong pl-5">
         {dated.map((i, n) => (
           <div key={n} className="relative mb-4">
             <div className={`absolute -left-[23px] top-1 h-2.5 w-2.5 rounded-full ${threatColor(i.threat_score)}`} />
-            <div className="text-xs font-mono text-neutral-400">{i.event_date}</div>
-            <div className="text-sm text-neutral-200">{i.title}</div>
-            <div className="text-xs text-neutral-500">{[i.org, i.stage].filter(Boolean).join(" · ")}</div>
+            <div className="text-xs font-mono text-inkMuted">{i.event_date}</div>
+            <div className="text-sm text-ink">{i.title}</div>
+            <div className="text-xs text-inkMuted">{[i.org, i.stage].filter(Boolean).join(" · ")}</div>
           </div>
         ))}
       </div>
@@ -86,14 +86,14 @@ export default function CompetitivePage() {
     fetchCompetitive(programId).then(setRadar).catch((e) => setError(String(e)));
   }, [programId]);
 
-  if (error) return <p className="text-red-400">Error: {error}</p>;
-  if (!radar) return <p className="text-neutral-400">Loading radar…</p>;
+  if (error) return <p className="text-red-600">Error: {error}</p>;
+  if (!radar) return <p className="text-inkMuted">Loading radar…</p>;
 
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-xl font-semibold">Competitive Radar</h1>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-inkMuted">
           {radar.live ? "live" : "cached"} · ClinicalTrials.gov + PubMed + curated ·{" "}
           {new Date(radar.generated_at).toLocaleString()}
         </span>
