@@ -404,7 +404,8 @@ export async function tppBuilderFinalize(
 
 // --- QueryOS / corpus knowledge ---
 export type KnowledgeCitation = {
-  id?: number; subject?: string; email_from?: string; sent_at?: string;
+  id?: number; subject?: string; email_from?: string; email_to?: string;
+  sent_at?: string; doc_type?: string; snippet?: string | null; body?: string;
 };
 export type KnowledgeAnswer = {
   answer: string; used_llm: boolean; source: "facts" | "documents" | "none";
@@ -425,5 +426,66 @@ export type CorpusSummary = { documents: number; facts: number; by_type: Record<
 export async function fetchCorpusSummary(programId: string): Promise<CorpusSummary> {
   const res = await fetch(`${API_BASE}/corpus/summary?program_id=${programId}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`corpus summary failed: ${res.status}`);
+  return res.json();
+}
+
+// --- Current Inbox (Inbox v2, Phase 2) ---
+export type InboxAttachment = { filename: string; protected: boolean; mimetype: string };
+export type InboxEnvelope = {
+  email_from: string | null;
+  email_to: string | null;
+  subject: string;
+  date: string | null;
+  direction: string | null;
+  body_preview: string | null;
+  attachments: InboxAttachment[];
+};
+export type InboxContext = {
+  molecules?: { molecule_id: number; name: string; tpp_status: string }[];
+  budget?: BudgetSnapshot;
+  prior_quotes?: { amounts: string[]; documents: { id: number; subject: string; sent_at: string }[] };
+  ledger?: { id: number; kind: string; title: string; created_at: string }[];
+};
+export type InboxV2Item = {
+  id: number;
+  kind: string;
+  doc_type: string | null;
+  title: string;
+  summary: string | null;
+  status: string;
+  document_id: number | null;
+  envelope: InboxEnvelope;
+  extraction: Record<string, unknown>;
+  analysis: { recommendation?: string; note?: string; decision_state?: string };
+  proposed_action: { action?: string; label?: string; note?: string };
+  context: InboxContext;
+};
+
+export type InboxApproveResult = ApproveResult & {
+  promoted_facts?: number;
+  molecules?: { name: string; created: boolean }[];
+  reply_draft?: string;
+  grounding?: { source: string; citations: KnowledgeCitation[] };
+};
+
+export async function fetchInbox(programId: string): Promise<InboxV2Item[]> {
+  const res = await fetch(`${API_BASE}/inbox?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /inbox failed: ${res.status}`);
+  return (await res.json()).items;
+}
+
+export async function approveInboxV2(itemId: number, programId: string): Promise<InboxApproveResult> {
+  const res = await fetch(`${API_BASE}/inbox/${itemId}/approve?program_id=${programId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`approve failed: ${res.status}`);
+  return res.json();
+}
+
+export async function declineInbox(itemId: number, programId: string): Promise<{ status: string }> {
+  const res = await fetch(`${API_BASE}/inbox/${itemId}/decline?program_id=${programId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`decline failed: ${res.status}`);
   return res.json();
 }

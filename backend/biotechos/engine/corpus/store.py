@@ -16,6 +16,70 @@ from .. import extract as X
 # predicates that hold multiple simultaneous values (a vendor tests many lines)
 MULTI_VALUED = {"tests_cell_line", "offers_service"}
 
+# Inbox v2: which extract recommendations warrant a human decision in the inbox.
+# review_quote / review_data / draft_reply always need a human; contract / invoice
+# / logistics carry a decision even though extract emits 'acknowledge' for them.
+_INBOX_RECOMMENDATIONS = {"review_quote", "review_data", "draft_reply"}
+_INBOX_DOC_TYPES = {"contract", "invoice", "logistics"}
+
+# recommendation -> proposed_action.action consumed by engine.inbox.approve()
+_ACTION_FOR = {
+    "review_quote": "review_quote",
+    "review_data": "review_data",
+    "draft_reply": "draft_reply",
+    "invoice": "review_invoice",
+    "contract": "review_contract",
+    "logistics": "review_logistics",
+}
+_LABEL_FOR = {
+    "review_quote": "Review quote → issue PO",
+    "review_data": "Review data → load to DB",
+    "draft_reply": "Review draft reply",
+    "review_invoice": "Reconcile invoice",
+    "review_contract": "Review agreement",
+    "review_logistics": "Confirm logistics",
+}
+
+
+def _stage_inbox_item(conn, program_id: str, doc_id: int, em, res: dict) -> None:
+    """Create an inbox_items row for an actionable doc that needs a human.
+    Skips noise/fyi and pure-acknowledge items (unless a decision doc_type)."""
+    dt = res["doc_type"]
+    analysis = res.get("analysis", {}) or {}
+    rec = analysis.get("recommendation")
+    if res.get("triage") in ("noise", "fyi"):
+        return
+    if rec not in _INBOX_RECOMMENDATIONS and dt not in _INBOX_DOC_TYPES:
+        return  # pure acknowledge with no decision doc_type
+
+    action_key = rec if rec in _INBOX_RECOMMENDATIONS else dt
+    action = _ACTION_FOR.get(action_key, "acknowledge")
+    extraction = res.get("extraction", {}) or {}
+    vendor = res.get("vendor")
+
+    subject = em.subject or "(no subject)"
+    title = subject
+    summary = analysis.get("note") or f"{dt.replace('_', ' ')} from {vendor or em.email_from}"
+    proposed = {"action": action, "label": _LABEL_FOR.get(action, "Review"),
+                "note": analysis.get("note", "")}
+    payload = {
+        "document_id": doc_id, "doc_type": dt, "vendor": vendor,
+        "email_from": em.email_from, "email_to": em.email_to,
+        "subject": subject, "date": em.date, "direction": em.direction,
+        "body_preview": (em.body or "")[:600],
+        "attachments": [
+            {"filename": a.filename, "protected": bool(a.protected),
+             "mimetype": a.mimetype} for a in (em.attachments or [])
+        ],
+        "extraction": extraction, "analysis": analysis,
+    }
+    conn.execute(
+        "INSERT INTO inbox_items(program_id,kind,title,summary,payload,proposed_action,"
+        "document_id,doc_type,analysis,extraction_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (program_id, dt, title, summary, json.dumps(payload), json.dumps(proposed),
+         doc_id, dt, json.dumps(analysis), json.dumps(extraction)),
+    )
+
 
 def _promote(conn, program_id: str, obs_id: int, o: dict) -> None:
     """Promote an 'agreed' observation into the current-facts world model."""
@@ -48,6 +112,9 @@ def reset(program_id: str = DEMO_PROGRAM_ID, conn=None) -> None:
     conn = conn or db.connect()
     with conn:
         # children before parents (facts→observations→documents)
+        # document-linked inbox items are regenerated on ingest; drop them first
+        conn.execute("DELETE FROM inbox_items WHERE program_id=? AND document_id IS NOT NULL",
+                     (program_id,))
         for t in ("facts", "observations", "documents"):
             conn.execute(f"DELETE FROM {t} WHERE program_id=?", (program_id,))
         conn.execute("DELETE FROM documents_fts")  # content-external; rebuilt on ingest
@@ -91,6 +158,7 @@ def ingest(program_id: str = DEMO_PROGRAM_ID, source: str | None = None,
                 counts["observations"] += 1
                 if o.get("decision_state") == "agreed":
                     _promote(conn, program_id, oc.lastrowid, o)
+            _stage_inbox_item(conn, program_id, doc_id, em, res)
             n += 1
         counts["facts"] = conn.execute(
             "SELECT COUNT(*) c FROM facts WHERE program_id=? AND status='current'",

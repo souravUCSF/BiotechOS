@@ -30,6 +30,11 @@ _MIGRATIONS = [
     ("vendors", "contacts", "TEXT"),             # JSON list of {name,email,role}
     ("vendors", "pricing_bands", "TEXT"),        # JSON: service -> price band
     ("vendors", "domain", "TEXT"),               # email domain, for credential matching
+    # Inbox v2 (Phase 2): link inbox items to their source document + extraction
+    ("inbox_items", "document_id", "INTEGER"),   # source documents.id
+    ("inbox_items", "doc_type", "TEXT"),         # extract doc_type
+    ("inbox_items", "analysis", "TEXT"),         # JSON: extract analysis/recommendation
+    ("inbox_items", "extraction_json", "TEXT"),  # JSON: typed extraction result
 ]
 
 

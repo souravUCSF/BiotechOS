@@ -80,6 +80,11 @@ DOMAIN_LEAK_RE = re.compile("|".join(re.escape(d) for d in DOMAIN_SUBS))
 _SMILES_RE = re.compile(r"(?<![\w.=&?/])(?=[^\s]*[=#\[\]])[A-Za-z0-9@+\[\]()=#\\-]{14,}(?![\w.])")
 
 
+# phone/fax: optional +country, then a 10-digit US-style number in common formats.
+_PHONE_RE = re.compile(
+    r"(?:\+?\d{1,3}[\s.\-]?)?\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4}\b")
+
+
 def _smiles_repl(m: "re.Match") -> str:
     tok = m.group(0)
     # URL/query cruft, not chemistry: has web punctuation or lacks ring/organic chars
@@ -159,6 +164,8 @@ class Anonymizer:
         # dynamic person full-names (longest first)
         for real in sorted(self.maps["person"], key=len, reverse=True):
             s = re.sub(re.escape(real), self.maps["person"][real], s, flags=re.I)
+        # phone / fax numbers (US + intl-ish) → [phone]
+        s = _PHONE_RE.sub("[phone]", s)
         s = _SMILES_RE.sub(_smiles_repl, s)
         return s
 

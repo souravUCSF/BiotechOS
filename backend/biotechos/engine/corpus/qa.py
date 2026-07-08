@@ -42,6 +42,19 @@ def _fts(conn, program_id: str, query: str, k: int = 6) -> list[dict]:
         return []
 
 
+def _cite(conn, doc_id: int, snippet: str | None = None) -> dict | None:
+    """Full citation payload for the clickable source panel."""
+    d = conn.execute(
+        "SELECT id,subject,email_from,email_to,sent_at,doc_type,raw_text FROM documents WHERE id=?",
+        (doc_id,)).fetchone()
+    if not d:
+        return None
+    body = (d["raw_text"] or "")[:6000]
+    return {"id": d["id"], "subject": d["subject"], "email_from": d["email_from"],
+            "email_to": d["email_to"], "sent_at": d["sent_at"], "doc_type": d["doc_type"],
+            "snippet": snippet, "body": body}
+
+
 def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | None = None) -> dict:
     conn = db.connect()
     q = question.strip()
@@ -69,13 +82,13 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
             args.append(vendor)
         facts_hit = [dict(r) for r in conn.execute(sql, args).fetchall()]
 
-    # gather citation docs from the facts' source documents
+    # gather citation docs from the facts' source documents (full content for the
+    # clickable source panel)
     doc_ids = sorted({f["source_document_id"] for f in facts_hit if f.get("source_document_id")})
     for did in doc_ids[:6]:
-        d = conn.execute("SELECT id,subject,email_from,sent_at FROM documents WHERE id=?",
-                         (did,)).fetchone()
-        if d:
-            citations.append(dict(d))
+        cit = _cite(conn, did)
+        if cit:
+            citations.append(cit)
 
     # --- build the answer ---
     if facts_hit:
@@ -102,19 +115,21 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
 
     # --- fallback: document retrieval (FTS5) ---
     docs = _fts(conn, program_id, q)
-    conn.close()
     if not docs:
+        conn.close()
         return {"answer": "Not found in the corpus.", "used_llm": False,
                 "citations": [], "source": "none", "fact_count": 0}
     context = "\n\n".join(f"[doc {d['id']}] {d['subject']}\n{d['snip']}" for d in docs)
+    cites = [_cite(conn, d["id"], snippet=d.get("snip")) for d in docs]
+    cites = [c for c in cites if c]
+    conn.close()
     answer, used_llm = llm.text(
         model=MODEL_ARTIFACTS,
         system=("Answer ONLY from the provided email excerpts, citing [doc N]. "
                 "If they don't contain the answer, say 'Not found in the corpus.'"),
         user=f"Question: {question}\n\nEXCERPTS:\n{context}",
         fallback="Related emails found (no API key for synthesis):\n" +
-                 "\n".join(f"- [doc {d['id']}] {d['subject']}" for d in docs))
-    return {"answer": answer, "used_llm": used_llm,
-            "citations": [{"id": d["id"], "subject": d["subject"],
-                           "email_from": d["email_from"], "sent_at": d["sent_at"]} for d in docs],
+                 "\n".join(f"- [doc {d['id']}] {d['subject']}" for d in docs),
+        api_key=api_key)
+    return {"answer": answer, "used_llm": used_llm, "citations": cites,
             "source": "documents", "fact_count": 0}

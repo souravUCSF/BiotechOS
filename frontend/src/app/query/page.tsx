@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useProgram } from "@/lib/ProgramContext";
 import {
   askKnowledge, fetchCorpusSummary,
-  type KnowledgeAnswer, type CorpusSummary,
+  type KnowledgeAnswer, type CorpusSummary, type KnowledgeCitation,
 } from "@/lib/api";
 
 const EXAMPLES = [
@@ -21,6 +21,7 @@ export default function QueryOSPage() {
   const [ans, setAns] = useState<KnowledgeAnswer | null>(null);
   const [summary, setSummary] = useState<CorpusSummary | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [openDoc, setOpenDoc] = useState<KnowledgeCitation | null>(null);
 
   useEffect(() => {
     fetchCorpusSummary(programId).then(setSummary).catch(() => setSummary(null));
@@ -103,18 +104,58 @@ export default function QueryOSPage() {
 
           {ans.citations.length > 0 && (
             <div className="mt-4 border-t border-border pt-3">
-              <div className="mb-1 text-xs font-medium text-inkMuted">Sources</div>
+              <div className="mb-1 text-xs font-medium text-inkMuted">
+                Sources — click to open the email
+              </div>
               <ul className="space-y-1 text-xs">
                 {ans.citations.map((c, i) => (
-                  <li key={`${c.id}-${i}`} className="text-inkMuted">
-                    <span className="text-ink">📧 {c.subject || "(no subject)"}</span>
-                    {c.email_from && <span className="ml-1">— {c.email_from}</span>}
-                    {c.sent_at && <span className="ml-1 text-inkFaint">{String(c.sent_at).slice(0, 10)}</span>}
+                  <li key={`${c.id}-${i}`}>
+                    <button
+                      onClick={() => setOpenDoc(c)}
+                      className="text-left text-inkMuted hover:text-ink"
+                    >
+                      <span className="text-emerald-700">📧 {c.subject || "(no subject)"}</span>
+                      {c.email_from && <span className="ml-1">— {c.email_from}</span>}
+                      {c.sent_at && <span className="ml-1 text-inkFaint">{String(c.sent_at).slice(0, 10)}</span>}
+                    </button>
                   </li>
                 ))}
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {/* source email side panel */}
+      {openDoc && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setOpenDoc(null)}>
+          <div
+            className="h-full w-full max-w-xl overflow-y-auto border-l border-borderStrong bg-panel p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-ink">{openDoc.subject || "(no subject)"}</div>
+                <div className="mt-1 text-xs text-inkMuted">
+                  {openDoc.email_from && <div>From: {openDoc.email_from}</div>}
+                  {openDoc.email_to && <div>To: {openDoc.email_to}</div>}
+                  {openDoc.sent_at && <div>Date: {String(openDoc.sent_at).slice(0, 10)}</div>}
+                  {openDoc.doc_type && (
+                    <span className="mt-1 inline-block rounded bg-panel2 px-2 py-0.5 text-inkMuted">
+                      {openDoc.doc_type}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => setOpenDoc(null)} className="text-inkMuted hover:text-ink">✕</button>
+            </div>
+            {openDoc.snippet && (
+              <div className="mb-3 rounded border border-emerald-300 bg-emerald-50 p-2 text-xs text-emerald-800">
+                matched: …{openDoc.snippet.replace(/\[/g, "").replace(/\]/g, "")}…
+              </div>
+            )}
+            <pre className="whitespace-pre-wrap break-words text-xs text-ink">{openDoc.body || "(no content)"}</pre>
+          </div>
         </div>
       )}
     </div>

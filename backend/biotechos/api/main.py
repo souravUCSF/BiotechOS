@@ -13,6 +13,8 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from ..config import DEMO_PROGRAM_ID
+from ..engine import cfo as cfo_engine
+from ..engine import identity as identity_engine
 from ..engine import inbox as inbox_engine
 from ..engine import structure as structure_engine
 from ..engine import tpp as tpp_engine
@@ -445,6 +447,111 @@ def tpp_demo_brief():
     return {"brief": tpp_builder.DEMO_BRIEF}
 
 
+def _referenced_molecule_ids(conn, program_id: str, payload: dict) -> list[int]:
+    """Resolve molecule tokens referenced by an inbox item to canonical ids."""
+    ids: list[int] = []
+    if payload.get("molecule_id"):
+        ids.append(payload["molecule_id"])
+    tokens: list[str] = []
+    for a in (payload.get("extraction", {}) or {}).get("assays", []):
+        if isinstance(a, dict) and a.get("molecule"):
+            tokens.append(str(a["molecule"]))
+    for tok in (payload.get("extraction", {}) or {}).get("molecules", []) or []:
+        tokens.append(str(tok))
+    for tok in tokens:
+        r = identity_engine.resolve_molecule(program_id, tok, conn=conn)
+        if r.get("molecule_id"):
+            ids.append(r["molecule_id"])
+    # de-dup, preserve order
+    seen, out = set(), []
+    for i in ids:
+        if i not in seen:
+            seen.add(i)
+            out.append(i)
+    return out
+
+
+def _inbox_context(conn, program_id: str, item: dict, payload: dict) -> dict:
+    """Assemble the context panel; only include sections that resolve."""
+    ctx: dict = {}
+
+    # 1) referenced-molecule TPP status
+    mol_ids = _referenced_molecule_ids(conn, program_id, payload)
+    if mol_ids:
+        scores = {m["molecule_id"]: m for m in tpp_engine.recompute(program_id)["molecules"]}
+        mols = []
+        for mid in mol_ids:
+            row = conn.execute("SELECT id,name FROM molecules WHERE id=?", (mid,)).fetchone()
+            if not row:
+                continue
+            s = scores.get(mid)
+            mols.append({"molecule_id": mid, "name": row["name"],
+                         "tpp_status": s["status"] if s else "no_data"})
+        if mols:
+            ctx["molecules"] = mols
+
+    # 2) budget snapshot (always resolvable if a budget exists)
+    snap = cfo_engine.budget_snapshot(conn, program_id)
+    if snap:
+        ctx["budget"] = snap
+
+    # 3) prior quotes from the same vendor (facts + documents)
+    vendor = payload.get("vendor")
+    if vendor and vendor != "Unknown vendor":
+        quotes = [dict(r) for r in conn.execute(
+            "SELECT value FROM facts WHERE program_id=? AND subject_type='vendor' "
+            "AND subject_key=? AND predicate='quoted_amount' AND status='current'",
+            (program_id, vendor)).fetchall()]
+        prior_docs = [dict(r) for r in conn.execute(
+            "SELECT id,subject,sent_at FROM documents WHERE program_id=? AND doc_type='quote' "
+            "AND id<>? ORDER BY id DESC LIMIT 5",
+            (program_id, payload.get("document_id") or -1)).fetchall()]
+        if quotes or prior_docs:
+            ctx["prior_quotes"] = {"amounts": [q["value"] for q in quotes], "documents": prior_docs}
+
+    # 4) related ledger entries (same vendor mention in title)
+    if vendor and vendor != "Unknown vendor":
+        led = [dict(r) for r in conn.execute(
+            "SELECT id,kind,title,created_at FROM ledger_entries WHERE program_id=? "
+            "AND title LIKE ? ORDER BY id DESC LIMIT 5",
+            (program_id, f"%{vendor}%")).fetchall()]
+        if led:
+            ctx["ledger"] = led
+    return ctx
+
+
+@app.get("/inbox")
+def get_inbox(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Open inbox items with envelope + extraction + analysis + context panel."""
+    conn = get_conn()
+    rows = db.rows_to_dicts(conn.execute(
+        "SELECT * FROM inbox_items WHERE program_id=? AND status='pending' ORDER BY id",
+        (program_id,)))
+    out = []
+    for it in rows:
+        payload = json.loads(it["payload"]) if it["payload"] else {}
+        analysis = json.loads(it["analysis"]) if it.get("analysis") else payload.get("analysis", {})
+        extraction = (json.loads(it["extraction_json"]) if it.get("extraction_json")
+                      else payload.get("extraction", {}))
+        proposed = json.loads(it["proposed_action"]) if it["proposed_action"] else {}
+        out.append({
+            "id": it["id"], "kind": it["kind"], "doc_type": it.get("doc_type"),
+            "title": it["title"], "summary": it["summary"], "status": it["status"],
+            "document_id": it.get("document_id"),
+            "envelope": {
+                "email_from": payload.get("email_from"), "email_to": payload.get("email_to"),
+                "subject": payload.get("subject") or it["title"], "date": payload.get("date"),
+                "direction": payload.get("direction"),
+                "body_preview": payload.get("body_preview"),
+                "attachments": payload.get("attachments", []),
+            },
+            "extraction": extraction, "analysis": analysis, "proposed_action": proposed,
+            "context": _inbox_context(conn, program_id, it, payload),
+        })
+    conn.close()
+    return {"items": out}
+
+
 @app.get("/inbox/{item_id}/rederivation")
 def inbox_rederivation(item_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
     """Re-derivation overlay data for an item (raw curve + fitted vs reported IC50)."""
@@ -467,6 +574,20 @@ def inbox_approve(item_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)
         return inbox_engine.approve(item_id, program_id)
     except ValueError as e:
         raise HTTPException(404, str(e))
+
+
+@app.post("/inbox/{item_id}/decline")
+def inbox_decline(item_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Dismiss an inbox item without acting on it."""
+    conn = get_conn()
+    with conn:
+        cur = conn.execute(
+            "UPDATE inbox_items SET status='dismissed' WHERE id=? AND program_id=?",
+            (item_id, program_id))
+    conn.close()
+    if cur.rowcount == 0:
+        raise HTTPException(404, "inbox item not found")
+    return {"status": "dismissed"}
 
 
 @app.post("/demo/reset")

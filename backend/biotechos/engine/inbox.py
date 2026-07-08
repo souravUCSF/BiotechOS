@@ -13,10 +13,60 @@ the re-derivation catch.
 from __future__ import annotations
 
 import json
+import re
 
 from ..config import DEMO_PROGRAM_ID
 from ..state import db
-from . import artifacts, cfo, curvefit, tpp
+from . import artifacts, cfo, curvefit, identity, tpp
+from .corpus import store as corpus_store
+
+
+def _next_btx_name(conn, program_id: str) -> str:
+    """Return the next BTX-#### name, continuing the sequence."""
+    rows = conn.execute(
+        "SELECT name FROM molecules WHERE program_id=? AND name LIKE 'BTX-%'",
+        (program_id,)).fetchall()
+    mx = 0
+    for r in rows:
+        m = re.match(r"BTX-(\d+)", r["name"])
+        if m:
+            mx = max(mx, int(m.group(1)))
+    return f"BTX-{max(mx, 1299) + 1:04d}"
+
+
+def _promote_item_observations(conn, program_id: str, document_id: int | None) -> int:
+    """Promote observations sourced from this item's document into current facts."""
+    if not document_id:
+        return 0
+    obs = conn.execute(
+        "SELECT id,subject_type,subject_key,predicate,value FROM observations "
+        "WHERE program_id=? AND source_document_id=?", (program_id, document_id)).fetchall()
+    n = 0
+    for o in obs:
+        corpus_store._promote(conn, program_id, o["id"],
+                              {"subject_type": o["subject_type"], "subject_key": o["subject_key"],
+                               "predicate": o["predicate"], "value": o["value"]})
+        n += 1
+    return n
+
+
+def _resolve_or_create(conn, program_id: str, token: str, smiles: str | None,
+                       document_id: int | None) -> tuple[int, str, bool]:
+    """Resolve a compound token; if unresolved, create a new BTX-#### molecule and
+    register the surrogate token as an alias. Returns (mol_id, name, created)."""
+    r = identity.resolve_molecule(program_id, token, smiles=smiles,
+                                  source_document_id=document_id, conn=conn)
+    if r.get("molecule_id"):
+        return r["molecule_id"], token, r["status"] == "created"
+    name = _next_btx_name(conn, program_id)
+    ik = identity.inchikey(smiles)
+    mid = conn.execute(
+        "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out) VALUES (?,?,?,?,0)",
+        (program_id, name, smiles, ik)).lastrowid
+    # canonical name is an implicit alias; also register the surrogate/CRO code
+    identity.add_alias(program_id, mid, token, source_document_id=document_id,
+                       confidence=1.0, verified=True, conn=conn)
+    return mid, name, True
 
 
 def _mol_id_by_name(conn, program_id: str, name: str) -> int | None:
@@ -135,6 +185,122 @@ def rederivation_for_item(item: dict) -> dict | None:
     return None
 
 
+def _approve_quote_from_extraction(conn, program_id: str, item: dict, payload: dict) -> dict:
+    """Quote → PO: materialize a vendor + quote from the extraction, then run the
+    CFO approve_quote flow (PO + vendor email draft + budget commit) → ledger + facts."""
+    ex = payload.get("extraction", {}) or {}
+    vendor_name = payload.get("vendor") or ex.get("vendor") or "Unknown vendor"
+    amount = ex.get("total") or (max(ex["amounts"]) if ex.get("amounts") else 0.0)
+    document_id = payload.get("document_id")
+
+    with conn:
+        vrow = conn.execute("SELECT id FROM vendors WHERE program_id=? AND name=?",
+                            (program_id, vendor_name)).fetchone()
+        vid = vrow["id"] if vrow else conn.execute(
+            "INSERT INTO vendors(program_id,name,email,kind) VALUES (?,?,?,?)",
+            (program_id, vendor_name, payload.get("email_from", ""), "CRO")).lastrowid
+        line_items = [{"item": s, "amount": None} for s in ex.get("services", [])] or \
+                     [{"item": payload.get("subject", "Quoted services"), "amount": amount}]
+        qid = conn.execute(
+            "INSERT INTO quotes(program_id,vendor_id,description,line_items,amount,status)"
+            " VALUES (?,?,?,?,?, 'received')",
+            (program_id, vid, payload.get("subject", "Vendor quote"),
+             json.dumps(line_items), amount)).lastrowid
+
+    fin = cfo.approve_quote(qid, program_id)  # its own txn: PO + email + commit + ledger + invoice item
+    with conn:
+        promoted = _promote_item_observations(conn, program_id, document_id)
+        conn.execute("UPDATE inbox_items SET status='approved' WHERE id=?", (item["id"],))
+    return {"kind": item["kind"], "financial": fin, "promoted_facts": promoted}
+
+
+def _approve_data_from_extraction(conn, program_id: str, item: dict, payload: dict,
+                                  before: dict) -> dict:
+    """Data → DB: resolve/merge each compound into the BTX set, insert assays,
+    recompute TPP, draft go/no-go memos on crossings → ledger + facts."""
+    ex = payload.get("extraction", {}) or {}
+    document_id = payload.get("document_id")
+    assays = ex.get("assays", []) or []
+    loaded, mols = 0, {}
+
+    with conn:
+        for a in assays:
+            if not isinstance(a, dict):
+                continue
+            token = a.get("molecule") or payload.get("subject")
+            if token not in mols:
+                mid, name, created = _resolve_or_create(
+                    conn, program_id, str(token), a.get("smiles"), document_id)
+                mols[token] = {"id": mid, "name": name, "created": created}
+            mid = mols[token]["id"]
+            # extract_cro_data emits {type,value,units}; map to assays table best-effort
+            try:
+                val = float(a.get("value")) if a.get("value") is not None else None
+            except (TypeError, ValueError):
+                val = None
+            if val is None:
+                continue
+            conn.execute(
+                "INSERT INTO assays(program_id,molecule_id,modality,target,standard_type,"
+                "value,units,source) VALUES (?,?,?,?,?,?,?,?)",
+                (program_id, mid, a.get("modality", "biochemical_ic50"),
+                 a.get("target", ""), a.get("type") or a.get("standard_type", "IC50"),
+                 val, a.get("units", "nM"), "cro"))
+            loaded += 1
+        for m in mols.values():
+            conn.execute("UPDATE molecules SET held_out=0 WHERE id=?", (m["id"],))
+
+    after = {m["name"]: m for m in tpp.recompute(program_id)["molecules"]}
+    crossed = [n for n, m in after.items()
+               if m["status"] == "pass" and before.get(n) != "pass"]
+
+    with conn:
+        conn.execute(
+            "INSERT INTO ledger_entries(program_id,kind,title,content,approved_by)"
+            " VALUES (?,?,?,?,?)",
+            (program_id, "data_interpretation", item["title"],
+             f"Loaded {loaded} CRO measurements across {len(mols)} molecule(s): "
+             + ", ".join(m["name"] for m in mols.values()), "founder"))
+        promoted = _promote_item_observations(conn, program_id, document_id)
+        conn.execute("UPDATE inbox_items SET status='approved' WHERE id=?", (item["id"],))
+
+    memo = None
+    for name in crossed:
+        text, used_llm = artifacts.go_no_go_memo(name, after[name])
+        memo = {"molecule": name, "text": text, "used_llm": used_llm}
+        with conn:
+            conn.execute(
+                "INSERT INTO ledger_entries(program_id,kind,title,content,approved_by)"
+                " VALUES (?,?,?,?,?)",
+                (program_id, "go_no_go", f"Go/No-Go: advance {name}", text, "founder"))
+
+    return {"kind": item["kind"], "loaded": loaded, "crossed": crossed, "memo": memo,
+            "molecules": [{"name": m["name"], "created": m["created"]} for m in mols.values()],
+            "promoted_facts": promoted}
+
+
+def _draft_query_reply(conn, program_id: str, item: dict, payload: dict) -> dict:
+    """Query → grounded reply draft (no send). Uses qa.ask READ-ONLY for grounding."""
+    from .corpus import qa  # local import: READ-ONLY grounding, never edited here
+    question = (payload.get("extraction", {}) or {}).get("question") \
+        or payload.get("subject") or ""
+    grounded = qa.ask(program_id, question)
+    draft = (f"Hi,\n\n{grounded.get('answer', '').strip()}\n\n"
+             f"Best regards,\nBiotechOS Program Office")
+    document_id = payload.get("document_id")
+    with conn:
+        conn.execute(
+            "INSERT INTO ledger_entries(program_id,kind,title,content,approved_by)"
+            " VALUES (?,?,?,?,?)",
+            (program_id, "query_reply", item["title"], draft, "founder"))
+        promoted = _promote_item_observations(conn, program_id, document_id)
+        conn.execute("UPDATE inbox_items SET status='approved' WHERE id=?", (item["id"],))
+    return {"kind": item["kind"], "reply_draft": draft,
+            "grounding": {"source": grounded.get("source"),
+                          "citations": grounded.get("citations", [])},
+            "promoted_facts": promoted}
+
+
 def approve(item_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
     """Run the loop for one inbox item."""
     conn = db.connect()
@@ -180,6 +346,37 @@ def approve(item_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
             conn.execute("UPDATE inbox_items SET status='approved' WHERE id=?", (item_id,))
         conn.close()
         return result
+
+    act = action.get("action")
+    document_id = payload.get("document_id")
+
+    # --- Inbox v2 branches (document-driven items staged by store.ingest) ------
+    if act == "review_quote":
+        res = _approve_quote_from_extraction(conn, program_id, item, payload)
+        conn.close()
+        return {**result, **res}
+
+    if act == "review_data":
+        res = _approve_data_from_extraction(conn, program_id, item, payload, before)
+        conn.close()
+        return {**result, **res}
+
+    if act == "draft_reply":
+        res = _draft_query_reply(conn, program_id, item, payload)
+        conn.close()
+        return {**result, **res}
+
+    if act in ("review_invoice", "review_contract", "review_logistics"):
+        with conn:
+            promoted = _promote_item_observations(conn, program_id, document_id)
+            conn.execute(
+                "INSERT INTO ledger_entries(program_id,kind,title,content,approved_by)"
+                " VALUES (?,?,?,?,?)",
+                (program_id, act, item["title"],
+                 payload.get("analysis", {}).get("note", "Reviewed and approved."), "founder"))
+            conn.execute("UPDATE inbox_items SET status='approved' WHERE id=?", (item_id,))
+        conn.close()
+        return {**result, "promoted_facts": promoted}
 
     # data item: load the incoming assays onto the molecule (activate it)
     mol_id = payload.get("molecule_id")

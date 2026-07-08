@@ -1,142 +1,217 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useProgram } from "@/lib/ProgramContext";
-import { useAppState } from "@/lib/useAppState";
 import {
-  approveInbox,
-  fetchRederivation,
+  approveInboxV2,
+  declineInbox,
+  fetchInbox,
   resetDemo,
-  type ApproveResult,
-  type Rederivation,
+  type InboxApproveResult,
+  type InboxV2Item,
 } from "@/lib/api";
-import type { InboxItem } from "@/lib/types";
-import { DoseResponse } from "@/components/DoseResponse";
 
-function parseAction(item: InboxItem): { label?: string; note?: string; action?: string } {
-  try {
-    return item.proposed_action ? JSON.parse(item.proposed_action) : {};
-  } catch {
-    return {};
-  }
+const STATUS_STYLE: Record<string, string> = {
+  pass: "text-emerald-700",
+  near: "text-amber-600",
+  fail: "text-red-600",
+  no_data: "text-inkMuted",
+};
+
+function ContextPanel({ item }: { item: InboxV2Item }) {
+  const c = item.context;
+  const has = c.molecules?.length || c.budget || c.prior_quotes || c.ledger?.length;
+  if (!has) return null;
+  return (
+    <div className="mt-3 rounded border border-border bg-bg p-3 text-xs">
+      <div className="mb-1 font-medium text-inkMuted">Context</div>
+      {c.molecules && c.molecules.length > 0 && (
+        <div className="mb-1">
+          <span className="text-inkMuted">Molecules: </span>
+          {c.molecules.map((m, i) => (
+            <span key={m.molecule_id}>
+              {i > 0 && ", "}
+              {m.name}{" "}
+              <span className={STATUS_STYLE[m.tpp_status] ?? ""}>({m.tpp_status})</span>
+            </span>
+          ))}
+        </div>
+      )}
+      {c.budget && (
+        <div className="mb-1 text-inkMuted">
+          Budget available ${c.budget.available.toLocaleString()} · committed $
+          {c.budget.committed.toLocaleString()}
+          {c.budget.runway_months != null && ` · ${c.budget.runway_months} mo runway`}
+        </div>
+      )}
+      {c.prior_quotes && c.prior_quotes.amounts.length > 0 && (
+        <div className="mb-1 text-inkMuted">
+          Prior quotes from this vendor: {c.prior_quotes.amounts.join(", ")}
+        </div>
+      )}
+      {c.ledger && c.ledger.length > 0 && (
+        <div className="text-inkMuted">
+          Related decisions: {c.ledger.map((l) => l.title).join("; ")}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function InboxCard({
   item,
-  onApproved,
+  onDone,
 }: {
-  item: InboxItem;
-  onApproved: (r: ApproveResult) => void;
+  item: InboxV2Item;
+  onDone: () => void;
 }) {
   const { programId } = useProgram();
-  const action = parseAction(item);
-  const [rederiv, setRederiv] = useState<Rederivation | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<ApproveResult | null>(null);
-  const approved = item.status === "approved" || result !== null;
-
-  useEffect(() => {
-    if (item.kind === "bio_cro_data") {
-      fetchRederivation(item.id, programId)
-        .then((r) => (r.has_curve ? setRederiv(r) : null))
-        .catch(() => {});
-    }
-  }, [item.id, item.kind, programId]);
+  const [result, setResult] = useState<InboxApproveResult | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const env = item.envelope;
 
   async function approve() {
     setBusy(true);
     try {
-      const r = await approveInbox(item.id, programId);
+      const r = await approveInboxV2(item.id, programId);
       setResult(r);
-      onApproved(r);
     } finally {
       setBusy(false);
     }
   }
 
+  async function decline() {
+    setBusy(true);
+    try {
+      await declineInbox(item.id, programId);
+      setDismissed(true);
+      onDone();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (dismissed) return null;
+
+  const locked = env.attachments.some((a) => a.protected);
+
   return (
     <div className="rounded border border-border bg-panel p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <span className="text-xs uppercase tracking-wide text-inkMuted">
-            {item.kind.replace(/_/g, " ")}
-          </span>
-          <h3 className="text-sm font-medium">{item.title}</h3>
-        </div>
-        {approved && (
-          <span className="rounded bg-emerald-700 px-2 py-0.5 text-xs text-white">approved</span>
-        )}
-      </div>
-      {item.summary && <p className="mt-2 text-sm text-inkMuted">{item.summary}</p>}
-
-      {rederiv?.flagged && (
-        <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3">
-          <div className="mb-2 text-xs font-medium text-amber-600">
-            ⚠ Data QC — reported IC50 disagrees with the raw curve
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-start justify-between text-left"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-inkMuted">
+              {(item.doc_type ?? item.kind).replace(/_/g, " ")}
+            </span>
+            {locked && <span title="password-protected attachment">🔒</span>}
           </div>
-          <DoseResponse rederiv={rederiv} />
+          <h3 className="truncate text-sm font-medium">{env.subject}</h3>
+          <p className="truncate text-xs text-inkMuted">
+            {env.email_from}
+            {env.date ? ` · ${env.date}` : ""}
+          </p>
         </div>
-      )}
+        {result ? (
+          <span className="ml-2 rounded bg-emerald-700 px-2 py-0.5 text-xs text-white">done</span>
+        ) : (
+          <span className="ml-2 text-xs text-inkMuted">{expanded ? "▲" : "▼"}</span>
+        )}
+      </button>
 
-      {!approved && (
-        <div className="mt-3 flex items-center gap-3">
-          <button
-            onClick={approve}
-            disabled={busy}
-            className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {busy ? "Processing…" : (action.label ?? "Approve")}
-          </button>
-          {action.note && <span className="text-xs text-inkMuted">{action.note}</span>}
-        </div>
-      )}
-
-      {result && (
-        <div className="mt-3 rounded border border-border bg-bg p-3 text-sm">
-          {result.crossed.length > 0 ? (
-            <div className="text-emerald-700">
-              ✓ {result.loaded} measurements loaded · <b>{result.crossed.join(", ")}</b> crossed to
-              MEETS TPP
-            </div>
-          ) : (
-            <div className="text-ink">
-              ✓ {result.loaded > 0 ? `${result.loaded} measurements loaded` : "Acknowledged"} ·
-              logged to Decision Log
+      {expanded && (
+        <div className="mt-3 space-y-3">
+          {env.body_preview && (
+            <p className="whitespace-pre-wrap text-sm text-ink">{env.body_preview}</p>
+          )}
+          {env.attachments.length > 0 && (
+            <div className="text-xs text-inkMuted">
+              Attachments:{" "}
+              {env.attachments.map((a) => `${a.protected ? "🔒 " : ""}${a.filename}`).join(", ")}
             </div>
           )}
-          {result.memo && (
-            <div className="mt-2 border-t border-border pt-2">
-              <div className="mb-1 text-xs text-inkMuted">
-                Drafted go/no-go memo {result.memo.used_llm ? "" : "(fallback)"}
-              </div>
-              <pre className="whitespace-pre-wrap font-sans text-xs text-ink">
-                {result.memo.text}
-              </pre>
+
+          <div className="rounded border border-border bg-bg p-3 text-xs">
+            <div className="mb-1 font-medium text-inkMuted">Extracted</div>
+            <pre className="whitespace-pre-wrap font-sans text-ink">
+              {JSON.stringify(item.extraction, null, 2)}
+            </pre>
+          </div>
+
+          {item.analysis?.note && (
+            <div className="text-sm">
+              <span className="text-inkMuted">Recommendation: </span>
+              <b>{item.analysis.recommendation ?? item.proposed_action.action}</b> —{" "}
+              {item.analysis.note}
             </div>
           )}
-          {result.financial && (
-            <div className="mt-1">
-              {result.financial.po_number && (
+
+          <ContextPanel item={item} />
+
+          {!result && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={approve}
+                disabled={busy}
+                className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {busy ? "Processing…" : (item.proposed_action.label ?? "Approve")}
+              </button>
+              <button
+                onClick={decline}
+                disabled={busy}
+                className="rounded border border-borderStrong px-3 py-1.5 text-sm text-inkMuted hover:bg-panel2 disabled:opacity-50"
+              >
+                Decline
+              </button>
+            </div>
+          )}
+
+          {result && (
+            <div className="rounded border border-border bg-bg p-3 text-sm">
+              {result.financial?.po_number && (
                 <div className="text-emerald-700">
-                  ✓ Issued {result.financial.po_number} · committed{" "}
-                  ${result.financial.amount?.toLocaleString()} · available now $
+                  ✓ Issued {result.financial.po_number} · committed $
+                  {result.financial.amount?.toLocaleString()} · available $
                   {result.financial.budget.available.toLocaleString()}
                 </div>
               )}
-              {result.financial.matched != null && (
-                <div className={result.financial.matched ? "text-emerald-700" : "text-red-600"}>
-                  {result.financial.matched ? "✓" : "⚠"} {result.financial.note} · actual spend $
-                  {result.financial.budget.actual.toLocaleString()}
+              {result.molecules && result.molecules.length > 0 && (
+                <div className="text-emerald-700">
+                  ✓ {result.loaded} measurements loaded ·{" "}
+                  {result.molecules.map((m) => `${m.name}${m.created ? " (new)" : ""}`).join(", ")}
                 </div>
               )}
-              {result.financial.email && (
-                <div className="mt-2 border-t border-border pt-2">
+              {result.crossed && result.crossed.length > 0 && (
+                <div className="text-emerald-700">
+                  <b>{result.crossed.join(", ")}</b> crossed to MEETS TPP
+                </div>
+              )}
+              {result.reply_draft && (
+                <div className="mt-1">
                   <div className="mb-1 text-xs text-inkMuted">
-                    Vendor email — Gmail draft (composed, not sent)
+                    Drafted reply (grounded · {result.grounding?.source})
                   </div>
                   <pre className="whitespace-pre-wrap font-sans text-xs text-ink">
-                    {result.financial.email}
+                    {result.reply_draft}
                   </pre>
+                </div>
+              )}
+              {result.memo && (
+                <div className="mt-2 border-t border-border pt-2">
+                  <div className="mb-1 text-xs text-inkMuted">Drafted go/no-go memo</div>
+                  <pre className="whitespace-pre-wrap font-sans text-xs text-ink">
+                    {result.memo.text}
+                  </pre>
+                </div>
+              )}
+              {result.promoted_facts != null && (
+                <div className="mt-1 text-xs text-inkMuted">
+                  {result.promoted_facts} observation(s) promoted to facts · logged to Decision Log
                 </div>
               )}
             </div>
@@ -149,29 +224,38 @@ function InboxCard({
 
 export default function InboxPage() {
   const { programId } = useProgram();
-  const { state, loading, reload } = useAppState();
+  const [items, setItems] = useState<InboxV2Item[] | null>(null);
   const [resetting, setResetting] = useState(false);
+
+  const load = useCallback(() => {
+    fetchInbox(programId)
+      .then(setItems)
+      .catch(() => setItems([]));
+  }, [programId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function doReset() {
     setResetting(true);
     try {
       await resetDemo(programId);
-      reload();
+      load();
     } finally {
       setResetting(false);
     }
   }
 
-  if (loading) return <p className="text-inkMuted">Loading…</p>;
-  if (!state) return null;
+  if (items === null) return <p className="text-inkMuted">Loading…</p>;
 
   return (
     <div className="max-w-3xl">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Monday-morning Inbox</h1>
+          <h1 className="text-xl font-semibold">Current Inbox</h1>
           <p className="text-sm text-inkMuted">
-            {state.program.name} · the OS has pre-triaged each item and proposed an action.
+            Triaged inbound mail — the OS extracted each item and proposed an action.
           </p>
         </div>
         <button
@@ -183,14 +267,14 @@ export default function InboxPage() {
         </button>
       </div>
 
-      {state.inbox_items.length === 0 ? (
+      {items.length === 0 ? (
         <div className="rounded border border-dashed border-borderStrong p-8 text-center text-inkMuted">
-          Inbox empty. Click “Reset demo” to re-stage the incoming CRO datasets.
+          Inbox empty. Ingest the corpus or click “Reset demo”.
         </div>
       ) : (
         <div className="space-y-4">
-          {state.inbox_items.map((item) => (
-            <InboxCard key={item.id} item={item} onApproved={() => reload()} />
+          {items.map((item) => (
+            <InboxCard key={item.id} item={item} onDone={load} />
           ))}
         </div>
       )}
