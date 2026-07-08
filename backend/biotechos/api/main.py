@@ -298,6 +298,42 @@ class CustomMetricRequest(BaseModel):
     program_id: str = DEMO_PROGRAM_ID
 
 
+class IngestRequest(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    source: str | None = None       # 'anonymized' | 'real' (defaults to config)
+    limit: int | None = None
+
+
+@app.post("/corpus/ingest")
+def corpus_ingest(req: IngestRequest):
+    """Read the mailbox source, extract, and (re)build the corpus + world model."""
+    from ..engine.corpus import store
+    return store.ingest(req.program_id, source=req.source, limit=req.limit)
+
+
+class AskRequest(BaseModel):
+    question: str
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/knowledge/ask")
+def knowledge_ask(req: AskRequest):
+    """QueryOS: grounded, cited answer from the knowledge store (facts-first)."""
+    from ..engine.corpus import qa
+    return qa.ask(req.program_id, req.question)
+
+
+@app.get("/corpus/summary")
+def corpus_summary(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    conn = get_conn()
+    docs = conn.execute("SELECT COUNT(*) c FROM documents WHERE program_id=?", (program_id,)).fetchone()["c"]
+    facts = conn.execute("SELECT COUNT(*) c FROM facts WHERE program_id=? AND status='current'", (program_id,)).fetchone()["c"]
+    by_type = {r["doc_type"]: r["c"] for r in conn.execute(
+        "SELECT doc_type, COUNT(*) c FROM documents WHERE program_id=? GROUP BY doc_type", (program_id,)).fetchall()}
+    conn.close()
+    return {"documents": docs, "facts": facts, "by_type": by_type}
+
+
 @app.get("/molecules/values")
 def molecules_values(metrics: str = Query(...), program_id: str = Query(default=DEMO_PROGRAM_ID)):
     """Value matrix (molecule × requested metric keys) for the configurable table."""

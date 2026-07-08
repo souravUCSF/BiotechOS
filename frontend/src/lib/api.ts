@@ -401,3 +401,29 @@ export async function tppBuilderFinalize(
   if (!res.ok) throw new Error(`finalize failed: ${res.status}`);
   return res.json();
 }
+
+// --- QueryOS / corpus knowledge ---
+export type KnowledgeCitation = {
+  id?: number; subject?: string; email_from?: string; sent_at?: string;
+};
+export type KnowledgeAnswer = {
+  answer: string; used_llm: boolean; source: "facts" | "documents" | "none";
+  fact_count: number; citations: KnowledgeCitation[];
+};
+
+export async function askKnowledge(question: string, programId: string): Promise<KnowledgeAnswer> {
+  const res = await fetch(`${API_BASE}/knowledge/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, program_id: programId }),
+  });
+  if (!res.ok) throw new Error(`ask failed: ${res.status}`);
+  return res.json();
+}
+
+export type CorpusSummary = { documents: number; facts: number; by_type: Record<string, number> };
+export async function fetchCorpusSummary(programId: string): Promise<CorpusSummary> {
+  const res = await fetch(`${API_BASE}/corpus/summary?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`corpus summary failed: ${res.status}`);
+  return res.json();
+}
