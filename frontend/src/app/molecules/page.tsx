@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useProgram } from "@/lib/ProgramContext";
 import { useAppState } from "@/lib/useAppState";
-import { fetchTppScores, type TppScores } from "@/lib/api";
+import {
+  fetchTppScores,
+  fetchMetrics,
+  fetchMoleculeValues,
+  type TppScores,
+  type MetricDef,
+  type MoleculeValues,
+} from "@/lib/api";
 import { Structure3D } from "@/components/Structure3D";
 import { PropertyScatter } from "@/components/PropertyScatter";
 import { MoleculeDashboardConfig, CARD_FIELD_OPTIONS } from "@/components/MoleculeDashboardConfig";
@@ -104,6 +111,18 @@ export default function MoleculesPage() {
   const [cardFields, setCardFields] = useState<string[]>(DEFAULT_CARD_FIELDS);
   const cfKey = `moldash.cardFields.${programId}`;
 
+  // scatter interactivity + configurable "All molecules" table
+  const [brushIds, setBrushIds] = useState<number[]>([]);
+  const [hoverId, setHoverId] = useState<number | null>(null);
+  const [metricsCatalog, setMetricsCatalog] = useState<MetricDef[]>([]);
+  const [tableColumns, setTableColumns] = useState<string[]>([
+    "assay:biochemical_ic50:TGTA", "assay:selectivity:TGTA/TGTB",
+    "assay:cellular_antiprolif:TGTA", "adme:MW", "adme:cLogP",
+  ]);
+  const [tableValues, setTableValues] = useState<MoleculeValues[]>([]);
+  const [showTableColPicker, setShowTableColPicker] = useState(false);
+  const tcKey = `moldash.tableCols.${programId}`;
+
   useEffect(() => {
     fetchTppScores(programId).then(setScores).catch(() => setScores(null));
     try {
@@ -116,6 +135,31 @@ export default function MoleculesPage() {
     setCardFields(fields);
     try { localStorage.setItem(cfKey, JSON.stringify(fields)); } catch { /* ignore */ }
   }
+
+  useEffect(() => {
+    fetchMetrics(programId).then(setMetricsCatalog).catch(() => setMetricsCatalog([]));
+    try {
+      const saved = localStorage.getItem(tcKey);
+      if (saved) setTableColumns(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, [programId, tcKey]);
+
+  useEffect(() => {
+    fetchMoleculeValues(tableColumns, programId).then(setTableValues).catch(() => setTableValues([]));
+  }, [tableColumns, programId]);
+
+  const tableValsByMol = useMemo(() => {
+    const m = new Map<number, Record<string, number | null>>();
+    tableValues.forEach((r) => m.set(r.molecule_id, r.values));
+    return m;
+  }, [tableValues]);
+
+  function setTableCols(cols: string[]) {
+    setTableColumns(cols);
+    try { localStorage.setItem(tcKey, JSON.stringify(cols)); } catch { /* ignore */ }
+  }
+  const metricLabel = (k: string) => metricsCatalog.find((m) => m.key === k)?.label ?? k;
+  const metricUnits = (k: string) => metricsCatalog.find((m) => m.key === k)?.units ?? "";
 
   if (!state) return <p className="text-inkMuted">Loading…</p>;
 
@@ -181,49 +225,99 @@ export default function MoleculesPage() {
       <h2 className="mb-3 text-sm font-semibold text-ink">
         Compare all molecules — any property vs. any property
       </h2>
-      <div className="mb-8">
+      <div className="mb-4">
         <PropertyScatter
           molecules={state.molecules}
           highlight={meets}
+          externalHoverId={hoverId}
+          onHoverId={setHoverId}
+          onBrush={setBrushIds}
           onSelect={(id) => router.push(`/molecules/${id}`)}
         />
       </div>
 
+      {/* brushed selection */}
+      {brushIds.length > 0 && (
+        <div className="mb-8 rounded border border-blue-300 bg-blue-50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-ink">Selected molecules ({brushIds.length})</span>
+            <button onClick={() => setBrushIds([])} className="text-xs text-inkMuted hover:text-ink">Clear ✕</button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {brushIds.map((id) => {
+              const mol = state.molecules.find((m) => m.id === id);
+              if (!mol) return null;
+              return (
+                <Link key={id} href={`/molecules/${id}`}
+                  onMouseEnter={() => setHoverId(id)} onMouseLeave={() => setHoverId(null)}
+                  className="flex items-center gap-2 rounded border border-border bg-panel px-2 py-1 hover:border-borderStrong">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`${API_BASE}/molecule/${id}/structure2d`} alt="" className="h-10 w-14 object-contain" />
+                  <span className="text-xs font-medium">{mol.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <h2 className="mb-3 text-sm font-semibold text-ink">All molecules</h2>
-      <div className="overflow-x-auto rounded border border-border">
+      <div className="relative overflow-x-auto rounded border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-panel text-inkMuted">
+          <thead className="bg-panel2 text-inkMuted">
             <tr>
-              <th className="px-3 py-2">Compound</th>
-              <th className="px-3 py-2">TGTA IC50</th>
-              <th className="px-3 py-2">Selectivity</th>
-              <th className="px-3 py-2">Cellular</th>
-              <th className="px-3 py-2">MW</th>
-              <th className="px-3 py-2">cLogP</th>
-              <th className="px-3 py-2">Assays</th>
+              <th className="px-3 py-2 font-medium">Compound</th>
+              {tableColumns.map((key) => (
+                <th key={key} className="group px-3 py-2 font-medium">
+                  <span className="inline-flex items-center gap-1">
+                    {metricLabel(key)}
+                    <button onClick={() => setTableCols(tableColumns.filter((c) => c !== key))}
+                      title="Remove column"
+                      className="text-inkFaint opacity-0 group-hover:opacity-100 hover:text-red-600">✕</button>
+                  </span>
+                </th>
+              ))}
+              <th className="px-3 py-2">
+                <button onClick={() => setShowTableColPicker((s) => !s)}
+                  className="rounded border border-borderStrong px-2 py-0.5 text-xs text-ink hover:bg-panel">
+                  + Column
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
             {state.molecules.map((mol) => {
-              const p = moleculeProperties(mol);
+              const vals = tableValsByMol.get(mol.id) ?? {};
               return (
-                <tr key={mol.id} className="border-t border-border hover:bg-panel2/60">
+                <tr key={mol.id}
+                  onMouseEnter={() => setHoverId(mol.id)} onMouseLeave={() => setHoverId(null)}
+                  className={`border-t border-border ${hoverId === mol.id ? "bg-amber-50" : "hover:bg-panel2/60"}`}>
                   <td className="px-3 py-2 font-medium">
                     <Link href={`/molecules/${mol.id}`} className="hover:text-emerald-700">
                       {mol.name}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 font-mono">{fmt(p.tgta_ic50)}nM</td>
-                  <td className="px-3 py-2 font-mono">{fmt(p.selectivity)}x</td>
-                  <td className="px-3 py-2 font-mono">{fmt(p.cell_ic50)}nM</td>
-                  <td className="px-3 py-2 font-mono">{p.MW ?? "—"}</td>
-                  <td className="px-3 py-2 font-mono">{p.cLogP ?? "—"}</td>
-                  <td className="px-3 py-2">{mol.assays.length}</td>
+                  {tableColumns.map((key) => {
+                    const v = vals[key];
+                    return <td key={key} className="px-3 py-2 font-mono">{v != null ? `${fmt(v)}${metricUnits(key)}` : "—"}</td>;
+                  })}
+                  <td />
                 </tr>
               );
             })}
           </tbody>
         </table>
+        {showTableColPicker && (
+          <div className="absolute right-2 top-10 z-20 max-h-80 w-72 overflow-y-auto rounded border border-borderStrong bg-panel p-2 shadow-lg">
+            <div className="mb-1 px-1 text-xs font-medium text-inkMuted">Add a column</div>
+            {metricsCatalog.filter((m) => !tableColumns.includes(m.key)).map((m) => (
+              <button key={m.key} onClick={() => { setTableCols([...tableColumns, m.key]); setShowTableColPicker(false); }}
+                className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm hover:bg-panel2">
+                <span>{m.label}</span><span className="text-xs text-inkFaint">{m.count ?? 0}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

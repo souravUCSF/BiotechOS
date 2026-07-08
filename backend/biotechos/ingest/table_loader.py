@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections import defaultdict
 
 import numpy as np
@@ -290,6 +291,80 @@ def load(reset: bool = True) -> dict:
         "held_out": len(held_out), "with_selectivity":
         sum(1 for r in curated_rows if r["selectivity_fold"] is not None),
     }
+
+
+def add_molecules(n: int = 250, program_id: str = DEMO_PROGRAM_ID) -> dict:
+    """Incrementally add N more molecules from the dataset to the EXISTING system
+    (no reset). Selects the richest molecules not already loaded, assigns the next
+    BTX codes, inserts assays + derived selectivity, computes ADME, enqueues folds.
+    """
+    conn = db.connect()
+    existing_refs, max_num = set(), 999
+    for r in conn.execute(
+        "SELECT internal_ref, name FROM molecules WHERE program_id=?", (program_id,)
+    ).fetchall():
+        if r["internal_ref"]:
+            existing_refs.add(str(r["internal_ref"]).split(":", 1)[0])
+        m = re.match(r"BTX-(\d+)", r["name"] or "")
+        if m:
+            max_num = max(max_num, int(m.group(1)))
+
+    print(f"Pass 1: scanning export (excluding {len(existing_refs)} existing) ...")
+    summary = pass1_choose_molecules()
+    summary = summary[~summary.source_ref.isin(existing_refs)]
+    ranked = summary.sort_values(["n_modalities", "n_rows"], ascending=False).head(n).reset_index(drop=True)
+    ranked["code"] = [f"{CODE_PREFIX}-{max_num + 1 + i}" for i in range(len(ranked))]
+    print(f"  adding {len(ranked)} molecules ({CODE_PREFIX}-{max_num+1} … {ranked['code'].iloc[-1]})")
+
+    chosen = set(ranked.source_ref)
+    print("Pass 2: collecting assays ...")
+    assays_by_mol = pass2_collect_assays(chosen)
+
+    new_ids = []
+    for row in ranked.itertuples(index=False):
+        ref, code = row.source_ref, row.code
+        assays = assays_by_mol.get(ref, [])
+        demo = _median_potency(assays, "biochemical_ic50", "TGTA")
+        egfr = _median_potency(assays, "biochemical_ic50", "TGTB")
+        selectivity = (egfr / demo) if (demo and egfr and demo > 0) else None
+        with conn:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO molecules(program_id,internal_ref,name,smiles,inchi_key,held_out)"
+                " VALUES (?,?,?,?,?,0)",
+                (program_id, f"{ref}:{row.ref_name}", code, row.smiles, row.inchi_key),
+            )
+            mol_id = cur.lastrowid
+            if not mol_id:
+                continue
+            new_ids.append(mol_id)
+            for a in assays:
+                conn.execute(
+                    "INSERT INTO assays(program_id,molecule_id,modality,target,standard_type,"
+                    "value,units,relation,pchembl,source,assay_desc,flags)"
+                    " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (program_id, mol_id, a["modality"], a["target"], a["standard_type"],
+                     a["value"], a["units"], a["relation"], a["pchembl"], a["source"],
+                     a["assay_desc"], json.dumps([a["flags"]]) if a["flags"] else None),
+                )
+            if selectivity is not None:
+                conn.execute(
+                    "INSERT INTO assays(program_id,molecule_id,modality,target,standard_type,"
+                    "value,units,source) VALUES (?,?,?,?,?,?,?,?)",
+                    (program_id, mol_id, "selectivity", "TGTA/TGTB", "Fold selectivity",
+                     selectivity, "x", "derived"),
+                )
+    conn.close()
+
+    # predicted ADME + enqueue structure folds for the new molecules
+    from ..engine import structure as _structure
+    _structure.compute_adme_for_program(program_id)
+    for mid in new_ids:
+        _structure.enqueue_fold(mid)
+
+    total = db.connect().execute(
+        "SELECT COUNT(*) c FROM molecules WHERE program_id=? AND held_out=0", (program_id,)
+    ).fetchone()["c"]
+    return {"added": len(new_ids), "active_total": total}
 
 
 if __name__ == "__main__":
