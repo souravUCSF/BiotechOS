@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS molecules (
     smiles              TEXT,
     inchi_key           TEXT,                -- kept for internal dedup only, not API-exposed
     held_out            INTEGER DEFAULT 0,   -- 1 = data withheld from initial seed (arrives via CRO doc)
+    favorite            INTEGER DEFAULT 0,   -- 1 = bookmarked/favorite (user-toggled)
     structure_cache_ref TEXT,                -- path to cached Boltz .cif/.pdb
     adme_json           TEXT,                -- predicted ADME blob (JSON)
     created_at          TEXT DEFAULT (datetime('now')),

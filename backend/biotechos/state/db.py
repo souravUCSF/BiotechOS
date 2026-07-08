@@ -16,6 +16,23 @@ def connect(db_path: Path | str = DB_PATH) -> sqlite3.Connection:
     return conn
 
 
+# Columns added after the initial schema — applied to existing DBs on connect
+# (CREATE TABLE IF NOT EXISTS won't add columns to an existing table).
+_MIGRATIONS = [
+    ("molecules", "favorite", "INTEGER DEFAULT 0"),
+]
+
+
+def _apply_migrations(conn: sqlite3.Connection) -> None:
+    for table, col, decl in _MIGRATIONS:
+        cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+        if col not in cols:
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+            except sqlite3.OperationalError:
+                pass
+
+
 def init_db(db_path: Path | str = DB_PATH, *, reset: bool = False) -> None:
     db_path = Path(db_path)
     if reset and db_path.exists():
@@ -23,6 +40,7 @@ def init_db(db_path: Path | str = DB_PATH, *, reset: bool = False) -> None:
     conn = connect(db_path)
     with conn:
         conn.executescript(SCHEMA_PATH.read_text())
+        _apply_migrations(conn)
     conn.close()
 
 

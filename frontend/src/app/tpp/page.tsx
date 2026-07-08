@@ -82,6 +82,7 @@ export default function MoleculeDatabasePage() {
   const [selectedBin, setSelectedBin] = useState<number | null>(null);
   const [binMemberIds, setBinMemberIds] = useState<number[]>([]);
   const [showDefine, setShowDefine] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   // configurable table columns (persisted per program as the default view)
   const DEFAULT_COLUMNS = [
@@ -162,12 +163,13 @@ export default function MoleculeDatabasePage() {
   );
   const rows = useMemo(() => {
     let mols = state?.molecules ?? [];
+    if (favoritesOnly) mols = mols.filter((mo) => mo.favorite);
     if (selectedBin != null) {
       const set = new Set(binMemberIds);
       mols = mols.filter((mo) => set.has(mo.id));
     }
     return mols;
-  }, [state, selectedBin, binMemberIds]);
+  }, [state, selectedBin, binMemberIds, favoritesOnly]);
 
   if (!state) return <p className="text-inkMuted">Loading…</p>;
 
@@ -264,8 +266,12 @@ export default function MoleculeDatabasePage() {
         <span className="text-inkMuted">
           {selectedBin != null
             ? `Showing ${rows.length} molecule${rows.length === 1 ? "" : "s"} in the selected range`
-            : `All ${rows.length} molecules`}
+            : `${favoritesOnly ? "Favorites" : "All"} · ${rows.length} molecules`}
         </span>
+        <label className="flex items-center gap-1 text-xs text-inkMuted">
+          <input type="checkbox" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
+          ⚑ Favorites only
+        </label>
         <span className="ml-auto text-xs text-inkMuted">Default view:</span>
         <select
           onChange={(e) => { const pr = PRESETS.find((x) => x.name === e.target.value); if (pr) setColumns(pr.cols); }}

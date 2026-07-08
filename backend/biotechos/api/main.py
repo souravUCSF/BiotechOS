@@ -144,6 +144,22 @@ def get_molecule(molecule_id: int):
     return _scrub(d)
 
 
+class FavoriteRequest(BaseModel):
+    favorite: bool
+
+
+@app.post("/molecule/{molecule_id}/favorite")
+def molecule_favorite(molecule_id: int, req: FavoriteRequest):
+    conn = get_conn()
+    cur = conn.execute("UPDATE molecules SET favorite=? WHERE id=?",
+                       (1 if req.favorite else 0, molecule_id))
+    conn.commit()
+    conn.close()
+    if cur.rowcount == 0:
+        raise HTTPException(404, "molecule not found")
+    return {"molecule_id": molecule_id, "favorite": req.favorite}
+
+
 @app.get("/molecule/{molecule_id}/structure2d")
 def molecule_structure2d(molecule_id: int):
     conn = get_conn()

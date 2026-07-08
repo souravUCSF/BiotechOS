@@ -178,6 +178,16 @@ export async function fetchMolecule(id: number): Promise<
   return res.json();
 }
 
+export async function setFavorite(id: number, favorite: boolean): Promise<{ favorite: boolean }> {
+  const res = await fetch(`${API_BASE}/molecule/${id}/favorite`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ favorite }),
+  });
+  if (!res.ok) throw new Error(`favorite toggle failed: ${res.status}`);
+  return res.json();
+}
+
 export async function fetchDemoBrief(): Promise<string> {
   const res = await fetch(`${API_BASE}/tpp/demo-brief`, { cache: "no-store" });
   if (!res.ok) throw new Error(`GET /tpp/demo-brief failed: ${res.status}`);

@@ -16,7 +16,6 @@ import { API_BASE } from "@/lib/apiBase";
 const fmt = (v: number | null) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(1);
 
-const STATUS_RANK = { pass: 0, near: 1, fail: 2, no_data: 3 } as Record<string, number>;
 const DEFAULT_CARD_FIELDS = ["tgta_ic50", "selectivity", "cell_ic50", "QED"];
 
 function AdvancingCard({ mol, status, cardFields }: { mol: Molecule; status: string; cardFields: string[] }) {
@@ -123,13 +122,7 @@ export default function MoleculesPage() {
   const statusById = new Map(
     (scores?.molecules ?? []).map((m) => [m.molecule_id, m.status]),
   );
-  const advancing = [...state.molecules]
-    .sort(
-      (a, b) =>
-        (STATUS_RANK[statusById.get(a.id) ?? "no_data"] ?? 3) -
-        (STATUS_RANK[statusById.get(b.id) ?? "no_data"] ?? 3),
-    )
-    .slice(0, 3);
+  const favorites = state.molecules.filter((m) => m.favorite);
   const meets = new Set(
     (scores?.molecules ?? [])
       .filter((m) => m.status === "pass")
@@ -157,17 +150,25 @@ export default function MoleculesPage() {
         {state.program.anti_target}
       </p>
 
-      <h2 className="mb-3 text-sm font-semibold text-ink">Advancing molecules</h2>
-      <div className="mb-8 grid gap-4 md:grid-cols-3">
-        {advancing.map((mol) => (
-          <AdvancingCard
-            key={mol.id}
-            mol={mol}
-            status={statusById.get(mol.id) ?? "no_data"}
-            cardFields={cardFields}
-          />
-        ))}
-      </div>
+      <h2 className="mb-3 text-sm font-semibold text-ink">
+        Favorite molecules{favorites.length > 0 ? ` (${favorites.length})` : ""}
+      </h2>
+      {favorites.length === 0 ? (
+        <div className="mb-8 rounded border border-dashed border-borderStrong p-6 text-center text-sm text-inkMuted">
+          No favorites yet. Open a molecule and click the ⚑ bookmark next to its name to feature it here.
+        </div>
+      ) : (
+        <div className="mb-8 grid gap-4 md:grid-cols-3">
+          {favorites.map((mol) => (
+            <AdvancingCard
+              key={mol.id}
+              mol={mol}
+              status={statusById.get(mol.id) ?? "no_data"}
+              cardFields={cardFields}
+            />
+          ))}
+        </div>
+      )}
 
       {showConfig && (
         <MoleculeDashboardConfig

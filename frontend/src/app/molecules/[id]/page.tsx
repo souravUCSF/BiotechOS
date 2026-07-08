@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchMolecule } from "@/lib/api";
+import { fetchMolecule, setFavorite } from "@/lib/api";
 import { Structure3D } from "@/components/Structure3D";
 import { AdmePanel } from "@/components/AdmePanel";
 import type { Molecule } from "@/lib/types";
@@ -23,6 +23,17 @@ export default function MoleculeDetail({
     fetchMolecule(molId).then(setMol).catch((e) => setError(String(e)));
   }, [molId]);
 
+  async function toggleFavorite() {
+    if (!mol) return;
+    const next = !mol.favorite;
+    setMol({ ...mol, favorite: next ? 1 : 0 });
+    try {
+      await setFavorite(molId, next);
+    } catch {
+      setMol({ ...mol, favorite: mol.favorite }); // revert on failure
+    }
+  }
+
   if (error) return <p className="text-red-600">Error: {error}</p>;
   if (!mol) return <p className="text-inkMuted">Loading…</p>;
 
@@ -35,7 +46,20 @@ export default function MoleculeDetail({
       <Link href="/molecules" className="text-sm text-inkMuted hover:text-ink">
         ← Dashboard
       </Link>
-      <h1 className="mb-4 mt-2 text-xl font-semibold">{mol.name}</h1>
+      <div className="mb-4 mt-2 flex items-center gap-2">
+        <h1 className="text-xl font-semibold">{mol.name}</h1>
+        <button
+          onClick={toggleFavorite}
+          title={mol.favorite ? "Remove from favorites" : "Add to favorites"}
+          aria-label="Toggle favorite"
+          className={mol.favorite ? "text-amber-500" : "text-inkFaint hover:text-amber-500"}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24"
+            fill={mol.favorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8">
+            <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+          </svg>
+        </button>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>

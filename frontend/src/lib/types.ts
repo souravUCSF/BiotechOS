@@ -22,6 +22,7 @@ export type Molecule = {
   name: string; // proprietary compound code, e.g. BTX-1007
   smiles: string;
   held_out: number;
+  favorite?: number;
   structure_cache_ref: string | null;
   adme_json: string | null;
   adme?: Record<string, number> | null;
