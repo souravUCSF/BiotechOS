@@ -7,7 +7,7 @@ import { Structure3D } from "@/components/Structure3D";
 import { AdmePanel } from "@/components/AdmePanel";
 import type { Molecule } from "@/lib/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8010";
+import { API_BASE } from "@/lib/apiBase";
 
 export default function MoleculeDetail({
   params,

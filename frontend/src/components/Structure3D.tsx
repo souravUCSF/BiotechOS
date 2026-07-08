@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8010";
+import { API_BASE } from "@/lib/apiBase";
 
 // 3Dmol is loaded from CDN on demand.
 declare global {

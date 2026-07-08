@@ -12,7 +12,7 @@ import { PropertyScatter } from "@/components/PropertyScatter";
 import { moleculeProperties } from "@/lib/properties";
 import type { Molecule } from "@/lib/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8010";
+import { API_BASE } from "@/lib/apiBase";
 const fmt = (v: number | null) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(1);
 

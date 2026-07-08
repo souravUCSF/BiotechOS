@@ -1,7 +1,7 @@
 import type { StateResponse, Program, Molecule, TppParam } from "./types";
 export type { TppParam };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8010";
+import { API_BASE } from "./apiBase";
 
 export async function fetchState(programId: string): Promise<StateResponse> {
   const res = await fetch(`${API_BASE}/state?program_id=${programId}`, { cache: "no-store" });
@@ -39,6 +39,8 @@ export type TppScores = {
   meets_tpp: string[];
 };
 
+export type HistogramMember = { molecule_id: number; name: string; value: number; bin: number };
+
 export type Histogram = {
   metric: string;
   counts: number[];
@@ -47,7 +49,47 @@ export type Histogram = {
   threshold: number | null;
   operator: string | null;
   units: string | null;
+  members?: HistogramMember[];
 };
+
+export type MetricDef = {
+  key: string;
+  label: string;
+  kind: "assay" | "adme" | "custom";
+  modality: string | null;
+  target: string | null;
+  units: string;
+  log: boolean;
+  higher_is_better: boolean;
+  count?: number;
+  description?: string;
+};
+
+export async function fetchMetrics(programId: string): Promise<MetricDef[]> {
+  const res = await fetch(`${API_BASE}/metrics?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /metrics failed: ${res.status}`);
+  return res.json();
+}
+
+export async function defineCustomMetric(
+  body: {
+    label: string;
+    units?: string;
+    log?: boolean;
+    higher_is_better?: boolean;
+    target?: string;
+    description?: string;
+  },
+  programId: string,
+): Promise<{ key: string; label: string }> {
+  const res = await fetch(`${API_BASE}/metrics/custom`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, program_id: programId }),
+  });
+  if (!res.ok) throw new Error(`define metric failed: ${res.status}`);
+  return res.json();
+}
 
 export async function fetchTppScores(programId: string): Promise<TppScores> {
   const res = await fetch(`${API_BASE}/tpp/scores?program_id=${programId}`, { cache: "no-store" });

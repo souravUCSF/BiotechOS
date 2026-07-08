@@ -7,7 +7,7 @@ import { ProgramSwitcher } from "./ProgramSwitcher";
 const LINKS = [
   { href: "/", label: "Inbox" },
   { href: "/tpp-builder", label: "TPP" },
-  { href: "/tpp", label: "TPP Tracker" },
+  { href: "/tpp", label: "Molecule Database" },
   { href: "/molecules", label: "Molecule Dashboard" },
   { href: "/competitive", label: "Competitive Radar" },
   { href: "/cfo", label: "CFO / Budget" },

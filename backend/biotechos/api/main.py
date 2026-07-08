@@ -23,9 +23,12 @@ app = FastAPI(title="BiotechOS API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    # Local single-user app reachable via localhost, claw.local, or a LAN IP —
+    # allow any origin (no credentials are used).
+    allow_origin_regex=".*",
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Structure-Placeholder", "X-Structure-Label"],
 )
 
 
