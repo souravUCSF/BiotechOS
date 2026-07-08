@@ -25,12 +25,13 @@ const STATUS_STYLE: Record<string, string> = {
 const fmt = (v: number | null | undefined) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(1);
 
-function DefinePropertyForm({ onDone }: { onDone: (key: string) => void }) {
+function DefinePropertyForm({ onDone, aliases }: { onDone: (key: string) => void; aliases: string[] }) {
   const { programId } = useProgram();
   const [label, setLabel] = useState("");
   const [units, setUnits] = useState("");
   const [higher, setHigher] = useState(false);
   const [log, setLog] = useState(false);
+  const [formula, setFormula] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit() {
@@ -38,7 +39,7 @@ function DefinePropertyForm({ onDone }: { onDone: (key: string) => void }) {
     setBusy(true);
     try {
       const r = await defineCustomMetric(
-        { label: label.trim(), units, higher_is_better: higher, log },
+        { label: label.trim(), units, higher_is_better: higher, log, formula: formula.trim() || undefined },
         programId,
       );
       onDone(r.key);
@@ -50,11 +51,11 @@ function DefinePropertyForm({ onDone }: { onDone: (key: string) => void }) {
   return (
     <div className="mt-3 rounded border border-border bg-panel p-3">
       <div className="mb-2 text-xs font-medium text-ink">
-        Define a new molecule property (no data yet — arrives later via CRO assays)
+        Define a new molecule property
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <input value={label} onChange={(e) => setLabel(e.target.value)}
-          placeholder="Property name (e.g. NanoBRET target engagement)"
+          placeholder="Property name (e.g. Cellular/biochemical ratio)"
           className="min-w-[16rem] flex-1 rounded border border-borderStrong bg-bg px-2 py-1" />
         <input value={units} onChange={(e) => setUnits(e.target.value)} placeholder="units"
           className="w-20 rounded border border-borderStrong bg-bg px-2 py-1" />
@@ -64,6 +65,17 @@ function DefinePropertyForm({ onDone }: { onDone: (key: string) => void }) {
         <label className="flex items-center gap-1 text-xs text-inkMuted">
           <input type="checkbox" checked={log} onChange={(e) => setLog(e.target.checked)} /> log scale
         </label>
+      </div>
+      <div className="mt-2">
+        <input value={formula} onChange={(e) => setFormula(e.target.value)}
+          placeholder="Optional formula, e.g.  cell_ic50 / tgta_ic50   (leave blank for an empty property)"
+          className="w-full rounded border border-borderStrong bg-bg px-2 py-1 font-mono text-sm" />
+        <div className="mt-1 text-[11px] text-inkFaint">
+          Arithmetic over other properties (+ − × ÷, parentheses, log10/abs). Available:{" "}
+          <span className="font-mono">{aliases.join(", ")}</span>
+        </div>
+      </div>
+      <div className="mt-2">
         <button onClick={submit} disabled={busy || !label.trim()}
           className="rounded bg-emerald-600 px-3 py-1 text-sm text-white disabled:opacity-50">
           {busy ? "Adding…" : "Add property"}
@@ -228,6 +240,13 @@ export default function MoleculeDatabasePage() {
                   <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
                 ))}
               </optgroup>
+              {metrics.some((m) => m.kind === "formula") && (
+                <optgroup label="Derived (formulas)">
+                  {metrics.filter((m) => m.kind === "formula").map((m) => (
+                    <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
+                  ))}
+                </optgroup>
+              )}
               {metrics.some((m) => m.kind === "custom") && (
                 <optgroup label="Custom">
                   {metrics.filter((m) => m.kind === "custom").map((m) => (
@@ -249,7 +268,12 @@ export default function MoleculeDatabasePage() {
           )}
         </div>
 
-        {showDefine && <DefinePropertyForm onDone={(key) => { setShowDefine(false); loadMetrics(); setMetric(key); }} />}
+        {showDefine && (
+          <DefinePropertyForm
+            aliases={metrics.filter((m) => m.kind !== "formula" && m.alias).map((m) => m.alias!)}
+            onDone={(key) => { setShowDefine(false); loadMetrics(); setMetric(key); }}
+          />
+        )}
 
         <div className="mt-4">
           <InteractiveHistogram

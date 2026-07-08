@@ -64,6 +64,12 @@ export default function MoleculeDetail({
       <div className="grid gap-6 md:grid-cols-2">
         <div>
           <Structure3D moleculeId={mol.id} />
+          <a
+            href={`${API_BASE}/molecule/${mol.id}/structure3d?download=1`}
+            className="mt-2 inline-block rounded border border-borderStrong px-3 py-1.5 text-sm text-ink hover:bg-panel2"
+          >
+            ↓ Download structure (PDB)
+          </a>
           <div className="mt-2 flex justify-center rounded border border-border bg-panel p-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`${API_BASE}/molecule/${mol.id}/structure2d`} alt="2D" className="h-40" />

@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS custom_metrics (
     log         INTEGER DEFAULT 0,
     higher_is_better INTEGER DEFAULT 0,
     description TEXT,
+    formula     TEXT,                  -- if set, a derived metric: arithmetic over other metric aliases
     created_at  TEXT DEFAULT (datetime('now')),
     UNIQUE(program_id, key)
 );

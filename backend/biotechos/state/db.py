@@ -20,6 +20,7 @@ def connect(db_path: Path | str = DB_PATH) -> sqlite3.Connection:
 # (CREATE TABLE IF NOT EXISTS won't add columns to an existing table).
 _MIGRATIONS = [
     ("molecules", "favorite", "INTEGER DEFAULT 0"),
+    ("custom_metrics", "formula", "TEXT"),
 ]
 
 

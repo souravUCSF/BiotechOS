@@ -156,10 +156,10 @@ def get_cached_structure(molecule_id: int, program_id: str = DEMO_PROGRAM_ID) ->
     cfg = get_fold_config(program_id)
     ref = fetch_reference_pdb(cfg.get("pdb_id") or "REF1")
     if ref and ref.exists():
-        pid = (cfg.get("pdb_id") or "REF1").upper()
-        return ref.read_text(), True, f"Reference: PDB {pid}"
+        # forward-looking label; the real per-compound Boltz co-fold replaces this
+        return ref.read_text(), True, "Predicted structure (co-fold pending)"
     if PLACEHOLDER_PDB.exists():
-        return PLACEHOLDER_PDB.read_text(), True, PLACEHOLDER_LABEL
+        return PLACEHOLDER_PDB.read_text(), True, "Predicted structure (co-fold pending)"
     return None
 
 

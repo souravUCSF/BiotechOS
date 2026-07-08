@@ -54,8 +54,9 @@ export type Histogram = {
 
 export type MetricDef = {
   key: string;
+  alias?: string;
   label: string;
-  kind: "assay" | "adme" | "custom";
+  kind: "assay" | "adme" | "custom" | "formula";
   modality: string | null;
   target: string | null;
   units: string;
@@ -63,6 +64,7 @@ export type MetricDef = {
   higher_is_better: boolean;
   count?: number;
   description?: string;
+  formula?: string | null;
 };
 
 export async function fetchMetrics(programId: string): Promise<MetricDef[]> {
@@ -91,6 +93,7 @@ export async function defineCustomMetric(
     higher_is_better?: boolean;
     target?: string;
     description?: string;
+    formula?: string;
   },
   programId: string,
 ): Promise<{ key: string; label: string }> {

@@ -5,6 +5,7 @@ import json
 
 import csv
 import io
+import re
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -133,6 +134,13 @@ def get_molecule(molecule_id: int):
         "SELECT * FROM assays WHERE molecule_id=?", (molecule_id,)
     ).fetchall())
     conn.close()
+    # present targets/descriptions as a biotech's own data — preferred names, no raw IDs
+    from ..engine import target_names
+    for a in assays:
+        a["target"] = target_names.pretty_target(a.get("target"))
+        if a.get("assay_desc"):
+            a["assay_desc"] = re.sub(r"\bCHEMBL\d+\b", "", a["assay_desc"]).strip()
+
     d = dict(mol)
     d["assays"] = assays
     if d.get("adme_json"):
@@ -174,23 +182,27 @@ def molecule_structure2d(molecule_id: int):
 
 
 @app.get("/molecule/{molecule_id}/structure3d", response_class=PlainTextResponse)
-def molecule_structure3d(molecule_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+def molecule_structure3d(molecule_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID),
+                         download: bool = Query(default=False)):
     """PDB text for the molecule's structure — a real Boltz co-fold once folded,
     otherwise the program's configured reference PDB. `X-Structure-Placeholder`
-    + `X-Structure-Label` headers tell the UI which it is."""
+    + `X-Structure-Label` headers tell the UI which it is. `download=1` attaches it."""
     result = structure_engine.get_cached_structure(molecule_id, program_id)
     if result is None:
         raise HTTPException(404, "no structure available")
     pdb, is_placeholder, label = result
-    return Response(
-        content=pdb,
-        media_type="text/plain",
-        headers={
-            "X-Structure-Placeholder": "1" if is_placeholder else "0",
-            "X-Structure-Label": label,
-            "Access-Control-Expose-Headers": "X-Structure-Placeholder,X-Structure-Label",
-        },
-    )
+    conn = get_conn()
+    mrow = conn.execute("SELECT name FROM molecules WHERE id=?", (molecule_id,)).fetchone()
+    conn.close()
+    name = mrow["name"] if mrow else f"mol_{molecule_id}"
+    headers = {
+        "X-Structure-Placeholder": "1" if is_placeholder else "0",
+        "X-Structure-Label": label,
+        "Access-Control-Expose-Headers": "X-Structure-Placeholder,X-Structure-Label",
+    }
+    if download:
+        headers["Content-Disposition"] = f'attachment; filename="{name}_structure.pdb"'
+    return Response(content=pdb, media_type="chemical/x-pdb" if download else "text/plain", headers=headers)
 
 
 @app.get("/fold-config")
@@ -270,6 +282,7 @@ class CustomMetricRequest(BaseModel):
     target: str = "TGTA"
     modality: str | None = None
     description: str | None = None
+    formula: str | None = None
     program_id: str = DEMO_PROGRAM_ID
 
 
@@ -287,7 +300,7 @@ def metrics_define(req: CustomMetricRequest):
     from ..engine import metrics as metrics_engine
     return metrics_engine.define_custom(
         req.program_id, req.label, req.units, req.log, req.higher_is_better,
-        req.target, req.modality, req.description)
+        req.target, req.modality, req.description, req.formula)
 
 
 @app.get("/tpp/current")

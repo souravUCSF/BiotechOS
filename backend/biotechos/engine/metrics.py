@@ -58,7 +58,7 @@ def slug(s: str) -> str:
 def _adme_metrics() -> list[dict]:
     out = []
     for field, (label, units, hib) in ADME_META.items():
-        out.append({"key": f"adme:{field}", "label": label, "kind": "adme",
+        out.append({"key": f"adme:{field}", "alias": field, "label": label, "kind": "adme",
                     "modality": None, "target": None, "units": units,
                     "log": False, "higher_is_better": hib})
     return out
@@ -68,22 +68,23 @@ def _adme_metrics() -> list[dict]:
 # IDs and would explode into thousands of junk metrics — instead we expose the
 # on/anti-target axes explicitly and aggregate the panel modalities across targets
 # (target "*" = median over every assay of that modality). Never surface raw IDs.
-# spec: (modality, target, label, units, log, higher_is_better)
+# spec: (modality, target, alias, label, units, log, higher_is_better)
+# `alias` is the short token used to reference this metric inside formulas.
 ASSAY_SPEC = [
-    ("biochemical_ic50", "TGTA", "TGTA biochemical IC50", "nM", True, False),
-    ("biochemical_ic50", "TGTB", "TGTB biochemical IC50 (anti-target)", "nM", True, False),
-    ("cellular_antiprolif", "TGTA", "Cellular anti-proliferation (TGTA+ lines)", "nM", True, False),
-    ("selectivity", "TGTA/TGTB", "TGTA vs TGTB selectivity", "x", True, True),
-    ("kinetics", "*", "Binding kinetics / residence time", "", True, True),
-    ("xenograft", "*", "In-vivo xenograft (TGI)", "", False, True),
-    ("tox", "*", "Toxicity panel (cytotox / hERG)", "", True, False),
-    ("adme", "*", "Measured ADME (clearance / stability)", "", False, False),
+    ("biochemical_ic50", "TGTA", "tgta_ic50", "TGTA biochemical IC50", "nM", True, False),
+    ("biochemical_ic50", "TGTB", "tgtb_ic50", "TGTB biochemical IC50 (anti-target)", "nM", True, False),
+    ("cellular_antiprolif", "TGTA", "cell_ic50", "Cellular anti-proliferation (TGTA+ lines)", "nM", True, False),
+    ("selectivity", "TGTA/TGTB", "selectivity", "TGTA vs TGTB selectivity", "x", True, True),
+    ("kinetics", "*", "kinetics", "Binding kinetics / residence time", "", True, True),
+    ("xenograft", "*", "xenograft", "In-vivo xenograft (TGI)", "", False, True),
+    ("tox", "*", "tox", "Toxicity panel (cytotox / hERG)", "", True, False),
+    ("adme", "*", "adme_meas", "Measured ADME (clearance / stability)", "", False, False),
 ]
 
 
 def _assay_metrics(conn, program_id: str) -> list[dict]:
     out = []
-    for modality, target, label, units, log, hib in ASSAY_SPEC:
+    for modality, target, alias, label, units, log, hib in ASSAY_SPEC:
         # only surface axes that actually have data (custom metrics cover the rest)
         if target == "*":
             n = conn.execute(
@@ -96,7 +97,7 @@ def _assay_metrics(conn, program_id: str) -> list[dict]:
         if n == 0:
             continue
         out.append({
-            "key": f"assay:{modality}:{target}",
+            "key": f"assay:{modality}:{target}", "alias": alias,
             "label": label, "kind": "assay", "modality": modality, "target": target,
             "units": units, "log": log, "higher_is_better": hib,
         })
@@ -105,12 +106,17 @@ def _assay_metrics(conn, program_id: str) -> list[dict]:
 
 def _custom_metrics(conn, program_id: str) -> list[dict]:
     rows = conn.execute("SELECT * FROM custom_metrics WHERE program_id=?", (program_id,)).fetchall()
-    return [{
-        "key": r["key"], "label": r["label"], "kind": "custom",
-        "modality": r["modality"], "target": r["target"], "units": r["units"] or "",
-        "log": bool(r["log"]), "higher_is_better": bool(r["higher_is_better"]),
-        "description": r["description"],
-    } for r in rows]
+    out = []
+    for r in rows:
+        formula = r["formula"] if "formula" in r.keys() else None
+        out.append({
+            "key": r["key"], "alias": slug(r["label"]),
+            "label": r["label"], "kind": "formula" if formula else "custom",
+            "modality": r["modality"], "target": r["target"], "units": r["units"] or "",
+            "log": bool(r["log"]), "higher_is_better": bool(r["higher_is_better"]),
+            "description": r["description"], "formula": formula,
+        })
+    return out
 
 
 def catalog(program_id: str = DEMO_PROGRAM_ID, include_counts: bool = True) -> list[dict]:
@@ -132,8 +138,76 @@ def catalog(program_id: str = DEMO_PROGRAM_ID, include_counts: bool = True) -> l
     return uniq
 
 
+import ast
+import math
+
+# whitelisted functions available inside formulas (arithmetic scope)
+_FORMULA_FUNCS = {"log10": math.log10, "log": math.log, "abs": abs, "sqrt": math.sqrt}
+
+
+def _alias_map(program_id: str) -> dict[str, str]:
+    """alias token -> metric key, for every non-formula catalog metric."""
+    out = {}
+    for m in catalog(program_id, include_counts=False):
+        if m.get("kind") != "formula" and m.get("alias"):
+            out[m["alias"]] = m["key"]
+    return out
+
+
+def _eval_formula(conn, program_id: str, molecule_id: int, formula: str,
+                  aliases: dict[str, str], depth: int = 0) -> float | None:
+    if depth > 5:
+        return None
+
+    def ev(node):
+        if isinstance(node, ast.Expression):
+            return ev(node.body)
+        if isinstance(node, ast.Constant):
+            return float(node.value) if isinstance(node.value, (int, float)) else None
+        if isinstance(node, ast.Name):
+            k = aliases.get(node.id)
+            if k is None:
+                raise ValueError(f"unknown metric alias '{node.id}'")
+            return resolve(conn, program_id, molecule_id, k)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            v = ev(node.operand)
+            return None if v is None else (v if isinstance(node.op, ast.UAdd) else -v)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow)):
+            a, b = ev(node.left), ev(node.right)
+            if a is None or b is None:
+                return None
+            if isinstance(node.op, ast.Add): return a + b
+            if isinstance(node.op, ast.Sub): return a - b
+            if isinstance(node.op, ast.Mult): return a * b
+            if isinstance(node.op, ast.Div): return a / b if b != 0 else None
+            if isinstance(node.op, ast.Pow): return a ** b
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in _FORMULA_FUNCS:
+            args = [ev(a) for a in node.args]
+            if any(a is None for a in args):
+                return None
+            try:
+                return float(_FORMULA_FUNCS[node.func.id](*args))
+            except (ValueError, ZeroDivisionError):
+                return None
+        raise ValueError("unsupported expression")
+
+    try:
+        tree = ast.parse(formula, mode="eval")
+        v = ev(tree)
+        return float(v) if v is not None and math.isfinite(v) else None
+    except Exception:
+        return None
+
+
 def resolve(conn, program_id: str, molecule_id: int, key: str) -> float | None:
     """Turn a metric key + molecule into a scalar value (median for assays)."""
+    if key.startswith("formula:"):
+        row = conn.execute(
+            "SELECT formula FROM custom_metrics WHERE program_id=? AND key=?",
+            (program_id, key)).fetchone()
+        if not row or not row["formula"]:
+            return None
+        return _eval_formula(conn, program_id, molecule_id, row["formula"], _alias_map(program_id))
     if key.startswith("adme:"):
         field = key[5:]
         row = conn.execute("SELECT adme_json FROM molecules WHERE id=?", (molecule_id,)).fetchone()
@@ -183,18 +257,25 @@ def get_meta(program_id: str, key: str) -> dict | None:
 
 def define_custom(program_id: str, label: str, units: str = "", log: bool = False,
                   higher_is_better: bool = False, target: str = "TGTA",
-                  modality: str | None = None, description: str | None = None) -> dict:
-    """Register a user-defined property (no data yet). Data arrives later via
-    assays with the matching (modality, target)."""
-    modality = modality or slug(label)
-    key = f"assay:{modality}:{target}"
+                  modality: str | None = None, description: str | None = None,
+                  formula: str | None = None) -> dict:
+    """Register a user-defined property. With `formula`, it's a derived metric
+    (arithmetic over other metric aliases). Otherwise it's an empty assay metric
+    whose data arrives later via matching (modality, target) assays."""
     conn = db.connect()
+    formula = (formula or "").strip() or None
+    if formula:
+        key = f"formula:{slug(label)}"
+        modality, target = None, None
+    else:
+        modality = modality or slug(label)
+        key = f"assay:{modality}:{target}"
     with conn:
         conn.execute(
             "INSERT OR REPLACE INTO custom_metrics(program_id,key,label,modality,target,"
-            "units,log,higher_is_better,description) VALUES (?,?,?,?,?,?,?,?,?)",
+            "units,log,higher_is_better,description,formula) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (program_id, key, label, modality, target, units, int(log),
-             int(higher_is_better), description),
+             int(higher_is_better), description, formula),
         )
     conn.close()
-    return {"key": key, "label": label, "modality": modality, "target": target}
+    return {"key": key, "label": label, "formula": formula}

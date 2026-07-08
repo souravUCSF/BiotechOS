@@ -97,6 +97,13 @@ export function TppAddCriterion({
               <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
             ))}
           </optgroup>
+          {metrics.some((m) => m.kind === "formula") && (
+            <optgroup label="Derived (formulas)">
+              {metrics.filter((m) => m.kind === "formula").map((m) => (
+                <option key={m.key} value={m.key}>{m.label} ({m.count ?? 0})</option>
+              ))}
+            </optgroup>
+          )}
           {metrics.some((m) => m.kind === "custom") && (
             <optgroup label="Custom">
               {metrics.filter((m) => m.kind === "custom").map((m) => (
