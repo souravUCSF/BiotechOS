@@ -49,9 +49,24 @@ CREATE TABLE IF NOT EXISTS assays (
 CREATE INDEX IF NOT EXISTS idx_assays_molecule ON assays(molecule_id);
 CREATE INDEX IF NOT EXISTS idx_assays_program ON assays(program_id);
 
+-- A TPP is versioned: each edit or rebuild creates a new immutable version;
+-- exactly one version per program is active (the live TPP).
+CREATE TABLE IF NOT EXISTS tpp_versions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id  TEXT NOT NULL REFERENCES programs(id),
+    version     INTEGER NOT NULL,       -- 1, 2, 3 ...
+    notes       TEXT,                   -- why this version exists (rationale / justification / build summary)
+    author      TEXT DEFAULT 'founder',
+    active      INTEGER DEFAULT 0,      -- 1 = current live TPP
+    created_at  TEXT DEFAULT (datetime('now')),
+    UNIQUE(program_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_tppver_program ON tpp_versions(program_id);
+
 CREATE TABLE IF NOT EXISTS tpp_params (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     program_id  TEXT NOT NULL REFERENCES programs(id),
+    version_id  INTEGER REFERENCES tpp_versions(id),  -- which TPP version this param belongs to
     axis        TEXT NOT NULL,          -- e.g. potency, selectivity, cellular, adme, tox
     label       TEXT NOT NULL,
     metric      TEXT NOT NULL,          -- which molecule field/modality this reads
@@ -63,6 +78,7 @@ CREATE TABLE IF NOT EXISTS tpp_params (
     rationale   TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_tpp_program ON tpp_params(program_id);
+CREATE INDEX IF NOT EXISTS idx_tpp_version ON tpp_params(version_id);
 
 CREATE TABLE IF NOT EXISTS tasks (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,

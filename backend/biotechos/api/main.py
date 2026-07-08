@@ -85,8 +85,9 @@ def get_state(program_id: str = Query(default=DEMO_PROGRAM_ID)):
                 m["adme"] = None
         _scrub(m)
 
+    _active = tpp_engine.active_version(conn, program_id)
     tpp_params = db.rows_to_dicts(conn.execute(
-        "SELECT * FROM tpp_params WHERE program_id=?", (program_id,)
+        "SELECT * FROM tpp_params WHERE version_id=?", (_active["id"] if _active else -1,)
     ).fetchall())
 
     inbox = db.rows_to_dicts(conn.execute(
@@ -218,15 +219,70 @@ def tpp_histogram(metric: str, program_id: str = Query(default=DEMO_PROGRAM_ID))
     return tpp_engine.population_histogram(metric, program_id)
 
 
+@app.get("/tpp/current")
+def tpp_current(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """The active TPP version + its parameters (for the TPP page)."""
+    return tpp_engine.current_tpp(program_id)
+
+
+@app.get("/tpp/versions")
+def tpp_versions(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    return tpp_engine.list_versions(program_id)
+
+
+class UpdateParamRequest(BaseModel):
+    changes: dict
+    justification: str
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/tpp/param/{param_id}/update")
+def tpp_update_param(param_id: int, req: UpdateParamRequest):
+    """Edit one TPP parameter -> creates a new version (justification required)."""
+    try:
+        return tpp_engine.update_param(req.program_id, param_id, req.changes, req.justification)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 class BuildTppRequest(BaseModel):
     brief: str
     program_id: str = DEMO_PROGRAM_ID
+    api_key: str | None = None
 
 
 @app.post("/tpp/build")
 def tpp_build(req: BuildTppRequest):
-    """TPP Builder: turn a program brief into a structured, executable TPP."""
-    return tpp_builder.build(req.brief, req.program_id)
+    """TPP Builder: turn a program brief into a structured, executable TPP version."""
+    return tpp_builder.build(req.brief, req.program_id, api_key=req.api_key)
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class TppChatRequest(BaseModel):
+    messages: list[ChatMessage]
+    program_id: str = DEMO_PROGRAM_ID
+    api_key: str | None = None
+
+
+@app.get("/tpp/builder/greeting")
+def tpp_builder_greeting():
+    return {"greeting": tpp_builder.GREETING}
+
+
+@app.post("/tpp/builder/chat")
+def tpp_builder_chat(req: TppChatRequest):
+    msgs = [{"role": m.role, "content": m.content} for m in req.messages]
+    return tpp_builder.chat(msgs, api_key=req.api_key)
+
+
+@app.post("/tpp/builder/finalize")
+def tpp_builder_finalize(req: TppChatRequest):
+    msgs = [{"role": m.role, "content": m.content} for m in req.messages]
+    return tpp_builder.finalize_from_chat(msgs, req.program_id, api_key=req.api_key)
 
 
 @app.get("/tpp/demo-brief")

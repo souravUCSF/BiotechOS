@@ -16,14 +16,18 @@ T = TypeVar("T", bound=BaseModel)
 _client = None
 
 
-def has_api_key() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+def has_api_key(api_key: str | None = None) -> bool:
+    return bool(api_key or os.environ.get("ANTHROPIC_API_KEY")
+                or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
 
 
-def _get_client():
+def _get_client(api_key: str | None = None):
+    """A per-key client (user-supplied keys aren't cached) or the cached env client."""
+    import anthropic
+    if api_key:
+        return anthropic.Anthropic(api_key=api_key)
     global _client
     if _client is None:
-        import anthropic
         _client = anthropic.Anthropic()
     return _client
 
@@ -36,12 +40,13 @@ def structured(
     schema: type[T],
     fallback: T,
     max_tokens: int = 4096,
+    api_key: str | None = None,
 ) -> tuple[T, bool]:
     """Return (result, used_llm). Falls back to `fallback` if no key or on error."""
-    if not has_api_key():
+    if not has_api_key(api_key):
         return fallback, False
     try:
-        client = _get_client()
+        client = _get_client(api_key)
         resp = client.messages.parse(
             model=model,
             max_tokens=max_tokens,
@@ -62,12 +67,13 @@ def text(
     user: str,
     fallback: str,
     max_tokens: int = 4096,
+    api_key: str | None = None,
 ) -> tuple[str, bool]:
     """Return (text, used_llm). Falls back to `fallback` if no key or on error."""
-    if not has_api_key():
+    if not has_api_key(api_key):
         return fallback, False
     try:
-        client = _get_client()
+        client = _get_client(api_key)
         resp = client.messages.create(
             model=model,
             max_tokens=max_tokens,
@@ -78,4 +84,32 @@ def text(
         return out or fallback, True
     except Exception as e:
         print(f"[llm] text() falling back ({type(e).__name__}: {e})")
+        return fallback, False
+
+
+def chat(
+    *,
+    model: str,
+    system: str,
+    messages: list[dict],
+    fallback: str,
+    max_tokens: int = 2048,
+    api_key: str | None = None,
+) -> tuple[str, bool]:
+    """Multi-turn conversation. `messages` is a list of {role, content}. Returns
+    (assistant_text, used_llm). Falls back to a canned reply if no key/on error."""
+    if not has_api_key(api_key):
+        return fallback, False
+    try:
+        client = _get_client(api_key)
+        resp = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+        )
+        out = next((b.text for b in resp.content if b.type == "text"), "")
+        return out or fallback, True
+    except Exception as e:
+        print(f"[llm] chat() falling back ({type(e).__name__}: {e})")
         return fallback, False

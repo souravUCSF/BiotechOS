@@ -95,22 +95,116 @@ def _status_for(value: float | None, operator: str, threshold: float, near_frac:
     raise ValueError(f"unsupported operator {operator!r}")
 
 
+def active_version(conn, program_id: str) -> dict | None:
+    r = conn.execute(
+        "SELECT * FROM tpp_versions WHERE program_id=? AND active=1", (program_id,)
+    ).fetchone()
+    return dict(r) if r else None
+
+
+def _active_params(conn, program_id: str) -> list[dict]:
+    ver = active_version(conn, program_id)
+    if ver is None:
+        return []
+    return db.rows_to_dicts(conn.execute(
+        "SELECT * FROM tpp_params WHERE version_id=? ORDER BY id", (ver["id"],)
+    ).fetchall())
+
+
+def _next_version_number(conn, program_id: str) -> int:
+    r = conn.execute(
+        "SELECT COALESCE(MAX(version), 0) m FROM tpp_versions WHERE program_id=?", (program_id,)
+    ).fetchone()
+    return r["m"] + 1
+
+
+def _create_version(conn, program_id: str, params: list[dict], notes: str,
+                    author: str = "founder") -> dict:
+    """Create a new TPP version from a list of param dicts and make it active."""
+    ver_num = _next_version_number(conn, program_id)
+    conn.execute("UPDATE tpp_versions SET active=0 WHERE program_id=?", (program_id,))
+    ver_id = conn.execute(
+        "INSERT INTO tpp_versions(program_id,version,notes,author,active) VALUES (?,?,?,?,1)",
+        (program_id, ver_num, notes, author),
+    ).lastrowid
+    for p in params:
+        conn.execute(
+            "INSERT INTO tpp_params(program_id,version_id,axis,label,metric,operator,threshold,"
+            "near_frac,units,weight,rationale) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (program_id, ver_id, p["axis"], p["label"], p["metric"], p["operator"],
+             p["threshold"], p.get("near_frac", 0.5), p.get("units"), p.get("weight", 1.0),
+             p.get("rationale")),
+        )
+    return {"id": ver_id, "version": ver_num}
+
+
 def seed_default_tpp(program_id: str = DEMO_PROGRAM_ID) -> None:
     conn = db.connect()
     with conn:
         existing = conn.execute(
-            "SELECT COUNT(*) c FROM tpp_params WHERE program_id=?", (program_id,)
+            "SELECT COUNT(*) c FROM tpp_versions WHERE program_id=?", (program_id,)
         ).fetchone()["c"]
         if existing:
             conn.close()
             return
-        for axis, label, metric, op, threshold, units, weight, rationale in DEFAULT_TPP:
-            conn.execute(
-                "INSERT INTO tpp_params(program_id,axis,label,metric,operator,threshold,"
-                "near_frac,units,weight,rationale) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (program_id, axis, label, metric, op, threshold, 0.5, units, weight, rationale),
-            )
+        params = [
+            {"axis": axis, "label": label, "metric": metric, "operator": op,
+             "threshold": threshold, "units": units, "weight": weight, "rationale": rationale}
+            for (axis, label, metric, op, threshold, units, weight, rationale) in DEFAULT_TPP
+        ]
+        _create_version(conn, program_id, params,
+                        notes="Initial TPP for the TGTA program — potency, TGTB selectivity, "
+                              "and cellular anti-proliferation criteria.")
     conn.close()
+
+
+def list_versions(program_id: str = DEMO_PROGRAM_ID) -> list[dict]:
+    conn = db.connect()
+    rows = db.rows_to_dicts(conn.execute(
+        "SELECT * FROM tpp_versions WHERE program_id=? ORDER BY version DESC", (program_id,)
+    ).fetchall())
+    conn.close()
+    return rows
+
+
+def current_tpp(program_id: str = DEMO_PROGRAM_ID) -> dict:
+    """The active version + its parameters (for the TPP page)."""
+    conn = db.connect()
+    ver = active_version(conn, program_id)
+    params = _active_params(conn, program_id)
+    conn.close()
+    return {"version": ver, "params": params}
+
+
+def update_param(program_id: str, param_id: int, changes: dict, justification: str) -> dict:
+    """Edit one parameter -> clone the active version's params into a NEW version
+    with the change applied. Requires a justification (recorded on the version)."""
+    if not justification or not justification.strip():
+        raise ValueError("a written justification is required to change the TPP")
+    conn = db.connect()
+    params = _active_params(conn, program_id)
+    if not params:
+        conn.close()
+        raise ValueError("no active TPP to edit")
+    target = next((p for p in params if p["id"] == param_id), None)
+    if target is None:
+        conn.close()
+        raise ValueError("parameter not part of the active TPP")
+    label = target["label"]
+    new_params = []
+    for p in params:
+        np = {k: p[k] for k in ("axis", "label", "metric", "operator", "threshold",
+                                "near_frac", "units", "weight", "rationale")}
+        if p["id"] == param_id:
+            for k in ("operator", "threshold", "weight", "rationale", "label"):
+                if k in changes and changes[k] is not None:
+                    np[k] = changes[k]
+        new_params.append(np)
+    with conn:
+        ver = _create_version(conn, program_id, new_params,
+                              notes=f"Edited “{label}”. Justification: {justification.strip()}")
+    conn.close()
+    return {"new_version": ver["version"], "notes_recorded": justification.strip()}
 
 
 def score_molecule(conn, molecule_id: int, params: list[dict]) -> list[ParamScore]:
@@ -144,9 +238,7 @@ def recompute(program_id: str = DEMO_PROGRAM_ID) -> dict:
     """Score every molecule against the current TPP; return per-molecule results
     plus the set of molecules currently at PASS (the 'meets TPP' set)."""
     conn = db.connect()
-    params = db.rows_to_dicts(
-        conn.execute("SELECT * FROM tpp_params WHERE program_id=?", (program_id,)).fetchall()
-    )
+    params = _active_params(conn, program_id)
     molecules = db.rows_to_dicts(
         conn.execute(
             "SELECT id, name, held_out FROM molecules WHERE program_id=? AND held_out=0",
@@ -191,9 +283,10 @@ def population_histogram(metric: str, program_id: str = DEMO_PROGRAM_ID, bins: i
     molecules = conn.execute(
         "SELECT id FROM molecules WHERE program_id=? AND held_out=0", (program_id,)
     ).fetchall()
+    ver = active_version(conn, program_id)
     param = conn.execute(
-        "SELECT threshold, operator, units FROM tpp_params WHERE program_id=? AND metric=?",
-        (program_id, metric),
+        "SELECT threshold, operator, units FROM tpp_params WHERE version_id=? AND metric=?",
+        (ver["id"] if ver else -1, metric),
     ).fetchone()
     values = []
     for m in molecules:

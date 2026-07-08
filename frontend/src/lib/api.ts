@@ -1,4 +1,5 @@
-import type { StateResponse, Program, Molecule } from "./types";
+import type { StateResponse, Program, Molecule, TppParam } from "./types";
+export type { TppParam };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8010";
 
@@ -199,5 +200,84 @@ export async function buildTpp(
     body: JSON.stringify({ brief, program_id: programId }),
   });
   if (!res.ok) throw new Error(`POST /tpp/build failed: ${res.status}`);
+  return res.json();
+}
+
+// --- TPP versioning + conversational builder ---
+
+export type TppVersion = {
+  id: number;
+  program_id: string;
+  version: number;
+  notes: string | null;
+  author: string;
+  active: number;
+  created_at: string;
+};
+
+export type CurrentTpp = {
+  version: TppVersion | null;
+  params: TppParam[];
+};
+
+export type ChatMessage = { role: "user" | "assistant"; content: string };
+
+export async function fetchCurrentTpp(programId: string): Promise<CurrentTpp> {
+  const res = await fetch(`${API_BASE}/tpp/current?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /tpp/current failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchTppVersions(programId: string): Promise<TppVersion[]> {
+  const res = await fetch(`${API_BASE}/tpp/versions?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /tpp/versions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateTppParam(
+  paramId: number,
+  changes: Record<string, unknown>,
+  justification: string,
+  programId: string,
+): Promise<{ new_version: number }> {
+  const res = await fetch(`${API_BASE}/tpp/param/${paramId}/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ changes, justification, program_id: programId }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? `update failed: ${res.status}`);
+  return res.json();
+}
+
+export async function tppBuilderGreeting(): Promise<string> {
+  const res = await fetch(`${API_BASE}/tpp/builder/greeting`, { cache: "no-store" });
+  return (await res.json()).greeting;
+}
+
+export async function tppBuilderChat(
+  messages: ChatMessage[],
+  programId: string,
+  apiKey?: string,
+): Promise<{ reply: string; used_llm: boolean }> {
+  const res = await fetch(`${API_BASE}/tpp/builder/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, program_id: programId, api_key: apiKey || null }),
+  });
+  if (!res.ok) throw new Error(`chat failed: ${res.status}`);
+  return res.json();
+}
+
+export async function tppBuilderFinalize(
+  messages: ChatMessage[],
+  programId: string,
+  apiKey?: string,
+): Promise<{ version: number; used_llm: boolean; params: TppParam[] }> {
+  const res = await fetch(`${API_BASE}/tpp/builder/finalize`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, program_id: programId, api_key: apiKey || null }),
+  });
+  if (!res.ok) throw new Error(`finalize failed: ${res.status}`);
   return res.json();
 }
