@@ -14,6 +14,38 @@ const EXAMPLES = [
   "Who can run Caco-2 assays?",
 ];
 
+// render an answer string, turning [n] / [n,m] markers into clickable citation links
+function renderAnswer(
+  text: string,
+  citations: KnowledgeCitation[],
+  onOpen: (c: KnowledgeCitation) => void,
+) {
+  const byN = new Map<number, KnowledgeCitation>();
+  citations.forEach((c) => { if (c.n != null) byN.set(c.n, c); });
+  return text.split(/(\[\d+(?:\s*,\s*\d+)*\])/g).map((part, i) => {
+    const m = part.match(/^\[(\d+(?:\s*,\s*\d+)*)\]$/);
+    if (!m) return <span key={i}>{part}</span>;
+    const nums = m[1].split(",").map((s) => s.trim());
+    return (
+      <sup key={i} className="mx-0.5 whitespace-nowrap text-emerald-700">
+        [{nums.map((n, j) => {
+          const c = byN.get(Number(n));
+          return (
+            <span key={j}>
+              {j > 0 ? "," : ""}
+              <button
+                className="hover:underline"
+                title={c?.subject || `source ${n}`}
+                onClick={() => c && onOpen(c)}
+              >{n}</button>
+            </span>
+          );
+        })}]
+      </sup>
+    );
+  });
+}
+
 export default function QueryOSPage() {
   const { programId } = useProgram();
   const [q, setQ] = useState("");
@@ -100,7 +132,9 @@ export default function QueryOSPage() {
             </span>
             {!ans.used_llm && <span>· deterministic (no API key)</span>}
           </div>
-          <div className="whitespace-pre-wrap text-sm text-ink">{ans.answer}</div>
+          <div className="whitespace-pre-wrap text-sm text-ink">
+            {renderAnswer(ans.answer, ans.citations, setOpenDoc)}
+          </div>
 
           {ans.citations.length > 0 && (
             <div className="mt-4 border-t border-border pt-3">
@@ -109,12 +143,13 @@ export default function QueryOSPage() {
               </div>
               <ul className="space-y-1 text-xs">
                 {ans.citations.map((c, i) => (
-                  <li key={`${c.id}-${i}`}>
+                  <li key={`${c.id}-${i}`} className="flex gap-1.5">
+                    <span className="font-mono text-emerald-700">[{c.n ?? i + 1}]</span>
                     <button
                       onClick={() => setOpenDoc(c)}
                       className="text-left text-inkMuted hover:text-ink"
                     >
-                      <span className="text-emerald-700">📧 {c.subject || "(no subject)"}</span>
+                      <span className="text-ink">{c.subject || "(no subject)"}</span>
                       {c.email_from && <span className="ml-1">— {c.email_from}</span>}
                       {c.sent_at && <span className="ml-1 text-inkFaint">{String(c.sent_at).slice(0, 10)}</span>}
                     </button>

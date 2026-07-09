@@ -63,8 +63,10 @@ _PLANNER = (
     "vendor name and the assay/technique. Return JSON {queries:[...]}, each a few keywords.")
 _READER = (
     _DOMAIN + "\n\n"
-    "Answer the QUESTION using ONLY the EXCERPTS (emails + attachment text). Put the "
-    "doc ids you used in cited_docs. If the excerpts clearly contain the answer, set "
+    "Answer the QUESTION using ONLY the EXCERPTS (emails + attachment text). Cite "
+    "INLINE: put [doc <id>] immediately after each statement, using the exact doc id "
+    "numbers shown in the excerpts. Also put those ids in cited_docs. If the excerpts "
+    "clearly contain the answer, set "
     "found=true and give a concise answer with the SPECIFIC values (prices, days, "
     "vendors) and units. IMPORTANT: if the excerpts contain MULTIPLE quotes/prices "
     "relevant to the question (e.g. different quote numbers, dates, or per-compound vs "
@@ -174,6 +176,34 @@ def _agentic_read(conn, program_id: str, question: str, cands: list[dict],
     return read, cands
 
 
+def _number_citations(conn, answer: str, extra_ids: list[int] | None = None):
+    """Remap inline `[doc <id>]` markers the LLM wrote → sequential `[1],[2]…` in
+    order of first appearance, and return the ordered, numbered citation list."""
+    order: list[int] = []
+
+    def repl(m):
+        did = int(m.group(1))
+        if did not in order:
+            order.append(did)
+        return f"[{order.index(did) + 1}]"
+
+    # match [doc 2630], (doc 2630, doc 2882), "doc 2630", "docs 2630" → [n]
+    answer = re.sub(r"\[?\s*docs?\s*#?\s*(\d+)\s*\]?", repl, answer or "", flags=re.I)
+    for did in extra_ids or []:      # cited-but-not-inlined sources go at the end
+        if did and did not in order:
+            order.append(did)
+    cits = []
+    for i, did in enumerate(order, 1):
+        c = _cite(conn, did)
+        if c:
+            c["n"] = i
+            cits.append(c)
+    # guarantee numbered markers exist even if the LLM omitted inline citations
+    if cits and not re.search(r"\[\d+\]", answer):
+        answer = answer.rstrip() + " " + "".join(f"[{c['n']}]" for c in cits)
+    return answer, cits
+
+
 def _cite(conn, doc_id: int, snippet: str | None = None) -> dict | None:
     """Full citation payload for the clickable source panel."""
     d = conn.execute(
@@ -219,14 +249,6 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
             args.append(vendor)
         facts_hit = [dict(r) for r in conn.execute(sql, args).fetchall()]
 
-    # gather citation docs from the facts' source documents (full content for the
-    # clickable source panel)
-    doc_ids = sorted({f["source_document_id"] for f in facts_hit if f.get("source_document_id")})
-    for did in doc_ids[:6]:
-        cit = _cite(conn, did)
-        if cit:
-            citations.append(cit)
-
     # --- build the answer ---
     if facts_hit:
         # group values by vendor
@@ -238,14 +260,19 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
                  "offers_service": "services offered",
                  "quoted_amount": "quoted amounts"}[predicate]
         deterministic = f"From the corpus ({label}):\n" + "\n".join(lines)
-        # optional LLM phrasing, strictly grounded in the retrieved facts
-        rows_txt = "\n".join(f"{f['subject_key']} | {predicate} | {f['value']}" for f in facts_hit)
+        # LLM phrasing, strictly grounded in the retrieved facts, with inline cites
+        rows_txt = "\n".join(
+            f"{f['subject_key']} | {predicate} | {f['value']} | source [doc {f['source_document_id']}]"
+            for f in facts_hit)
         answer, used_llm = llm.text(
             model=MODEL_ARTIFACTS,
             system=(_DOMAIN + "\n\nAnswer ONLY from the FACT ROWS given. Do not add any value "
-                    "not present. Be concise. If the rows don't answer the question, say so."),
+                    "not present. Be concise. Cite INLINE: put [doc <id>] after each vendor's "
+                    "values, using the source shown in the row."),
             user=f"Question: {question}\n\nFACT ROWS:\n{rows_txt}",
             fallback=deterministic, api_key=api_key)
+        answer, citations = _number_citations(
+            conn, answer, [f["source_document_id"] for f in facts_hit if f.get("source_document_id")])
         conn.close()
         return {"answer": answer, "used_llm": used_llm, "citations": citations,
                 "source": "facts", "fact_count": len(facts_hit)}
@@ -261,10 +288,9 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
         return {"answer": "Not found in the corpus.", "used_llm": False,
                 "citations": [], "source": "none", "fact_count": 0}
     read, cands = _agentic_read(conn, program_id, question, cands, api_key)
-    cited_ids = [i for i in (read.cited_docs or []) if any(c["id"] == i for c in cands)] \
-        or [c["id"] for c in cands[:5]]
-    citations = [c for c in (_cite(conn, i) for i in cited_ids) if c]
-    conn.close()
     answer = read.answer if (read.found and read.answer) else "Not found in the corpus."
+    extra = read.cited_docs or [c["id"] for c in cands[:3]]
+    answer, citations = _number_citations(conn, answer, extra if read.found else [])
+    conn.close()
     return {"answer": answer, "used_llm": True, "citations": citations,
             "source": "documents", "fact_count": 0}

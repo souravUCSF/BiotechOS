@@ -404,7 +404,7 @@ export async function tppBuilderFinalize(
 
 // --- QueryOS / corpus knowledge ---
 export type KnowledgeCitation = {
-  id?: number; subject?: string; email_from?: string; email_to?: string;
+  n?: number; id?: number; subject?: string; email_from?: string; email_to?: string;
   sent_at?: string; doc_type?: string; snippet?: string | null; body?: string;
 };
 export type KnowledgeAnswer = {
