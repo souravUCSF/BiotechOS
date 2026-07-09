@@ -8,12 +8,16 @@ from __future__ import annotations
 
 import re
 
-from ...config import DEMO_PROGRAM_ID, MODEL_ARTIFACTS
+from pydantic import BaseModel
+
+from ...config import DEMO_PROGRAM_ID, MODEL_ARTIFACTS, MODEL_EXTRACTION
 from ...state import db
 from .. import llm
 from ..extract import VENDOR_BY_DOMAIN
 
 VENDORS = list(VENDOR_BY_DOMAIN.values())
+_STOP = {"which", "what", "can", "test", "does", "the", "for", "from", "with", "who",
+         "how", "much", "are", "at", "is", "of", "a", "an", "to", "do", "you", "they"}
 
 
 def _vendor_in(q: str) -> str | None:
@@ -23,23 +27,109 @@ def _vendor_in(q: str) -> str | None:
     return None
 
 
-def _fts(conn, program_id: str, query: str, k: int = 6) -> list[dict]:
-    # sanitize to a safe FTS OR-query of the salient words
-    words = [w for w in re.findall(r"[A-Za-z0-9\-]{3,}", query) if w.lower() not in
-             {"which", "what", "can", "test", "does", "the", "for", "from", "with", "who"}]
-    if not words:
-        return []
-    match = " OR ".join(words[:8])
+# --- agentic document retrieval + read (for questions facts can't answer) -----
+class _Queries(BaseModel):
+    queries: list[str]
+
+
+class _Read(BaseModel):
+    found: bool
+    answer: str
+    cited_docs: list[int] = []
+    need_search: str | None = None
+
+
+_PLANNER = (
+    "Generate 3-5 short keyword search queries to find emails/attachments that "
+    "answer the question. Use synonyms + likely phrasings: price→cost, quote, "
+    "quotation, fee, USD, per compound; turnaround→TAT, working days, timeline, "
+    "delivery; capability→services, assays, offer, can run. Always include the "
+    "vendor name and the assay/technique. Return JSON {queries:[...]}, each a few keywords.")
+_READER = (
+    "Answer the QUESTION using ONLY the EXCERPTS (emails + attachment text). Put the "
+    "doc ids you used in cited_docs. If the excerpts clearly contain the answer, set "
+    "found=true and give a concise answer with the SPECIFIC values (prices, days, "
+    "vendors) and units. If they do not, set found=false and, if a different search "
+    "might help, put keywords in need_search. Never invent values not in the excerpts.")
+
+
+def _fts_run(conn, program_id: str, expr: str, k: int) -> list[dict]:
     try:
         rows = conn.execute(
             "SELECT d.id, d.subject, d.email_from, d.sent_at, d.doc_type, "
-            "snippet(documents_fts,1,'[',']','…',12) AS snip "
+            "snippet(documents_fts,1,'[',']','…',16) AS snip "
             "FROM documents_fts f JOIN documents d ON d.id=f.rowid "
             "WHERE documents_fts MATCH ? AND d.program_id=? ORDER BY rank LIMIT ?",
-            (match, program_id, k)).fetchall()
+            (expr, program_id, k)).fetchall()
         return [dict(r) for r in rows]
     except Exception:
         return []
+
+
+def _or_expr(query: str) -> str | None:
+    words = [re.sub(r"[^A-Za-z0-9]", "", w) for w in str(query).split()]
+    words = [w for w in words if len(w) >= 2 and w.lower() not in _STOP]
+    return " OR ".join(words[:12]) or None
+
+
+def _fts_search(conn, program_id: str, query: str, k: int = 8) -> list[dict]:
+    e = _or_expr(query)
+    return _fts_run(conn, program_id, e, k) if e else []
+
+
+def _plan_queries(question: str, api_key: str | None) -> list[str]:
+    qs, _ = llm.structured(model=MODEL_EXTRACTION, system=_PLANNER, user=question,
+                           schema=_Queries, fallback=_Queries(queries=[question]),
+                           api_key=api_key)
+    out = [q for q in qs.queries if str(q).strip()]
+    return out or [question]
+
+
+def _retrieve(conn, program_id: str, queries: list[str], anchor: str | None = None,
+              k: int = 10, cap: int = 16) -> list[dict]:
+    """Union retrieval. If `anchor` (a vendor/entity token) is given, run
+    vendor-anchored `anchor AND (…)` queries FIRST so the discriminating doc
+    surfaces even when common terms flood a pure-OR search."""
+    seen: dict[int, dict] = {}
+    atok = re.sub(r"[^A-Za-z0-9]", "", anchor) if anchor else None
+    if atok and len(atok) >= 2:
+        for q in queries:
+            e = _or_expr(q)
+            if e:
+                for r in _fts_run(conn, program_id, f"{atok} AND ({e})", k):
+                    seen.setdefault(r["id"], r)
+    for q in queries:
+        for r in _fts_search(conn, program_id, q, k):
+            seen.setdefault(r["id"], r)
+    return list(seen.values())[:cap]
+
+
+def _agentic_read(conn, program_id: str, question: str, cands: list[dict],
+                  api_key: str | None, rounds: int = 2):
+    """Read retrieved excerpts, optionally re-search, answer grounded + cited."""
+    read = None
+    for i in range(rounds):
+        blocks = []
+        for c in cands:
+            row = conn.execute("SELECT raw_text FROM documents WHERE id=?", (c["id"],)).fetchone()
+            body = (row["raw_text"] or "") if row else ""
+            # surface the FTS-matched region (prices/timelines often sit deep in
+            # attachment text) + a head window.
+            snip = (c.get("snip") or "").replace("[", "").replace("]", "")
+            blocks.append(f"[doc {c['id']}] {c['subject']}\nMATCH: …{snip}…\n{body[:3500]}")
+        fb = _Read(found=bool(cands),
+                   answer=("Related emails:\n" + "\n".join(f"- [doc {c['id']}] {c['subject']}"
+                           for c in cands[:5])) if cands else "Not found in the corpus.",
+                   cited_docs=[c["id"] for c in cands[:5]])
+        read, _ = llm.structured(model=MODEL_ARTIFACTS, system=_READER,
+                                 user=f"QUESTION: {question}\n\nEXCERPTS:\n" + "\n\n".join(blocks),
+                                 schema=_Read, fallback=fb, api_key=api_key, max_tokens=800)
+        if read.found or not read.need_search or i == rounds - 1:
+            break
+        more = _retrieve(conn, program_id, [read.need_search], k=8)
+        have = {c["id"] for c in cands}
+        cands += [m for m in more if m["id"] not in have]
+    return read, cands
 
 
 def _cite(conn, doc_id: int, snippet: str | None = None) -> dict | None:
@@ -61,16 +151,21 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
     facts_hit: list[dict] = []
     citations: list[dict] = []
 
-    # --- query planning: map to a structured facts lookup when possible ---
+    # --- query planning: use structured facts ONLY for the precise, repeatable
+    # questions they answer well; everything else (pricing, turnaround, a specific
+    # assay/protein) falls through to the agentic document read below. ---
     vendor = _vendor_in(q)
     ql = q.lower()
+    # pricing / timing / specific-quote questions → documents (facts are too coarse)
+    price_time = re.search(r"price|cost|how much|\$|quote|quotation|fee|charge|"
+                           r"turn ?around|\btat\b|working days|how long|timeline|"
+                           r"when will|delivery|lead time", ql)
     predicate = None
-    if re.search(r"cell ?line|cell-?line", ql):
-        predicate = "tests_cell_line"
-    elif re.search(r"service|assay|offer|capab|do (?:they|you) (?:run|do)", ql):
-        predicate = "offers_service"
-    elif re.search(r"quote|price|cost|charge", ql):
-        predicate = "quoted_amount"
+    if not price_time:
+        if re.search(r"cell ?line|cell-?line", ql):
+            predicate = "tests_cell_line"
+        elif re.search(r"\bservices?\b|\boffer\b|capabilit|what can .*\b(do|run|test)\b", ql):
+            predicate = "offers_service"
 
     if predicate:
         sql = ("SELECT f.subject_key, f.value, f.observation_id, o.source_document_id "
@@ -113,23 +208,21 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
         return {"answer": answer, "used_llm": used_llm, "citations": citations,
                 "source": "facts", "fact_count": len(facts_hit)}
 
-    # --- fallback: document retrieval (FTS5) ---
-    docs = _fts(conn, program_id, q)
-    if not docs:
+    # --- long-tail: agentic document retrieval + grounded read ---
+    # LLM query-expansion → union retrieval over emails + attachment text → read
+    # the excerpts, optionally re-search once, answer with the specific values + cite.
+    queries = _plan_queries(question, api_key)
+    anchor = vendor.split()[0] if vendor else None   # e.g. "BPS", "Vendor 1"
+    cands = _retrieve(conn, program_id, queries, anchor=anchor)
+    if not cands:
         conn.close()
         return {"answer": "Not found in the corpus.", "used_llm": False,
                 "citations": [], "source": "none", "fact_count": 0}
-    context = "\n\n".join(f"[doc {d['id']}] {d['subject']}\n{d['snip']}" for d in docs)
-    cites = [_cite(conn, d["id"], snippet=d.get("snip")) for d in docs]
-    cites = [c for c in cites if c]
+    read, cands = _agentic_read(conn, program_id, question, cands, api_key)
+    cited_ids = [i for i in (read.cited_docs or []) if any(c["id"] == i for c in cands)] \
+        or [c["id"] for c in cands[:5]]
+    citations = [c for c in (_cite(conn, i) for i in cited_ids) if c]
     conn.close()
-    answer, used_llm = llm.text(
-        model=MODEL_ARTIFACTS,
-        system=("Answer ONLY from the provided email excerpts, citing [doc N]. "
-                "If they don't contain the answer, say 'Not found in the corpus.'"),
-        user=f"Question: {question}\n\nEXCERPTS:\n{context}",
-        fallback="Related emails found (no API key for synthesis):\n" +
-                 "\n".join(f"- [doc {d['id']}] {d['subject']}" for d in docs),
-        api_key=api_key)
-    return {"answer": answer, "used_llm": used_llm, "citations": cites,
+    answer = read.answer if (read.found and read.answer) else "Not found in the corpus."
+    return {"answer": answer, "used_llm": True, "citations": citations,
             "source": "documents", "fact_count": 0}
