@@ -60,8 +60,13 @@
              display:none; align-items:center; justify-content:center; z-index:50; }
   .overlay.on { display:flex; }
   .overlay .box { background:var(--panel); border:1px solid var(--border); border-radius:10px;
-                  padding:16px 22px; display:flex; gap:12px; align-items:center;
+                  padding:18px 22px; display:flex; flex-direction:column; gap:10px;
+                  align-items:stretch; min-width:340px;
                   box-shadow:0 8px 30px rgba(0,0,0,.10); font-size:14px; }
+  .overlay .row { display:flex; gap:12px; align-items:center; }
+  .pbar { height:8px; background:var(--border); border-radius:5px; overflow:hidden; }
+  .pfill { height:100%; width:0%; background:var(--green); transition:width .2s ease; }
+  #pcount { color:var(--muted); font-size:12px; }
   .kv { display:grid; grid-template-columns:78px 1fr; gap:2px 8px; margin-top:4px; }
   .kv .k { color:#991b1b; font-weight:600; }
   .kv .ret { color:#7f1d1d; } .kv .exp { color:#065f46; }
@@ -87,7 +92,11 @@
   </div>
   <aside id="results"><div class="muted">Run evals to see the scorecard.</div></aside>
 </main>
-<div class="overlay" id="overlay"><div class="box"><span class="spinner"></span><span id="overlay-msg">Running evals…</span></div></div>
+<div class="overlay" id="overlay"><div class="box">
+  <div class="row"><span class="spinner"></span><span id="overlay-msg">Running evals…</span></div>
+  <div class="pbar"><div class="pfill" id="pfill"></div></div>
+  <div id="pcount"></div>
+</div></div>
 <script>
 const API = "/evals/api";
 let suite = null, suites = [], cases = [], results = {};
@@ -218,18 +227,40 @@ function setRunning(on, text){
   if(text) document.getElementById("overlay-msg").textContent=text;
   document.querySelectorAll("button.run, button.primary").forEach(b=>b.disabled=on);
 }
+function _progress(done, total, label){
+  document.getElementById("pfill").style.width = total ? `${Math.round(done/total*100)}%` : "0%";
+  document.getElementById("pcount").textContent = `${done} / ${total}` + (label ? ` · ${label}` : "");
+  document.getElementById("overlay-msg").textContent = done < total ? "Running evals…" : "Finishing…";
+}
 async function run(which){
-  const label = which ? `Running “${which[0]}” (the judge may take a moment)…` : "Running all suites (the judge may take a moment)…";
-  setRunning(true, label); msg("running…");
-  try {
-    await save();
-    const r = await fetch(`${API}/run`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(which?{suites:which}:{})});
-    if(!r.ok){ msg("run failed: "+(await r.text()), true); return; }
-    const rep = await r.json(); results={};
-    for(const s of rep.suites){ results[s.suite]={}; for(const res of s.results) results[s.suite][res.id]=res; }
-    renderResults(rep); render(); msg("done");
-  } catch(e){ msg("run failed: "+e.message, true); }
-  finally { setRunning(false); }
+  await save();                              // persist edits on the visible suite
+  const suiteNames = which || suites.map(s=>s.name);
+  // gather (suite, case) work items
+  const work = [];
+  for(const sn of suiteNames){
+    const cs = (sn===suite) ? cases : await (await fetch(`${API}/cases/${sn}`)).json();
+    for(const c of cs) work.push({suite:sn, case:c});
+  }
+  results = {}; const agg = {};
+  for(const sn of suiteNames){ results[sn]={}; agg[sn]={passed:0,total:0,results:[]}; }
+  setRunning(true); msg("running…"); _progress(0, work.length, "starting…");
+  let done = 0;
+  for(const w of work){
+    _progress(done, work.length, `${w.suite}: ${w.case.id||""}`);
+    let res;
+    try {
+      const r = await fetch(`${API}/run_one`,{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({suite:w.suite, case:w.case})});
+      res = r.ok ? await r.json() : {id:w.case.id, passed:false, detail:{error:await r.text()}};
+    } catch(e){ res = {id:w.case.id, passed:false, detail:{error:e.message}}; }
+    results[w.suite][res.id] = res;
+    agg[w.suite].total++; if(res.passed) agg[w.suite].passed++; agg[w.suite].results.push(res);
+    done++; _progress(done, work.length, `${w.suite}: ${w.case.id||""}`);
+    if(w.suite===suite) render();            // live pass/fail badges on the visible suite
+  }
+  const rep = { suites: suiteNames.map(sn=>({ suite:sn, total:agg[sn].total, passed:agg[sn].passed,
+    pass_rate: agg[sn].total ? agg[sn].passed/agg[sn].total : null, results:agg[sn].results })) };
+  renderResults(rep); render(); setRunning(false); msg("done");
 }
 function renderResults(rep){
   const el = document.getElementById("results");

@@ -127,25 +127,35 @@ def _eval_identity(program_id, case, conn):
     return ok, detail
 
 
+def eval_one(name: str, case: dict, program_id: str = DEMO_PROGRAM_ID,
+             repeat: int = 1, conn=None) -> dict:
+    """Evaluate a single case → {id, passed, detail}. Used by the per-case
+    progress runner in the eval site."""
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        if name == "qa":
+            passed, detail = _eval_qa(program_id, case, conn, repeat)
+        elif name in ("classify", "fields"):
+            passed, detail = _eval_extract(program_id, case, conn)
+        elif name == "decision":
+            passed, detail = _eval_decision(program_id, case, conn)
+        elif name == "identity":
+            passed, detail = _eval_identity(program_id, case, conn)
+        else:
+            passed, detail = False, {"error": f"unknown suite {name}"}
+    except Exception as e:
+        passed, detail = False, {"error": f"{type(e).__name__}: {e}"}
+    finally:
+        if own:
+            conn.close()
+    return {"id": case.get("id", "?"), "passed": bool(passed), "detail": detail}
+
+
 def run_suite(name: str, program_id: str = DEMO_PROGRAM_ID, repeat: int = 1) -> dict:
     cases = load_suite(name)
     conn = db.connect()
-    results = []
-    for c in cases:
-        try:
-            if name == "qa":
-                passed, detail = _eval_qa(program_id, c, conn, repeat)
-            elif name in ("classify", "fields"):
-                passed, detail = _eval_extract(program_id, c, conn)
-            elif name == "decision":
-                passed, detail = _eval_decision(program_id, c, conn)
-            elif name == "identity":
-                passed, detail = _eval_identity(program_id, c, conn)
-            else:
-                passed, detail = False, {"error": f"unknown suite {name}"}
-        except Exception as e:
-            passed, detail = False, {"error": f"{type(e).__name__}: {e}"}
-        results.append({"id": c.get("id", "?"), "passed": bool(passed), "detail": detail})
+    results = [eval_one(name, c, program_id, repeat, conn=conn) for c in cases]
     conn.close()
     n = len(results)
     npass = sum(1 for r in results if r["passed"])

@@ -53,3 +53,15 @@ class RunReq(BaseModel):
 @router.post("/api/run")
 def run(req: RunReq):
     return runner.run(req.suites, repeat=req.repeat)
+
+
+class RunOneReq(BaseModel):
+    suite: str
+    case: dict
+    repeat: int = 1
+
+
+@router.post("/api/run_one")
+def run_one(req: RunOneReq):
+    """Evaluate a single case (drives the per-case progress bar in the UI)."""
+    return runner.eval_one(req.suite, req.case, repeat=req.repeat)
