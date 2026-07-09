@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ProgramSwitcher } from "./ProgramSwitcher";
 
 const LINKS = [
-  { href: "/", label: "Inbox" },
+  { href: "/mailbox", label: "Inbox" },
   { href: "/query", label: "QueryOS" },
   { href: "/tpp-builder", label: "TPP" },
   { href: "/tpp", label: "Molecule Database" },

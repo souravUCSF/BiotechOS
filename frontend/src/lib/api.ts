@@ -489,3 +489,32 @@ export async function declineInbox(itemId: number, programId: string): Promise<{
   if (!res.ok) throw new Error(`decline failed: ${res.status}`);
   return res.json();
 }
+
+// --- Mailbox (triaged inbox) ---
+export type TriageCategory = "ignore" | "knowledge" | "processing" | "action";
+export type MailItem = {
+  id: number; from: string; subject: string; sent_at: string; doc_type: string;
+  seen: boolean; category: TriageCategory; next_step: string; reason: string;
+  needs_reply: boolean; confidence: number; preview: string;
+};
+export type Mailbox = { counts: Record<TriageCategory, number>; emails: MailItem[] };
+export type MailEmail = {
+  id: number; from: string; to: string; subject: string; sent_at: string;
+  doc_type: string; body: string; triage: Partial<MailItem>;
+};
+
+export async function fetchMailbox(
+  programId: string, category?: string, includeIgnored = false,
+): Promise<Mailbox> {
+  const p = new URLSearchParams({ program_id: programId, include_ignored: String(includeIgnored) });
+  if (category) p.set("category", category);
+  const res = await fetch(`${API_BASE}/mailbox?${p}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /mailbox failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchMailEmail(id: number): Promise<MailEmail> {
+  const res = await fetch(`${API_BASE}/mailbox/${id}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /mailbox/${id} failed: ${res.status}`);
+  return res.json();
+}

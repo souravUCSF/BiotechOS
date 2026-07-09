@@ -35,6 +35,9 @@ _MIGRATIONS = [
     ("inbox_items", "doc_type", "TEXT"),         # extract doc_type
     ("inbox_items", "analysis", "TEXT"),         # JSON: extract analysis/recommendation
     ("inbox_items", "extraction_json", "TEXT"),  # JSON: typed extraction result
+    # Inbox v3 (mailbox): precomputed LLM triage stored per email
+    ("documents", "triage_json", "TEXT"),        # JSON: {category,next_step,reason,needs_reply,confidence}
+    ("documents", "seen", "INTEGER DEFAULT 0"),  # read/unread in the mailbox UI
 ]
 
 

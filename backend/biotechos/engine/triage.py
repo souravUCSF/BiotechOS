@@ -14,11 +14,14 @@ existing keyword extractor's doc_type when no API key.
 """
 from __future__ import annotations
 
+import json
 import re
+import types
 
 from pydantic import BaseModel
 
 from ..config import DEMO_PROGRAM_ID, MODEL_ARTIFACTS
+from ..state import db
 from . import llm
 from .corpus.qa import _DOMAIN
 from . import extract as X
@@ -106,3 +109,52 @@ def triage(email, program_id: str = DEMO_PROGRAM_ID, api_key: str | None = None)
     if res.category not in CATEGORIES:
         res.category = "action"
     return res
+
+
+def _doc_email(row):
+    return types.SimpleNamespace(
+        subject=row["subject"] or "", full_text=row["raw_text"] or "",
+        body=row["raw_text"] or "", email_from=row["email_from"] or "")
+
+
+def triage_document(conn, row, api_key: str | None = None) -> dict:
+    """Triage one stored `documents` row and persist triage_json. Returns the dict."""
+    t = triage(_doc_email(row), api_key=api_key)
+    payload = t.model_dump()
+    conn.execute("UPDATE documents SET triage_json=? WHERE id=?", (json.dumps(payload), row["id"]))
+    return payload
+
+
+def backfill(program_id: str = DEMO_PROGRAM_ID, since: str | None = None,
+             limit: int | None = None, only_inbound: bool = True,
+             redo: bool = False, api_key: str | None = None) -> dict:
+    """Precompute triage for stored emails lacking it (most-recent first). Keyword
+    'noise' is stored as ignore WITHOUT an LLM call to save cost."""
+    conn = db.connect()
+    where = "program_id=?"
+    args = [program_id]
+    if only_inbound:
+        where += " AND direction='inbound'"
+    if since:
+        where += " AND date(sent_at) >= ?"; args.append(since)
+    if not redo:
+        where += " AND (triage_json IS NULL OR triage_json='')"
+    sql = f"SELECT * FROM documents WHERE {where} ORDER BY sent_at DESC"
+    if limit:
+        sql += f" LIMIT {int(limit)}"
+    rows = conn.execute(sql, args).fetchall()
+    n, by_cat = 0, {}
+    with conn:
+        for r in rows:
+            if (r["triage"] or "") == "noise":     # cheap prefilter → no LLM
+                payload = {"category": "ignore", "doc_type": "noise",
+                           "next_step": "ignore", "reason": "marketing/no-reply/noise",
+                           "needs_reply": False, "confidence": 0.5}
+                conn.execute("UPDATE documents SET triage_json=? WHERE id=?",
+                             (json.dumps(payload), r["id"]))
+            else:
+                payload = triage_document(conn, r, api_key=api_key)
+            by_cat[payload["category"]] = by_cat.get(payload["category"], 0) + 1
+            n += 1
+    conn.close()
+    return {"triaged": n, "by_category": by_cat}

@@ -350,6 +350,65 @@ def corpus_summary(program_id: str = Query(default=DEMO_PROGRAM_ID)):
     return {"documents": docs, "facts": facts, "by_type": by_type}
 
 
+@app.get("/mailbox")
+def mailbox(program_id: str = Query(default=DEMO_PROGRAM_ID),
+            category: str | None = Query(default=None),
+            include_ignored: bool = Query(default=False),
+            limit: int = Query(default=60)):
+    """Triaged inbound emails for the mailbox view — most recent first."""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id,email_from,subject,sent_at,doc_type,raw_text,triage_json,seen "
+        "FROM documents WHERE program_id=? AND direction='inbound' AND triage_json IS NOT NULL "
+        "ORDER BY sent_at DESC LIMIT ?", (program_id, max(limit, 1) * 2)).fetchall()
+    out, counts = [], {"ignore": 0, "knowledge": 0, "processing": 0, "action": 0}
+    for r in rows:
+        try:
+            t = json.loads(r["triage_json"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        cat = t.get("category", "action")
+        counts[cat] = counts.get(cat, 0) + 1
+        if category and cat != category:
+            continue
+        if not include_ignored and not category and cat == "ignore":
+            continue
+        from ..engine.triage import latest_message
+        preview = latest_message(r["raw_text"] or "")[:200]
+        out.append({
+            "id": r["id"], "from": r["email_from"], "subject": r["subject"],
+            "sent_at": r["sent_at"], "doc_type": r["doc_type"], "seen": bool(r["seen"]),
+            "category": cat, "next_step": t.get("next_step"), "reason": t.get("reason"),
+            "needs_reply": t.get("needs_reply", False), "confidence": t.get("confidence"),
+            "preview": preview,
+        })
+        if len(out) >= limit:
+            break
+    conn.close()
+    return {"counts": counts, "emails": out}
+
+
+@app.get("/mailbox/{doc_id}")
+def mailbox_email(doc_id: int):
+    """Full email + triage for the reading pane."""
+    conn = get_conn()
+    r = conn.execute("SELECT * FROM documents WHERE id=?", (doc_id,)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "email not found")
+    conn.execute("UPDATE documents SET seen=1 WHERE id=?", (doc_id,))
+    conn.commit()
+    d = dict(r)
+    conn.close()
+    try:
+        d["triage"] = json.loads(d.get("triage_json") or "{}")
+    except json.JSONDecodeError:
+        d["triage"] = {}
+    return {"id": d["id"], "from": d["email_from"], "to": d["email_to"],
+            "subject": d["subject"], "sent_at": d["sent_at"], "doc_type": d["doc_type"],
+            "body": d["raw_text"], "triage": d["triage"]}
+
+
 @app.get("/molecules/values")
 def molecules_values(metrics: str = Query(...), program_id: str = Query(default=DEMO_PROGRAM_ID)):
     """Value matrix (molecule × requested metric keys) for the configurable table."""
