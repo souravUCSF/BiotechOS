@@ -422,10 +422,84 @@ export async function askKnowledge(question: string, programId: string): Promise
   return res.json();
 }
 
-export type CorpusSummary = { documents: number; facts: number; by_type: Record<string, number> };
+export type CorpusSummary = {
+  documents: number; facts: number; entities?: number; edges?: number;
+  by_type: Record<string, number>;
+};
 export async function fetchCorpusSummary(programId: string): Promise<CorpusSummary> {
   const res = await fetch(`${API_BASE}/corpus/summary?program_id=${programId}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`corpus summary failed: ${res.status}`);
+  return res.json();
+}
+
+// --- Entity graph (Knowledge Layer v1) ---
+export type EntityListItem = {
+  id: number; entity_type: string; display_name: string; edge_count: number;
+};
+export type EntityEdge = {
+  predicate: string; other_id: number; other_name: string; other_type: string;
+  status: string; valid_from: string | null; valid_to: string | null;
+  source_document_id: number | null;
+};
+export type EntityFact = {
+  subject_type: string; predicate: string; value: string; status: string;
+  valid_from: string | null; valid_to: string | null; observation_id: number | null;
+};
+export type AssaySummary = {
+  modality: string; target: string | null; standard_type: string | null;
+  cell_line: string | null; units: string | null;
+  n: number; avg_value: number | null; min_value: number | null; max_value: number | null;
+};
+export type EntityProfile = {
+  entity: { id: number; entity_type: string; display_name: string; attrs: Record<string, unknown> };
+  aliases: { alias: string; alias_norm: string; confidence: number }[];
+  edges_out: EntityEdge[];
+  edges_in: EntityEdge[];
+  facts: EntityFact[];
+  molecule?: { id: number; name: string; smiles: string | null; inchi_key: string | null; favorite: number } | null;
+  assays?: AssaySummary[];
+};
+
+export async function fetchEntities(
+  programId: string, entityType?: string, q?: string,
+): Promise<EntityListItem[]> {
+  const params = new URLSearchParams({ program_id: programId });
+  if (entityType) params.set("entity_type", entityType);
+  if (q) params.set("q", q);
+  const res = await fetch(`${API_BASE}/entities?${params}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`entities failed: ${res.status}`);
+  return (await res.json()).entities;
+}
+
+export async function fetchEntity(id: number, programId: string): Promise<EntityProfile> {
+  const res = await fetch(`${API_BASE}/entities/${id}?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`entity failed: ${res.status}`);
+  return res.json();
+}
+
+// --- Suspected-decisions confirmation queue (Phase 2) ---
+export type SuspectedDecision = {
+  id: number; kind: string; subject_type: string; subject_key: string;
+  predicate: string; value: string | null; confidence: number; rationale: string | null;
+  status: string; created_at: string | null; source_document_id: number | null;
+  source: KnowledgeCitation | null;
+};
+
+export async function fetchDecisions(
+  programId: string, status = "suspected",
+): Promise<SuspectedDecision[]> {
+  const res = await fetch(
+    `${API_BASE}/decisions?program_id=${programId}&status=${status}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`decisions failed: ${res.status}`);
+  return (await res.json()).decisions;
+}
+
+export async function decideDecision(
+  id: number, action: "confirm" | "dismiss", programId: string,
+): Promise<{ status: string }> {
+  const res = await fetch(
+    `${API_BASE}/decisions/${id}/${action}?program_id=${programId}`, { method: "POST" });
+  if (!res.ok) throw new Error(`decision ${action} failed: ${res.status}`);
   return res.json();
 }
 

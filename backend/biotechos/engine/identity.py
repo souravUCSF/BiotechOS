@@ -21,14 +21,17 @@ _SIMPLE_RE = re.compile(r"^([A-Z]+)-?0*(\d+)([A-Z]?)$")
 
 
 def normalize(token: str) -> str:
-    """Canonical key that collapses dash/underscore/space + zero-padding drift.
-    CLO-00003 / CLO00003 / clo_3 -> 'CLO|3'; BTX-1050 -> 'BTX|1050'. Multi-segment
-    codes (CRO project codes) collapse to a dash-stripped exact key (no fuzzy)."""
-    t = re.sub(r"[\s_]+", "", (token or "").upper())
-    m = _SIMPLE_RE.match(t)
+    """Canonical key that collapses common compound-code drift/misspellings:
+    dash/underscore/space, zero-padding (00 vs 000), and letter-O vs zero (a
+    frequent OCR/typo confusion, e.g. CL0-00002 vs CLO-00002). All of
+    CLO-00003 / CL0-00003 / CLO00003 / clo_3 -> 'CL|3'; BTX-1050 -> 'BTX|1050'.
+    Multi-segment CRO project codes collapse to a stripped exact key (no fuzzy split)."""
+    t = re.sub(r"[\s_\-]+", "", (token or "").upper())
+    t = t.replace("O", "0")   # unify letter-O and zero
+    m = re.match(r"^([A-Z]+)0*(\d+)([A-Z]?)$", t)
     if m:
         return f"{m.group(1)}|{int(m.group(2))}{m.group(3)}"
-    return t.replace("-", "")
+    return t
 
 
 def inchikey(smiles: str | None) -> str | None:

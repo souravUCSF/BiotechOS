@@ -318,18 +318,33 @@ class IngestRequest(BaseModel):
     program_id: str = DEMO_PROGRAM_ID
     source: str | None = None       # 'anonymized' | 'real' (defaults to config)
     limit: int | None = None
+    use_llm: bool = False           # run the LLM decision extractor (per-email cost)
+    extract_attachments: bool = True  # auto-extract attachment data → approval items
 
 
 @app.post("/corpus/ingest")
 def corpus_ingest(req: IngestRequest):
     """Read the mailbox source, extract, and (re)build the corpus + world model."""
     from ..engine.corpus import store
-    return store.ingest(req.program_id, source=req.source, limit=req.limit)
+    return store.ingest(req.program_id, source=req.source, limit=req.limit,
+                        use_llm=req.use_llm, extract_attachments=req.extract_attachments)
 
 
 class AskRequest(BaseModel):
     question: str
     program_id: str = DEMO_PROGRAM_ID
+
+
+class AttachmentExtractRequest(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    limit: int | None = None
+
+
+@app.post("/attachments/extract")
+def attachments_extract(req: AttachmentExtractRequest):
+    """Extract assay data from ingested attachments and stage review_data inbox items."""
+    from ..engine import attachments
+    return attachments.backfill(req.program_id, limit=req.limit)
 
 
 @app.post("/knowledge/ask")
@@ -346,8 +361,66 @@ def corpus_summary(program_id: str = Query(default=DEMO_PROGRAM_ID)):
     facts = conn.execute("SELECT COUNT(*) c FROM facts WHERE program_id=? AND status='current'", (program_id,)).fetchone()["c"]
     by_type = {r["doc_type"]: r["c"] for r in conn.execute(
         "SELECT doc_type, COUNT(*) c FROM documents WHERE program_id=? GROUP BY doc_type", (program_id,)).fetchall()}
+    ents = conn.execute("SELECT COUNT(*) c FROM entities WHERE program_id=?", (program_id,)).fetchone()["c"]
+    edges = conn.execute("SELECT COUNT(*) c FROM edges WHERE program_id=? AND status='current'", (program_id,)).fetchone()["c"]
+    susp = conn.execute("SELECT COUNT(*) c FROM decisions WHERE program_id=? AND status='suspected'", (program_id,)).fetchone()["c"]
     conn.close()
-    return {"documents": docs, "facts": facts, "by_type": by_type}
+    return {"documents": docs, "facts": facts, "entities": ents, "edges": edges,
+            "suspected_decisions": susp, "by_type": by_type}
+
+
+@app.get("/decisions")
+def list_decisions(program_id: str = Query(default=DEMO_PROGRAM_ID),
+                   status: str = Query(default="suspected")):
+    """Suspected-decisions confirmation queue (highest-confidence first)."""
+    from ..engine import decisions
+    return {"decisions": decisions.queue(program_id, status=status)}
+
+
+@app.post("/decisions/{decision_id}/confirm")
+def confirm_decision(decision_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Confirm a decision → promote to facts + Decision Log."""
+    from ..engine import decisions
+    try:
+        return decisions.confirm(decision_id, program_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/decisions/{decision_id}/dismiss")
+def dismiss_decision(decision_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine import decisions
+    try:
+        return decisions.dismiss(decision_id, program_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/entities")
+def list_entities(program_id: str = Query(default=DEMO_PROGRAM_ID),
+                  entity_type: str | None = Query(default=None),
+                  q: str | None = Query(default=None)):
+    """Entity graph nodes for the current program (most-connected first)."""
+    from ..engine import graph
+    conn = get_conn()
+    try:
+        return {"entities": graph.list_entities(conn, program_id, entity_type, q)}
+    finally:
+        conn.close()
+
+
+@app.get("/entities/{entity_id}")
+def get_entity(entity_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Full profile of one entity: attrs, aliases, edges (in/out), and facts."""
+    from ..engine import graph
+    conn = get_conn()
+    try:
+        prof = graph.profile(conn, program_id, entity_id)
+        if not prof:
+            raise HTTPException(status_code=404, detail="entity not found")
+        return prof
+    finally:
+        conn.close()
 
 
 @app.get("/mailbox")

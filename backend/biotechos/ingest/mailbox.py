@@ -103,6 +103,18 @@ def _read_thread(slug_dir: Path, direction: str) -> Email | None:
     )
 
 
+def parse_dt(s: str | None):
+    """Parse an email date (ISO-8601, possibly Z-suffixed) → aware datetime, or None.
+    Used to process the corpus in true chronological order."""
+    if not s:
+        return None
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(s.strip().replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
 def _iter_archive(base: Path):
     """Yield Email for every thread under <base>/Emails/{Inbox,Sent}/YYYY-MM/<slug>/."""
     for box, direction in (("Inbox", "inbound"), ("Sent", "outbound")):

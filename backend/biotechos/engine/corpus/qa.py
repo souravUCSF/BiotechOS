@@ -12,8 +12,10 @@ from pydantic import BaseModel
 
 from ...config import DEMO_PROGRAM_ID, MODEL_ARTIFACTS, MODEL_EXTRACTION
 from ...state import db
-from .. import llm
-from ..extract import VENDOR_BY_DOMAIN
+from .. import graph, identity, llm
+from ..extract import CELL_LINE_RE, VENDOR_BY_DOMAIN
+
+_MOL_TOKEN_RE = re.compile(r"\b(?:BTX|CLO|CL0)[-_ ]?\d{2,5}[A-Za-z]?\b", re.I)
 
 VENDORS = list(VENDOR_BY_DOMAIN.values())
 _STOP = {"which", "what", "can", "test", "does", "the", "for", "from", "with", "who",
@@ -63,9 +65,14 @@ _PLANNER = (
     "vendor name and the assay/technique. Return JSON {queries:[...]}, each a few keywords.")
 _READER = (
     _DOMAIN + "\n\n"
-    "Answer the QUESTION using ONLY the EXCERPTS (emails + attachment text). Cite "
-    "INLINE: put [doc <id>] immediately after each statement, using the exact doc id "
-    "numbers shown in the excerpts. Also put those ids in cited_docs. If the excerpts "
+    "Answer the QUESTION using ONLY the material provided (the KNOWN FACTS block, if "
+    "present, and the EXCERPTS from emails + attachment text). "
+    "CITATIONS — this is strict: put [doc <id>] after a statement ONLY when that specific "
+    "statement is actually supported by that document's excerpt text. A statement taken "
+    "from a KNOWN FACTS line that has NO [doc id] is from the internal database — state it "
+    "with NO citation. Never attach a [doc id] to a fact just because the document mentions "
+    "the compound/vendor; the excerpt must actually contain the value you are citing. Only "
+    "put ids you genuinely used in cited_docs. If the excerpts "
     "clearly contain the answer, set "
     "found=true and give a concise answer with the SPECIFIC values (prices, days, "
     "vendors) and units. IMPORTANT: if the excerpts contain MULTIPLE quotes/prices "
@@ -146,12 +153,64 @@ def _retrieve(conn, program_id: str, queries: list[str], anchor: str | None = No
     return list(seen.values())[:cap]
 
 
+def _entity_facts(conn, program_id: str, question: str, vendor: str | None) -> list[dict]:
+    """Current facts for every entity named in the question — the structured
+    knowledge base (capabilities AND attachment-extracted knowledge: billing,
+    quote terms, contract scope, reagent specs). Each carries its source doc."""
+    names: set[str] = set()
+    if vendor:
+        names.add(vendor)
+    for eid in graph.resolve_mentions(conn, program_id, question):
+        r = conn.execute("SELECT display_name FROM entities WHERE id=?", (eid,)).fetchone()
+        if r:
+            names.add(r["display_name"])
+    if not names:
+        return []
+    ph = ",".join("?" * len(names))
+    rows = conn.execute(
+        f"SELECT f.subject_key, f.predicate, f.value, o.source_document_id AS doc_id "
+        f"FROM facts f LEFT JOIN observations o ON o.id=f.observation_id "
+        f"WHERE f.program_id=? AND f.status='current' AND f.subject_key IN ({ph}) "
+        f"AND f.value IS NOT NULL ORDER BY f.subject_key, f.predicate LIMIT 100",
+        [program_id, *names]).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _molecule_context(conn, program_id: str, question: str) -> list[str]:
+    """KNOWN-FACT lines for any molecule named in the question — its structure
+    (SMILES/InChIKey, from the molecule identity system) and a short assay summary.
+    These come from the structured DB, not the corpus (where structures are withheld)."""
+    lines: list[str] = []
+    seen: set[int] = set()
+    for tok in set(_MOL_TOKEN_RE.findall(question)):
+        r = identity.resolve_molecule(program_id, tok, conn=conn)
+        mid = r.get("molecule_id")
+        if not mid or mid in seen:
+            continue
+        seen.add(mid)
+        m = conn.execute("SELECT name,smiles,inchi_key FROM molecules WHERE id=?", (mid,)).fetchone()
+        if not m:
+            continue
+        if m["smiles"]:
+            lines.append(f"- {m['name']} — SMILES: {m['smiles']}")
+        if m["inchi_key"]:
+            lines.append(f"- {m['name']} — InChIKey: {m['inchi_key']}")
+        for a in graph._molecule_assay_summary(conn, mid)[:6]:
+            av = a.get("avg_value")
+            lines.append(f"- {m['name']} — {a['modality']}/{a.get('target')}/"
+                         f"{a.get('standard_type')}: avg {round(av, 3) if av is not None else '?'} "
+                         f"{a.get('units') or ''} (n={a['n']})")
+    return lines
+
+
 def _agentic_read(conn, program_id: str, question: str, cands: list[dict],
-                  api_key: str | None, rounds: int = 2):
-    """Read retrieved excerpts, optionally re-search, answer grounded + cited."""
+                  api_key: str | None, rounds: int = 2, facts_block: str = ""):
+    """Read retrieved excerpts, optionally re-search, answer grounded + cited.
+    `facts_block` prepends the structured knowledge base so the reader can answer
+    from facts (billing, quote terms, capabilities, reagent specs) as well as docs."""
     read = None
     for i in range(rounds):
-        blocks = []
+        blocks = [facts_block] if facts_block else []
         for c in cands:
             row = conn.execute("SELECT raw_text FROM documents WHERE id=?", (c["id"],)).fetchone()
             body = (row["raw_text"] or "") if row else ""
@@ -161,7 +220,7 @@ def _agentic_read(conn, program_id: str, question: str, cands: list[dict],
             windows = _value_windows(body)
             blocks.append(f"[doc {c['id']}] {c['subject']}\nMATCH: …{snip}…\n{body[:3000]}"
                           + ("\n…\n" + "\n…\n".join(windows) if windows else ""))
-        fb = _Read(found=bool(cands),
+        fb = _Read(found=bool(cands or facts_block),
                    answer=("Related emails:\n" + "\n".join(f"- [doc {c['id']}] {c['subject']}"
                            for c in cands[:5])) if cands else "Not found in the corpus.",
                    cited_docs=[c["id"] for c in cands[:5]])
@@ -174,6 +233,43 @@ def _agentic_read(conn, program_id: str, question: str, cands: list[dict],
         have = {c["id"] for c in cands}
         cands += [m for m in more if m["id"] not in have]
     return read, cands
+
+
+def _answer_value_tokens(answer: str) -> list[str]:
+    """Distinctive, verifiable values in an answer (emails, $amounts, InChIKeys,
+    SMILES-ish strings, values+units). Used to check a citation is real."""
+    toks: set[str] = set()
+    toks |= set(re.findall(r"[\w.+\-]+@[\w.\-]+\.\w+", answer))                # emails
+    toks |= set(re.findall(r"\$\s?[\d,]+(?:\.\d+)?", answer))                  # money
+    toks |= set(re.findall(r"\b[A-Z]{14}-[A-Z]{10}-[A-Z]\b", answer))         # InChIKey
+    toks |= set(re.findall(r"\b\d+(?:\.\d+)?\s?(?:nM|uM|µM|%|mg|kDa|/min|"     # value+unit
+                           r"working days|business days|weeks)\b", answer, re.I))
+    # SMILES-ish: long token with chemistry punctuation
+    for t in re.findall(r"[A-Za-z0-9@+\-\[\]()=#/\\%]{12,}", answer):
+        if re.search(r"[=#\[\]()]", t) and any(ch in t for ch in "cCnNoOsS"):
+            toks.add(t)
+    return [t for t in toks if len(t) >= 3]
+
+
+def _doc_supports(conn, did: int, vals: list[str]) -> bool:
+    """True if document `did` actually contains one of the answer's distinctive values."""
+    if not vals:
+        return True              # nothing verifiable → don't second-guess
+    row = conn.execute("SELECT raw_text FROM documents WHERE id=?", (did,)).fetchone()
+    body = (row["raw_text"] or "") if row else ""
+    return any(v in body for v in vals)
+
+
+def _strip_unsupported_citations(conn, answer: str) -> str:
+    """Remove [doc N] markers whose document does NOT actually contain any of the
+    answer's distinctive values — the reader tends to staple retrieved doc ids onto
+    facts that really came from the internal DB (SMILES, InChIKey, billing emails)."""
+    vals = _answer_value_tokens(answer)
+    if not vals:
+        return answer
+    return re.sub(r"\[?\s*docs?\s*#?\s*(\d+)\s*\]?",
+                  lambda m: m.group(0) if _doc_supports(conn, int(m.group(1)), vals) else "",
+                  answer, flags=re.I)
 
 
 def _number_citations(conn, answer: str, extra_ids: list[int] | None = None):
@@ -247,6 +343,13 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
         if vendor:
             sql += " AND f.subject_key=?"
             args.append(vendor)
+        # reverse cell-line query ("which vendors test CellLine-1?"): filter facts to the
+        # named line so we return only the vendors that do it, not every vendor.
+        if predicate == "tests_cell_line":
+            m = CELL_LINE_RE.search(q)
+            if m:
+                sql += " AND UPPER(REPLACE(f.value,'-',''))=?"
+                args.append(re.sub(r"[^A-Za-z0-9]", "", m.group(0)).upper())
         facts_hit = [dict(r) for r in conn.execute(sql, args).fetchall()]
 
     # --- build the answer ---
@@ -283,14 +386,54 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
     queries = _plan_queries(question, api_key)
     anchor = vendor.split()[0] if vendor else None   # e.g. "BPS", "Vendor 1"
     cands = _retrieve(conn, program_id, queries, anchor=anchor)
-    if not cands:
+    # graph boost: fold in documents behind edges of entities named in the question,
+    # so factually-connected sources surface even when keywords don't overlap.
+    have = {c["id"] for c in cands}
+    for eid in graph.resolve_mentions(conn, program_id, question):
+        for did in graph.neighborhood_doc_ids(conn, program_id, eid):
+            if did not in have:
+                r = conn.execute(
+                    "SELECT id, subject, email_from, sent_at, doc_type FROM documents WHERE id=?",
+                    (did,)).fetchone()
+                if r:
+                    cands.append({**dict(r), "snip": ""})
+                    have.add(did)
+    cands = cands[:16]
+    # structured knowledge grounding: fold in current facts for entities named in the
+    # question (capabilities + attachment-extracted billing/quote/contract/reagent facts)
+    facts_rows = _entity_facts(conn, program_id, question, vendor)
+    mol_lines = _molecule_context(conn, program_id, question)
+    facts_block = ""
+    if facts_rows or mol_lines:
+        lines = [f"- {r['subject_key']} — {r['predicate']}: {r['value']}"
+                 + (f" [doc {r['doc_id']}]" if r["doc_id"] else "") for r in facts_rows]
+        lines += mol_lines
+        facts_block = (
+            "KNOWN FACTS (structured knowledge base). Cite the [doc id] shown when present; "
+            "lines WITHOUT a [doc id] come from the internal molecule/vendor database and are "
+            "authoritative — state them directly (no citation needed):\n" + "\n".join(lines))
+        for r in facts_rows:      # seed fact source docs so their citations resolve
+            did = r["doc_id"]
+            if did and did not in have:
+                row = conn.execute(
+                    "SELECT id, subject, email_from, sent_at, doc_type FROM documents WHERE id=?",
+                    (did,)).fetchone()
+                if row:
+                    cands.append({**dict(row), "snip": ""})
+                    have.add(did)
+    if not cands and not facts_block:
         conn.close()
         return {"answer": "Not found in the corpus.", "used_llm": False,
                 "citations": [], "source": "none", "fact_count": 0}
-    read, cands = _agentic_read(conn, program_id, question, cands, api_key)
+    read, cands = _agentic_read(conn, program_id, question, cands, api_key, facts_block=facts_block)
     answer = read.answer if (read.found and read.answer) else "Not found in the corpus."
-    extra = read.cited_docs or [c["id"] for c in cands[:3]]
+    # drop citations the source document doesn't actually support (DB-sourced facts
+    # like SMILES/InChIKey/billing emails must not borrow a retrieved doc's id)
+    _vals = _answer_value_tokens(answer)
+    answer = _strip_unsupported_citations(conn, answer)
+    extra = [d for d in (read.cited_docs or []) if _doc_supports(conn, d, _vals)]
     answer, citations = _number_citations(conn, answer, extra if read.found else [])
     conn.close()
     return {"answer": answer, "used_llm": True, "citations": citations,
-            "source": "documents", "fact_count": 0}
+            "source": "knowledge" if facts_block else "documents",
+            "fact_count": len(facts_rows)}

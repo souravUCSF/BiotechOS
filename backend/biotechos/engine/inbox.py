@@ -58,7 +58,13 @@ def _resolve_or_create(conn, program_id: str, token: str, smiles: str | None,
                                   source_document_id=document_id, conn=conn)
     if r.get("molecule_id"):
         return r["molecule_id"], token, r["status"] == "created"
-    name = _next_btx_name(conn, program_id)
+    # Preserve a real compound code (CLO-00002, CL0-00002, BTX-1050) as the molecule
+    # name; only fall back to a surrogate BTX-#### for non-compound tokens (e.g. a bare
+    # CRO project code or an assay label).
+    if re.match(r"^(CLO|CL0|BTX)[-_ ]?\d", token, re.I):
+        name = token.strip()
+    else:
+        name = _next_btx_name(conn, program_id)
     ik = identity.inchikey(smiles)
     mid = conn.execute(
         "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out) VALUES (?,?,?,?,0)",

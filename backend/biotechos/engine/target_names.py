@@ -22,6 +22,30 @@ _CANONICAL = {
     "TGTA/TGTB": "TGTA / TGTB",
 }
 
+# ChEMBL "target_name" values that aren't real protein targets: assay organisms
+# and curation placeholders. These read as noise in the app, so collapse them to
+# a clean, honest label instead of exposing the raw string or a CHEMBL id.
+_ORGANISMS = {
+    "homo sapiens", "rattus norvegicus", "mus musculus", "canis familiaris",
+    "oryctolagus cuniculus", "cavia porcellus", "bos taurus", "sus scrofa",
+    "macaca mulatta", "macaca fascicularis", "gallus gallus",
+}
+_PLACEHOLDERS = {
+    "unchecked", "no relevant target", "no target assigned", "unclassified",
+    "unknown", "none", "non-protein target", "non-molecular target",
+}
+
+
+def _clean_name(name: str) -> str:
+    """Collapse non-target ChEMBL labels to an honest display value."""
+    low = name.strip().lower()
+    if low in _ORGANISMS or low in _PLACEHOLDERS:
+        return "off-target"
+    if low in ("admet", "adme"):
+        return "ADME"
+    return name
+
+
 _cache: dict[str, str] | None = None
 
 
@@ -55,7 +79,8 @@ def pretty_target(target: str | None) -> str | None:
     if target in _CANONICAL:
         return _CANONICAL[target]
     if target.startswith("CHEMBL"):
-        return load_map().get(target, "off-target")
+        name = load_map().get(target)
+        return _clean_name(name) if name else "off-target"
     return target
 
 
