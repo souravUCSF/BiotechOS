@@ -8,10 +8,10 @@ import {
 } from "@/lib/api";
 
 const EXAMPLES = [
-  "Which cell lines can Vendor 22 test?",
-  "What services does Vendor 23 offer?",
-  "What has Vendor 23 quoted?",
-  "Which vendors can run intact MS?",
+  "Which cell lines can Vendor 2 test?",
+  "What services does Vendor 1 offer?",
+  "How much are ADP-Glo kinase assays at Vendor 6?",
+  "Who can run Caco-2 assays?",
 ];
 
 export default function QueryOSPage() {
