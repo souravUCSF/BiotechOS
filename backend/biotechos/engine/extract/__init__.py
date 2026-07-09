@@ -19,7 +19,16 @@ VENDOR_BY_DOMAIN = {
     "vendor-5.example.com": "Vendor 5", "vendor-6.example.com": "Vendor 6",
     "vendor-7.example.com": "Vendor 7", "sb.vendor-7.example.com": "Vendor 7",
     "vendor-8.example.com": "Vendor 8",
+    # Program B (ADC) vendors
+    "vendor-9.example.com": "Vendor 9", "vendor-10.example.com": "Vendor 10",
+    "vendor-11.example.com": "Vendor 11", "vendor-12.example.com": "Vendor 12",
+    "vendor-13.example.com": "Vendor 13", "vendor-14.example.com": "Vendor 14",
+    "vendor-15.example.com": "Vendor 15", "vendor-16.example.com": "Vendor 16",
+    "vendor-17.example.com": "Vendor 17", "vendor-18.example.com": "Vendor 18",
+    "vendor-19.example.com": "Vendor 19", "vendor-20.example.com": "Vendor 20",
+    "vendor-21.example.com": "Vendor 21", "vendor-1b.example.com": "Vendor 1",
 }
+OWN_DOMAINS = {"example-a.com", "example-b.com"}
 OWN_DOMAIN = "example-a.com"
 
 # Broad cancer cell-line vocabulary — matches lines CROs list in capability docs.

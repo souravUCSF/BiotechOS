@@ -33,6 +33,17 @@ def _startup() -> None:
     # apply non-destructive schema migrations to an existing DB on boot so new
     # columns (e.g. fold_settings.target_kind) exist without a data reload.
     db.init_db(reset=False)
+    # Ensure the Program B ADC program row exists (its corpus is ingested separately
+    # via store.ingest("program-b"); no molecules/TPP yet). Idempotent.
+    from ..config import PROGRAM_B_ID
+    conn = db.connect()
+    with conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO programs(id,name,target,anti_target,indication,status)"
+            " VALUES (?,?,?,?,?,?)",
+            (PROGRAM_B_ID, "Program B", "TGTA", None,
+             "TGTA-expressing solid tumors", "active"))
+    conn.close()
 
 app.add_middleware(
     CORSMiddleware,

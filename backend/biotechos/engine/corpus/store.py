@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from ...config import DEMO_PROGRAM_ID
+from ...config import DEMO_PROGRAM_ID, org_for_program
 from ...ingest.mailbox import get_source
 from ...state import db
 from .. import extract as X
@@ -115,9 +115,16 @@ def reset(program_id: str = DEMO_PROGRAM_ID, conn=None) -> None:
         # document-linked inbox items are regenerated on ingest; drop them first
         conn.execute("DELETE FROM inbox_items WHERE program_id=? AND document_id IS NOT NULL",
                      (program_id,))
+        # Drop this program's FTS rows BEFORE deleting the documents (need the ids).
+        # MUST be program-scoped — a blanket DELETE wiped OTHER programs' index
+        # entries (their rowids survived but pointed at empty content), silently
+        # breaking their document search.
+        conn.execute(
+            "INSERT INTO documents_fts(documents_fts, rowid, subject, raw_text) "
+            "SELECT 'delete', id, subject, raw_text FROM documents WHERE program_id=?",
+            (program_id,))
         for t in ("facts", "observations", "documents"):
             conn.execute(f"DELETE FROM {t} WHERE program_id=?", (program_id,))
-        conn.execute("DELETE FROM documents_fts")  # content-external; rebuilt on ingest
     if own:
         conn.close()
 
@@ -127,7 +134,7 @@ def ingest(program_id: str = DEMO_PROGRAM_ID, source: str | None = None,
     conn = db.connect()
     if do_reset:
         reset(program_id, conn=conn)
-    src = get_source(source)
+    src = get_source(source, org=org_for_program(program_id))
     counts = {"documents": 0, "observations": 0, "facts": 0, "by_type": {}}
     n = 0
     with conn:

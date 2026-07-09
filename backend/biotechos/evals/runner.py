@@ -130,7 +130,9 @@ def _eval_identity(program_id, case, conn):
 def eval_one(name: str, case: dict, program_id: str = DEMO_PROGRAM_ID,
              repeat: int = 1, conn=None) -> dict:
     """Evaluate a single case → {id, passed, detail}. Used by the per-case
-    progress runner in the eval site."""
+    progress runner in the eval site. Each case may carry its own "program"
+    field (default = the passed program_id, which defaults to demo)."""
+    program_id = case.get("program") or program_id
     own = conn is None
     conn = conn or db.connect()
     try:
@@ -149,7 +151,8 @@ def eval_one(name: str, case: dict, program_id: str = DEMO_PROGRAM_ID,
     finally:
         if own:
             conn.close()
-    return {"id": case.get("id", "?"), "passed": bool(passed), "detail": detail}
+    return {"id": case.get("id", "?"), "program": program_id,
+            "passed": bool(passed), "detail": detail}
 
 
 def run_suite(name: str, program_id: str = DEMO_PROGRAM_ID, repeat: int = 1) -> dict:

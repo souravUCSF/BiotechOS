@@ -130,20 +130,28 @@ class RealMailboxSource:
 
 
 class AnonymizedCorpusSource:
-    """Committed anonymized copy at CORPUS_DIR (safe to sync). Iterates every
-    pseudonym-org subdir (e.g. DemoOrg/)."""
+    """Committed anonymized copy at CORPUS_DIR (safe to sync). If `org` is given,
+    reads only CORPUS_DIR/<org>/; otherwise iterates every org subdir."""
 
-    def __init__(self, base: Path = CORPUS_DIR):
+    def __init__(self, base: Path = CORPUS_DIR, org: str | None = None):
         self.base = Path(base)
+        self.org = org
 
     def emails(self):
         if not self.base.is_dir():
+            return
+        if self.org:
+            org = self.base / self.org
+            if (org / "Emails").is_dir():
+                yield from _iter_archive(org)
             return
         for org in sorted(self.base.iterdir()):
             if (org / "Emails").is_dir():
                 yield from _iter_archive(org)
 
 
-def get_source(kind: str | None = None):
+def get_source(kind: str | None = None, org: str | None = None):
     kind = kind or MAILBOX_SOURCE
-    return RealMailboxSource() if kind == "real" else AnonymizedCorpusSource()
+    if kind == "real":
+        return RealMailboxSource(org) if org else RealMailboxSource()
+    return AnonymizedCorpusSource(org=org)

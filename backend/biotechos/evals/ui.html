@@ -35,6 +35,7 @@
   .badge { font-size:11px; padding:2px 8px; border-radius:10px; }
   .badge.pass { background:#dcfce7; color:var(--green); }
   .badge.fail { background:#fee2e2; color:var(--red); }
+  .badge.prog { background:#e0e7ff; color:#3730a3; text-transform:lowercase; margin-right:6px; }
   .form { padding:12px 14px; display:grid; grid-template-columns:170px 1fr; gap:8px 14px; align-items:start; }
   .form label { color:var(--muted); font-size:12px; padding-top:6px; }
   .form .field input[type=text], .form .field input[type=number], .form .field select,
@@ -78,14 +79,14 @@
   <div class="tabs" id="tabs"></div>
   <span style="flex:1"></span>
   <span id="msg" class="muted"></span>
-  <button class="run" onclick="run()">▶ Run all</button>
+  <button class="run" id="btn-all" data-label="▶ Run all" onclick="run()">▶ Run all</button>
 </header>
 <main>
   <div>
     <div class="toolbar">
       <button onclick="addCase()">+ Add case</button>
       <button class="primary" onclick="save()">Save</button>
-      <button class="run" onclick="run([suite])">▶ Run this suite</button>
+      <button class="run" id="btn-suite" data-label="▶ Run this suite" onclick="run([suite])">▶ Run this suite</button>
       <span class="muted" id="suitehint"></span>
     </div>
     <div class="cases" id="cases"></div>
@@ -138,6 +139,13 @@ const FIELDS = {
     {k:"expect_recommendation", label:"Expected recommendation", t:"select", opts:[""].concat(RECS)},
   ],
 };
+// Every case belongs to a program (default demo). Prepend a program selector to
+// each suite's fields so cases can be authored/retargeted per program.
+const PROGRAMS = ["demo","program-b"];
+const PROGRAM_FIELD = {k:"program", label:"Program", t:"select", opts:PROGRAMS,
+  hint:"which program's corpus this case runs against"};
+for(const s in FIELDS){ FIELDS[s] = [PROGRAM_FIELD].concat(FIELDS[s]); }
+
 const HINTS = {
   qa:"Ask a question, give the gold answer, and optional must-include/exclude guardrails.",
   classify:"Point at an email and give the expected triage + document type.",
@@ -174,6 +182,8 @@ function render(){
     const r = results[suite]?.[c.id];
     const cls = r===undefined?'':(r.passed?'pass':'fail');
     const badge = r===undefined?'':`<span class="badge ${r.passed?'pass':'fail'}">${r.passed?'pass':'fail'}</span>`;
+    const prog = (c.program||'demo');
+    const pbadge = `<span class="badge prog" title="program">${prog}</span>`;
     const rows = spec.map(f=>{
       const val = getP(c, f.k);
       return `<label>${f.label}</label><div class="field">${input(i,f,val)}${f.hint?`<div class="hint">${f.hint}</div>`:''}</div>`;
@@ -181,7 +191,7 @@ function render(){
     return `<div class="case ${cls}">
       <div class="case-head">
         <input class="id" value="${esc(c.id||'')}" oninput="setId(${i},this.value)" placeholder="case id"/>
-        ${badge}<span style="flex:1"></span>
+        ${pbadge}${badge}<span style="flex:1"></span>
         <button class="del" onclick="delCase(${i})">delete</button>
       </div>
       <div class="form">${rows}</div>
@@ -227,12 +237,22 @@ function setRunning(on, text){
   if(text) document.getElementById("overlay-msg").textContent=text;
   document.querySelectorAll("button.run, button.primary").forEach(b=>b.disabled=on);
 }
+let _activeBtn = null;
 function _progress(done, total, label){
   document.getElementById("pfill").style.width = total ? `${Math.round(done/total*100)}%` : "0%";
   document.getElementById("pcount").textContent = `${done} / ${total}` + (label ? ` · ${label}` : "");
   document.getElementById("overlay-msg").textContent = done < total ? "Running evals…" : "Finishing…";
+  // Live counter on the button label itself: "Running 2/5…"
+  if(_activeBtn) _activeBtn.textContent = done < total ? `Running ${done}/${total}…` : "Finishing…";
+}
+function _restoreBtns(){
+  for(const id of ["btn-all","btn-suite"]){
+    const b=document.getElementById(id); if(b) b.textContent=b.dataset.label;
+  }
+  _activeBtn=null;
 }
 async function run(which){
+  _activeBtn = document.getElementById(which ? "btn-suite" : "btn-all");
   await save();                              // persist edits on the visible suite
   const suiteNames = which || suites.map(s=>s.name);
   // gather (suite, case) work items
@@ -260,7 +280,7 @@ async function run(which){
   }
   const rep = { suites: suiteNames.map(sn=>({ suite:sn, total:agg[sn].total, passed:agg[sn].passed,
     pass_rate: agg[sn].total ? agg[sn].passed/agg[sn].total : null, results:agg[sn].results })) };
-  renderResults(rep); render(); setRunning(false); msg("done");
+  renderResults(rep); render(); setRunning(false); _restoreBtns(); msg("done");
 }
 function renderResults(rep){
   const el = document.getElementById("results");

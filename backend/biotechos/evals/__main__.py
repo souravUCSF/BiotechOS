@@ -24,6 +24,8 @@ def _capture(question: str, program_id: str) -> None:
             "reference_answer": r["answer"], "expect_source": r["source"],
             "must_include": [], "must_not_include": [], "min_citations": len(r["citations"]),
             "rubric": ""}
+    if program_id != DEMO_PROGRAM_ID:
+        case["program"] = program_id
     print("# review + edit, then append to data/evals/qa.jsonl:")
     print(json.dumps(case, ensure_ascii=False))
     print("\n# citations:", [c.get("subject", "")[:60] for c in r["citations"]], file=sys.stderr)

@@ -33,6 +33,17 @@ RAW_DEMO = RAW_DIR / "demo_activities_long.csv.gz"
 
 # Hero program
 DEMO_PROGRAM_ID = "demo"
+PROGRAM_B_ID = "program-b"
+
+# program_id → raw archive / corpus org subdir under DATASTORE_ROOT and CORPUS_DIR.
+PROGRAM_ORG = {
+    "demo": "Program A",
+    "program-b": "Program B",
+}
+
+
+def org_for_program(program_id: str) -> str:
+    return PROGRAM_ORG.get(program_id, CORPUS_ORG)
 PRIMARY_TARGET = "TGTA"          # CHEMBL1824 / P04626
 PRIMARY_TARGET_CHEMBL = "CHEMBL1824"
 TGTB_ANTITARGET = "TGTB"       # CHEMBL203 / P00533
