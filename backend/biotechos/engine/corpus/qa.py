@@ -39,13 +39,30 @@ class _Read(BaseModel):
     need_search: str | None = None
 
 
+# Shared domain header — grounding rules + a tight CRO/biotech glossary. Kept
+# short on purpose (a bloated header dilutes attention and induces confident errors).
+_DOMAIN = (
+    "Context: you are answering over a biotech CRO email/document corpus. "
+    "Grounding: use ONLY the material provided; never invent values; if it isn't "
+    "there, say 'not found'. "
+    "Notes: units — uM means µM (micromolar), nM = nanomolar; IC50/EC50/GI50 are "
+    "potency. Assays — ADP-Glo/HTRF = kinase activity; intact-MS/HRMS = covalent "
+    "binding; Caco-2 = permeability/ADME. CRO quotes may be priced per-compound OR "
+    "as a total; 'TAT'/'working days' = turnaround. Compound codes may be written "
+    "with or without leading zeros or dashes (CLO-00003, CLO00003, CLO 3 are the SAME "
+    "molecule) — treat them as equivalent and do not over-trust exact digits. "
+    "Targets: TGTA (on-target), TGTB (anti-target); molecules are coded BTX-####.")
+
+
 _PLANNER = (
+    _DOMAIN + "\n\n"
     "Generate 3-5 short keyword search queries to find emails/attachments that "
     "answer the question. Use synonyms + likely phrasings: price→cost, quote, "
     "quotation, fee, USD, per compound; turnaround→TAT, working days, timeline, "
     "delivery; capability→services, assays, offer, can run. Always include the "
     "vendor name and the assay/technique. Return JSON {queries:[...]}, each a few keywords.")
 _READER = (
+    _DOMAIN + "\n\n"
     "Answer the QUESTION using ONLY the EXCERPTS (emails + attachment text). Put the "
     "doc ids you used in cited_docs. If the excerpts clearly contain the answer, set "
     "found=true and give a concise answer with the SPECIFIC values (prices, days, "
@@ -225,8 +242,8 @@ def ask(program_id: str = DEMO_PROGRAM_ID, question: str = "", api_key: str | No
         rows_txt = "\n".join(f"{f['subject_key']} | {predicate} | {f['value']}" for f in facts_hit)
         answer, used_llm = llm.text(
             model=MODEL_ARTIFACTS,
-            system=("Answer ONLY from the FACT ROWS given. Do not add any value not present. "
-                    "Be concise. If the rows don't answer the question, say so."),
+            system=(_DOMAIN + "\n\nAnswer ONLY from the FACT ROWS given. Do not add any value "
+                    "not present. Be concise. If the rows don't answer the question, say so."),
             user=f"Question: {question}\n\nFACT ROWS:\n{rows_txt}",
             fallback=deterministic, api_key=api_key)
         conn.close()
