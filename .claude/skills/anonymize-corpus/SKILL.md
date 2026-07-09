@@ -1,63 +1,60 @@
 ---
 name: anonymize-corpus
-description: One-way anonymize a real email/document archive into a committable, shareable corpus — obfuscating molecule structures, target identity, vendor + person PII while preserving numbers, prose, timelines, and workflow. Use when onboarding a new private dataset (emails/quotes/invoices/CRO data) into BiotechOS, or re-running anonymization after the raw archive changes.
+description: Anonymize a real email/document archive into a committable corpus by scrubbing ONLY the biological target identity, chemical structures, and residue/mutation callouts — keeping vendor names, people, domains, phones, and codes real. Use when onboarding a private CRO dataset into BiotechOS or re-running after the raw archive changes.
 ---
 
-# Anonymize a document/email corpus
+# Anonymize a document/email corpus (narrow scope)
 
-Turns a real archive (`~/DataStore/<Org>/Emails/...`) into a de-identified corpus
-under `data/corpus/` that is safe to commit to GitHub. **One-way** (no reverse key).
-The raw archive stays outside the repo; the `real→surrogate` maps stay gitignored
-in `data/corpus_maps/`.
+Turns a real archive (`~/DataStore/<Org>/Emails/…`) into a de-identified corpus
+under `data/corpus/`, safe to commit to a **private** repo. **One-way.** Raw
+archive stays outside the repo.
 
-## What it guarantees
-- **Targets** remapped (default TGTA/TGTA→TGTA, TGTA→TGTB, TGTA→Kinase-C).
-- **Molecule/project codes** → surrogate, number-preserving + consistent (`CLO-00002→HLX-00002`, `PH-PGMA-…→AX-HLX-…`).
-- **Vendors** → pseudonyms (company names + email domains).
-- **People** → pseudonyms (built from sender display names; founder → "Sam Founder").
-- **Structures/SMILES + figures** dropped (`[structure withheld]`); **numbers kept real**.
-- **Paths too**: pseudonym org dir (`DemoOrg/`) + hashed, subject-derived slugs + neutralized attachment filenames — no real token in any file path.
-- **Leak-scan = 0** for real tokens/domains/names in both paths and contents.
+## Scope — what gets changed (deliberately narrow)
+1. **Target identity** — `TGTA/TGTA→TGTA`, `TGTA→TGTB`, `TGTA→Kinase-C` (alnum-aware
+   boundaries so `CTGTA_CATX` etc. are caught), in body, subject, attachment
+   filenames, AND folder slugs (paths must not leak the target either).
+2. **Chemical structures** — SMILES strings → `[structure withheld]`.
+3. **Chemical images** — dropped (only extracted *text* is kept; figures never re-rendered).
+4. **Amino-acid residues / mutations / positions** — `V600E`, `Y340D/Y341E`,
+   `Cys805`, "position 600" → `[mutation]`/`[residue]`/`[pos]` (these reveal the
+   specific kinase even after the target rename).
+
+**Preserved verbatim:** vendor names, people, email domains, phone numbers,
+molecule/project codes, real numbers, prose, timelines, workflow. (This means the
+committed corpus contains real business PII — appropriate only for a private repo.)
 
 ## Files
-- Engine: `backend/biotechos/ingest/anonymize/__init__.py` — maps + `Anonymizer` + `build_corpus()`.
-- Reader: `backend/biotechos/ingest/mailbox.py` — `RealMailboxSource` (raw) / `AnonymizedCorpusSource` (output).
-- Config: `backend/biotechos/config.py` — `DATASTORE_ROOT`, `CORPUS_ORG`, `CORPUS_DIR`, `CORPUS_MAPS_DIR`, `MAILBOX_SOURCE`.
-- Archive layout (in + out): `<root>/<Org>/Emails/{Inbox,Sent}/YYYY-MM/<slug>/{email.txt, metadata.json, attachments/, extracted/*.txt}`.
+- Engine: `backend/biotechos/ingest/anonymize/__init__.py` — `anonymize_text()`, `build_corpus()`, `leak_scan()`.
+- Reader: `backend/biotechos/ingest/mailbox.py` (`RealMailboxSource`).
+- Config: `backend/biotechos/config.py` (`DATASTORE_ROOT`, `CORPUS_ORG`, `CORPUS_DIR`).
 
-## Run it
+## Run
 ```bash
 cd backend
-# optional: point at a different archive / org (defaults: ~/DataStore, Program A)
-export DATASTORE_ROOT=/path/to/archive CORPUS_ORG=Program A
+export DATASTORE_ROOT=/path/to/archive CORPUS_ORG=Program A   # defaults: ~/DataStore, Program A
 uv run python -c "from biotechos.ingest.anonymize import build_corpus; print(build_corpus())"
-# → writes data/corpus/<ANON_ORG>/... ; prints {threads, out_dir, leak_count, leaks}
+# then refresh the DB: uv run python -c "from biotechos.engine.corpus import store; print(store.ingest('demo'))"
 ```
-`build_corpus(limit=N)` for a quick dry run; `clean=True` (default) wipes `data/corpus/` first.
+`build_corpus(limit=N)` for a dry run.
 
-## Adapt to a NEW dataset (the part to edit)
-In `ingest/anonymize/__init__.py`:
-1. **`ANON_ORG`** — pseudonym company/org dir name for output paths.
-2. **`_RAW_SUBS`** — ordered `(regex, replacement)`; add this dataset's **targets, vendors, sponsor code-abbreviations, founder/company names**. Use the alnum-aware boundaries `_B`/`_E` (NOT `\b`) so underscore-joined tokens like `FOO_BAR` are caught. Specific/multi-word entries first.
-3. **`DOMAIN_SUBS`** — every real email domain → a `*.example` pseudo-domain.
-4. **`code_alias()`** — prefix rewrites for the dataset's molecule/project code scheme (number-preserving).
-5. **`LEAK_RE` + `DOMAIN_LEAK_RE`** — the tokens/domains the verifier must prove are gone.
-6. Pseudonyms must NOT contain a real token as a substring (e.g. avoid "CellVista" if "Vendor 3" is a real vendor).
+## Adapt to a NEW dataset
+Edit `ingest/anonymize/__init__.py`:
+1. `_RAW_SUBS` — the dataset's real target → surrogate map (use `_B`/`_E` boundaries, NOT `\b`).
+2. `LEAK_RE` — the target tokens the verifier must prove are gone.
+3. `_MUT_RE` / `_RES3_RE` / `_POS_RE` — residue/mutation forms (keep the 3–4 digit
+   guard so cell-line names like `T47D`, `A375`, `H358` are NOT caught).
+4. If your codes/IDs themselves encode the target, extend the slug/filename scrub.
 
-## Verify (always, after any map change)
-`build_corpus()` returns `leak_count` from the in-pass scan. Then run an **independent** scan over the written files (catches path leaks + anything the in-pass scan's field list missed):
+## Verify (always — paths AND contents)
 ```bash
 cd /path/to/repo
-# real tokens/domains/names in BOTH paths and contents — must be 0
 { find data/corpus -print; grep -rniE '.' data/corpus/ 2>/dev/null; } \
-  | grep -iE '\b(REAL_TARGET|REAL_VENDOR1|REAL_VENDOR2|REAL_PERSON)\b|(realdomain1|realdomain2)\.com' | wc -l
+  | grep -iE '\b(REAL_TARGET1|REAL_TARGET2|V600E|Y340D)\b|Cys[- ]?805' | wc -l   # must be 0
+grep -rniE '\b(TGTA|TGTB)\b' data/corpus/ | wc -l   # target remap landed (>0)
 ```
-Also confirm the remap landed (e.g. TGTA/TGTB mentions > 0) and structures are gone.
 
 ## Gotchas (learned)
 - `\b` fails around `_` — use `_B`/`_E`.
-- Company/role display names ("Vendor 1 invoice") must be scrubbed by token subs, not registered as people; run vendor token subs **before** person-name subs.
-- Multi-recipient `To:` lines and inline quoted headers in bodies — scrub every `local@domain` token (map domain, genericize local part), not just the first address.
-- Attachment filenames + directory slugs leak too — neutralize both, not just body text.
-- SMILES scrub must exclude URL/tracking cruft (web punctuation) to avoid mislabeling junk as structures.
-- Maps persist in `data/corpus_maps/maps.json`; delete it for a fully fresh pseudonym assignment.
+- The target leaks in **attachment filenames** and **folder slugs**, not just body text — scrub all three.
+- Mutation regex must be case-insensitive (`y340e`) but digit-guarded (3–4) so cell lines aren't caught.
+- SMILES scrub must skip URL/tracking cruft (web punctuation) to avoid mislabeling junk as structures.

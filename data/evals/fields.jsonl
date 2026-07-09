@@ -1,0 +1,2 @@
+{"id":"fx-ice-svc","doc_subject":"Services at ICE Bioscien","expect":{"vendor":"Vendor 2","services":["intact_ms"]},"min_recall":1.0}
+{"id":"fx-vendor-1-quote","doc_subject":"IntactMS Assays","expect":{"vendor":"Vendor 1","services":["intact_ms"]},"min_recall":1.0}

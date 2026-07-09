@@ -11,14 +11,16 @@ import re
 
 from ...engine import identity
 
-# anonymized email domain → vendor display name (mirrors ingest/anonymize maps)
+# email domain → vendor display name (real domains; corpus is only target/structure
+# anonymized, vendor identities are preserved).
 VENDOR_BY_DOMAIN = {
-    "vendor-23.example": "Vendor 23", "vendor-22.example": "Vendor 22",
-    "crystalpath.example": "CrystalPath", "novakin.example": "NovaKin",
-    "cytonova.example": "CytoNova Labs", "kinaseworks.example": "KinaseWorks",
-    "reagentco.example": "ReagentCo",
+    "vendor-1.example.com": "Vendor 1", "vendor-2.example.com": "Vendor 2",
+    "vendor-3.example.com": "Vendor 3", "vendor-4.example.com": "Vendor 4",
+    "vendor-5.example.com": "Vendor 5", "vendor-6.example.com": "Vendor 6",
+    "vendor-7.example.com": "Vendor 7", "sb.vendor-7.example.com": "Vendor 7",
+    "vendor-8.example.com": "Vendor 8",
 }
-OWN_DOMAIN = "demoorg.example"
+OWN_DOMAIN = "example-a.com"
 
 # Broad cancer cell-line vocabulary — matches lines CROs list in capability docs.
 CELL_LINE_RE = re.compile(

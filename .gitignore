@@ -10,10 +10,15 @@ data/raw/
 data/biotechos.db
 data/cache/
 
-# Anonymization maps (real_InChIKey→surrogate, target, vendor) — SECRET.
-# NOTE: data/corpus/ (anonymized emails+attachments) IS committed & safe to sync;
-# the raw archive lives OUTSIDE the repo (~/DataStore) and is never here.
+# Eval run artifacts (timestamped); baseline.json + *.jsonl cases ARE committed.
+data/evals/results/
+
+# Anonymization maps — SECRET.
 data/corpus_maps/
+# Corpus: only target/structure anonymized; vendor names, employee emails, phones,
+# and codes are REAL third-party PII → keep local, never commit. Regenerate via
+# ingest.anonymize.build_corpus from the raw archive (~/DataStore).
+data/corpus/
 
 # Python
 backend/.venv/

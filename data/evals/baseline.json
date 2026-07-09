@@ -1,0 +1,253 @@
+{
+  "suites": [
+    {
+      "suite": "qa",
+      "total": 3,
+      "passed": 3,
+      "pass_rate": 1.0,
+      "results": [
+        {
+          "id": "qa-cellines-ice",
+          "passed": true,
+          "detail": {
+            "source": "facts",
+            "citations": 3,
+            "missing_include": [],
+            "must_not_violations": [],
+            "source_ok": true,
+            "citations_ok": true,
+            "groundedness": 1.0,
+            "unsupported": [],
+            "judge_score": 0.9,
+            "judge": "The assistant correctly identified all four cell lines: CellLine-2, CellLine-1, PC9, and HeLa. The assistant listed NCI-CellLine-1 as a separate entry from CellLine-1, but these refer to the same cell line (as indicated in the reference answer where CellLine-1 is parenthetically noted as NCI-CellLine-1). No hallucinated cell lines were added. The answer covers all reference facts correctly.",
+            "answer": "Based on the fact rows, Vendor 2 can test the following cell lines:\n\n1. CellLine-2\n2. CellLine-1\n3. PC9\n4. HELA\n5. NCI-CellLine-1"
+          }
+        },
+        {
+          "id": "qa-services-vendor-1",
+          "passed": true,
+          "detail": {
+            "source": "facts",
+            "citations": 6,
+            "missing_include": [],
+            "must_not_violations": [],
+            "source_ok": true,
+            "citations_ok": true,
+            "groundedness": 0.636,
+            "unsupported": [
+              "Biochemical",
+              "Kinetics",
+              "Pharmacokinetics",
+              "Production"
+            ],
+            "judge_score": 1.0,
+            "judge": "The assistant correctly lists all 8 assay services mentioned in the reference answer: synthesis, biochemical IC50, intact MS, binding kinetics (listed as 'kinetics'), ADME, PK, in-vivo, and protein production. No fabricated services are added.",
+            "answer": "Based on the fact rows, Vendor 1 offers the following assay services:\n\n- **Synthesis**\n- **Kinetics**\n- **ADME**\n- **Intact MS**\n- **PK** (Pharmacokinetics)\n- **Protein Production**\n- **Biochemical I"
+          }
+        },
+        {
+          "id": "qa-no-fabrication",
+          "passed": true,
+          "detail": {
+            "source": "facts",
+            "citations": 3,
+            "missing_include": [],
+            "must_not_violations": [],
+            "source_ok": true,
+            "citations_ok": true,
+            "groundedness": 1.0,
+            "unsupported": [],
+            "judge_score": 0.9,
+            "judge": "The assistant correctly lists CellLine-2, CellLine-1, PC9, and HeLa (HELA), which matches the reference. However, it separately lists both 'CellLine-1' and 'NCI-CellLine-1' as if they were different cell lines, when they are the same cell line (NCI-CellLine-1). This is a minor redundancy/confusion but not a hallucination of a new cell line. No invented lines like A375 or MCF10A are present. Core facts are covered correctly.",
+            "answer": "Based on the fact rows, Vendor 2 can test the following cell lines:\n\n1. **CellLine-2**\n2. **CellLine-1**\n3. **PC9**\n4. **HELA**\n5. **NCI-CellLine-1**"
+          }
+        }
+      ]
+    },
+    {
+      "suite": "classify",
+      "total": 5,
+      "passed": 5,
+      "pass_rate": 1.0,
+      "results": [
+        {
+          "id": "cl-cda",
+          "passed": true,
+          "detail": {
+            "doc": "Complete with Docusign: Program A CDA.docx",
+            "triage": [
+              "actionable",
+              "actionable"
+            ],
+            "doc_type": [
+              "contract",
+              "contract"
+            ]
+          }
+        },
+        {
+          "id": "cl-invoice",
+          "passed": true,
+          "detail": {
+            "doc": "Invoice no. 1222473 from Vendor 1, Inc. to Callis",
+            "triage": [
+              "actionable",
+              "actionable"
+            ],
+            "doc_type": [
+              "invoice",
+              "invoice"
+            ]
+          }
+        },
+        {
+          "id": "cl-weekly",
+          "passed": true,
+          "detail": {
+            "doc": "[structure withheld] Chemistry Weekly Update-2026-",
+            "doc_type": [
+              "project_update",
+              "project_update"
+            ]
+          }
+        },
+        {
+          "id": "cl-capability",
+          "passed": true,
+          "detail": {
+            "doc": "About Kinase Assays and Intact MS Services at ICE ",
+            "doc_type": [
+              "vendor_capability",
+              "vendor_capability"
+            ]
+          }
+        },
+        {
+          "id": "cl-quote",
+          "passed": true,
+          "detail": {
+            "doc": "[structure withheld] IntactMS Assays",
+            "doc_type": [
+              "quote",
+              "quote"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "suite": "fields",
+      "total": 2,
+      "passed": 2,
+      "pass_rate": 1.0,
+      "results": [
+        {
+          "id": "fx-ice-svc",
+          "passed": true,
+          "detail": {
+            "doc": "About Kinase Assays and Intact MS Services at ICE ",
+            "vendor": [
+              "Vendor 2",
+              "Vendor 2"
+            ],
+            "services": {
+              "precision": 0.333,
+              "recall": 1.0,
+              "f1": 0.5,
+              "missing": [],
+              "extra": [
+                "biochemical_ic50",
+                "in_vivo"
+              ]
+            }
+          }
+        },
+        {
+          "id": "fx-vendor-1-quote",
+          "passed": true,
+          "detail": {
+            "doc": "[structure withheld] IntactMS Assays",
+            "vendor": [
+              "Vendor 1",
+              "Vendor 1"
+            ],
+            "services": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "missing": [],
+              "extra": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "suite": "identity",
+      "total": 3,
+      "passed": 3,
+      "pass_rate": 1.0,
+      "results": [
+        {
+          "id": "id-canonical",
+          "passed": true,
+          "detail": {
+            "status": [
+              "resolved",
+              "resolved"
+            ]
+          }
+        },
+        {
+          "id": "id-drift",
+          "passed": true,
+          "detail": {
+            "status": [
+              "resolved",
+              "resolved"
+            ],
+            "same_as": true
+          }
+        },
+        {
+          "id": "id-absent",
+          "passed": true,
+          "detail": {
+            "status": [
+              "unresolved",
+              "unresolved"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "suite": "decision",
+      "total": 2,
+      "passed": 2,
+      "pass_rate": 1.0,
+      "results": [
+        {
+          "id": "dec-quote",
+          "passed": true,
+          "detail": {
+            "recommendation": [
+              "review_quote",
+              "review_quote"
+            ]
+          }
+        },
+        {
+          "id": "dec-cda",
+          "passed": true,
+          "detail": {
+            "recommendation": [
+              "acknowledge",
+              "acknowledge"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

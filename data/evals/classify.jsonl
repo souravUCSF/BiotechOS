@@ -1,0 +1,5 @@
+{"id":"cl-cda","doc_subject":"Program A CDA","expect":{"triage":"actionable","doc_type":"contract"}}
+{"id":"cl-invoice","doc_subject":"1222473","expect":{"triage":"actionable","doc_type":"invoice"}}
+{"id":"cl-weekly","doc_subject":"Chemistry Weekly","expect":{"doc_type":"project_update"}}
+{"id":"cl-capability","doc_subject":"Services at ICE Bioscien","expect":{"doc_type":"vendor_capability"}}
+{"id":"cl-quote","doc_subject":"IntactMS Assays","expect":{"doc_type":"quote"}}
