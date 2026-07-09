@@ -1,3 +1,3 @@
-{"id":"id-canonical","token":"BTX-1000","expect_status":"resolved"}
-{"id":"id-drift","token":"btx_1000","expect_status":"resolved","expect_same_as":"BTX-1000"}
-{"id":"id-absent","token":"ZZZ-99999","expect_status":"unresolved"}
+{"id": "id-canonical", "token": "BTX-1000", "expect_status": "resolved"}
+{"id": "id-drift", "token": "btx_1000", "expect_status": "resolved", "expect_same_as": "BTX-1000"}
+{"id": "id-absent", "token": "ZZZ-99999", "expect_status": "unresolved"}
