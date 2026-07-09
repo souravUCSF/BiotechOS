@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BiotechOS · Evals</title>
+<style>
+  :root { --bg:#f7f9fb; --panel:#fff; --border:#e2e8f0; --ink:#1e293b; --muted:#64748b;
+          --green:#059669; --red:#dc2626; --amber:#d97706; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  header { position:sticky; top:0; background:var(--panel); border-bottom:1px solid var(--border);
+           padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; z-index:5; }
+  h1 { font-size:15px; margin:0; font-weight:600; }
+  .tabs { display:flex; gap:4px; }
+  .tab { padding:5px 12px; border:1px solid var(--border); border-radius:6px; background:var(--panel);
+         cursor:pointer; font-size:13px; }
+  .tab.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .tab .n { opacity:.6; margin-left:5px; }
+  button { cursor:pointer; border:1px solid var(--border); border-radius:6px; background:var(--panel);
+           padding:6px 12px; font-size:13px; color:var(--ink); }
+  button.primary { background:var(--green); color:#fff; border-color:var(--green); }
+  button.run { background:var(--ink); color:#fff; border-color:var(--ink); }
+  main { display:grid; grid-template-columns:1fr 360px; gap:16px; padding:16px 20px; align-items:start; }
+  .cases { display:flex; flex-direction:column; gap:10px; }
+  .case { border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+  .case.pass { border-left:3px solid var(--green); }
+  .case.fail { border-left:3px solid var(--red); }
+  .case-head { display:flex; align-items:center; justify-content:space-between; padding:6px 10px;
+               border-bottom:1px solid var(--border); }
+  .case-id { font-weight:600; font-size:13px; }
+  .badge { font-size:11px; padding:2px 7px; border-radius:10px; }
+  .badge.pass { background:#dcfce7; color:var(--green); }
+  .badge.fail { background:#fee2e2; color:var(--red); }
+  textarea { width:100%; border:0; border-radius:0 0 8px 8px; padding:10px; font:12px/1.5 ui-monospace,
+             SFMono-Regular,Menlo,monospace; resize:vertical; min-height:70px; color:var(--ink); }
+  textarea.err { background:#fff5f5; }
+  .toolbar { display:flex; gap:8px; margin-bottom:12px; }
+  aside { position:sticky; top:64px; border:1px solid var(--border); border-radius:8px;
+          background:var(--panel); padding:14px; max-height:80vh; overflow:auto; }
+  .score { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border); }
+  .fail-detail { font-size:12px; color:var(--muted); margin:6px 0 12px; white-space:pre-wrap;
+                 background:#fff5f5; border:1px solid #fecaca; border-radius:6px; padding:8px; }
+  .muted { color:var(--muted); font-size:12px; }
+  .del { color:var(--red); border:0; background:none; }
+  #msg { font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BiotechOS · Evals</h1>
+  <div class="tabs" id="tabs"></div>
+  <span style="flex:1"></span>
+  <span id="msg" class="muted"></span>
+  <button class="run" onclick="run()">▶ Run all</button>
+</header>
+<main>
+  <div>
+    <div class="toolbar">
+      <button onclick="addCase()">+ Add case</button>
+      <button class="primary" onclick="save()">Save suite</button>
+      <button class="run" onclick="run([suite])">▶ Run this suite</button>
+      <span class="muted" id="suitehint"></span>
+    </div>
+    <div class="cases" id="cases"></div>
+  </div>
+  <aside id="results"><div class="muted">Run evals to see the scorecard.</div></aside>
+</main>
+<script>
+const API = "/evals/api";
+let suite = null, suites = [], lastResults = {};
+
+const TEMPLATES = {
+  qa: {id:"qa-NEW", question:"", reference_answer:"", expect_source:"facts",
+       must_include:[], must_not_include:[], min_citations:1, rubric:""},
+  classify: {id:"cl-NEW", doc_subject:"", expect:{triage:"actionable", doc_type:"quote"}},
+  fields: {id:"fx-NEW", doc_subject:"", expect:{vendor:"", services:[]}, min_recall:1.0},
+  identity: {id:"id-NEW", token:"", expect_status:"resolved"},
+  decision: {id:"dec-NEW", doc_subject:"", expect_recommendation:"review_quote"},
+};
+
+async function boot(){
+  suites = await (await fetch(`${API}/suites`)).json();
+  suite = suites[0]?.name;
+  renderTabs();
+  await loadCases();
+}
+function renderTabs(){
+  document.getElementById("tabs").innerHTML = suites.map(s =>
+    `<div class="tab ${s.name===suite?'active':''}" onclick="switchSuite('${s.name}')">${s.name}<span class="n">${s.count}</span></div>`).join("");
+}
+async function switchSuite(s){ suite = s; renderTabs(); await loadCases(); }
+
+async function loadCases(){
+  const cases = await (await fetch(`${API}/cases/${suite}`)).json();
+  document.getElementById("suitehint").textContent =
+    ({qa:"question + reference_answer + must_include/exclude",
+      classify:"doc_subject + expect{triage,doc_type}",
+      fields:"doc_subject + expect{vendor,total,cell_lines,services}",
+      identity:"token + expect_status (+expect_same_as)",
+      decision:"doc_subject + expect_recommendation"})[suite] || "";
+  const res = lastResults[suite] || {};
+  document.getElementById("cases").innerHTML = cases.map((c,i)=>{
+    const r = (res[c.id]);
+    const cls = r===undefined?'':(r.passed?'pass':'fail');
+    const badge = r===undefined?'':`<span class="badge ${r.passed?'pass':'fail'}">${r.passed?'pass':'fail'}</span>`;
+    return `<div class="case ${cls}">
+      <div class="case-head"><span class="case-id">${c.id||'(no id)'} ${badge}</span>
+        <button class="del" onclick="delCase(${i})">delete</button></div>
+      <textarea data-i="${i}" spellcheck="false" oninput="validate(this)">${JSON.stringify(c,null,2)}</textarea>
+    </div>`;
+  }).join("") || `<div class="muted">No cases yet — click “+ Add case”.</div>`;
+}
+function validate(ta){ try{ JSON.parse(ta.value); ta.classList.remove("err"); }catch{ ta.classList.add("err"); } }
+function collect(){
+  const out=[]; for(const ta of document.querySelectorAll("#cases textarea")){
+    try{ out.push(JSON.parse(ta.value)); }catch(e){ throw new Error(`Invalid JSON in a case: ${e.message}`); } }
+  return out;
+}
+function addCase(){
+  const cases = safeCollect(); if(cases===null) return;
+  cases.push(structuredClone(TEMPLATES[suite]||{id:"NEW"}));
+  renderCases(cases);
+}
+function delCase(i){ const cases = safeCollect(); if(cases===null) return; cases.splice(i,1); renderCases(cases); }
+function safeCollect(){ try{ return collect(); }catch(e){ msg(e.message,true); return null; } }
+function renderCases(cases){
+  document.getElementById("cases").innerHTML = cases.map((c,i)=>`<div class="case">
+    <div class="case-head"><span class="case-id">${c.id||'(no id)'}</span>
+      <button class="del" onclick="delCase(${i})">delete</button></div>
+    <textarea data-i="${i}" spellcheck="false" oninput="validate(this)">${JSON.stringify(c,null,2)}</textarea>
+  </div>`).join("");
+}
+async function save(){
+  const cases = safeCollect(); if(cases===null) return;
+  const r = await fetch(`${API}/cases/${suite}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(cases)});
+  if(r.ok){ const d=await r.json(); msg(`saved ${d.saved} cases`); suites.find(s=>s.name===suite).count=d.saved; renderTabs(); }
+  else msg("save failed: "+(await r.text()), true);
+}
+async function run(which){
+  msg("running…");
+  const cases = safeCollect(); if(cases!==null){ await save(); }
+  const body = which? {suites:which} : {};
+  const r = await fetch(`${API}/run`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!r.ok){ msg("run failed: "+(await r.text()), true); return; }
+  const rep = await r.json();
+  lastResults = {};
+  for(const s of rep.suites){ lastResults[s.suite]={}; for(const res of s.results) lastResults[s.suite][res.id]=res; }
+  renderResults(rep); msg("done"); loadCases();
+}
+function renderResults(rep){
+  const el = document.getElementById("results");
+  el.innerHTML = "<div style='font-weight:600;margin-bottom:8px'>Scorecard</div>" + rep.suites.map(s=>{
+    const pct = s.pass_rate==null?'—':Math.round(s.pass_rate*100)+'%';
+    const fails = s.results.filter(r=>!r.passed);
+    return `<div class="score"><span>${s.suite}</span><span>${s.passed}/${s.total} · ${pct}</span></div>` +
+      fails.map(f=>`<div class="fail-detail">✗ ${f.id}\n${JSON.stringify(f.detail,null,1).slice(0,500)}</div>`).join("");
+  }).join("");
+}
+function msg(t,err){ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?'var(--red)':'var(--muted)'; }
+boot();
+</script>
+</body>
+</html>

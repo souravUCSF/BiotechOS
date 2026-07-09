@@ -24,6 +24,9 @@ from ..state import db
 
 app = FastAPI(title="BiotechOS API")
 
+from ..evals.api import router as evals_router  # noqa: E402
+app.include_router(evals_router)
+
 
 @app.on_event("startup")
 def _startup() -> None:

@@ -29,6 +29,16 @@ def load_suite(name: str) -> list[dict]:
     return out
 
 
+def save_suite(name: str, cases: list[dict]) -> int:
+    """Overwrite a suite's JSONL with the given cases (one JSON object per line)."""
+    if name not in SUITES:
+        raise ValueError(f"unknown suite {name}")
+    EVALS_DIR.mkdir(parents=True, exist_ok=True)
+    p = EVALS_DIR / f"{name}.jsonl"
+    p.write_text("\n".join(json.dumps(c, ensure_ascii=False) for c in cases) + ("\n" if cases else ""))
+    return len(cases)
+
+
 def _find_doc(conn, program_id: str, case: dict):
     """Look up a corpus document by doc_id or subject substring."""
     if case.get("doc_id"):
