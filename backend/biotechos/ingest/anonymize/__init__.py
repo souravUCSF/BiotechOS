@@ -110,10 +110,13 @@ def build_corpus(org: str = CORPUS_ORG, out_dir: Path = CORPUS_DIR,
             "from": em.email_from, "to": em.email_to, "subject": subject, "date": em.date,
             "attachments": [{"filename": a["filename"], "mimetype": a["mimetype"],
                              "protected": a["protected"]} for a in atts]}, indent=2))
-        for i, a in enumerate(atts):
+        for a in atts:
             if a["text"]:
-                stem = re.sub(r"[^A-Za-z0-9]+", "-", Path(a["filename"]).stem).strip("-")[:50]
-                (dest / "extracted" / f"{stem or f'att{i}'}.txt").write_text(a["text"])
+                # IMPORTANT: name the extracted file exactly `<attachment-stem>.txt`
+                # so the corpus reader (which derives it from metadata's filename)
+                # finds it. Sanitizing here silently dropped attachment text for any
+                # filename with spaces/special chars (most quote/data PDFs).
+                (dest / "extracted" / (Path(a["filename"]).stem + ".txt")).write_text(a["text"])
         leaks += leak_scan(subject, body, *[a["text"] for a in atts])
         n += 1
     return {"threads": n, "out_dir": str(out_dir), "leaks": sorted(set(leaks))[:20],

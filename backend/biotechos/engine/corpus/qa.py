@@ -49,8 +49,12 @@ _READER = (
     "Answer the QUESTION using ONLY the EXCERPTS (emails + attachment text). Put the "
     "doc ids you used in cited_docs. If the excerpts clearly contain the answer, set "
     "found=true and give a concise answer with the SPECIFIC values (prices, days, "
-    "vendors) and units. If they do not, set found=false and, if a different search "
-    "might help, put keywords in need_search. Never invent values not in the excerpts.")
+    "vendors) and units. IMPORTANT: if the excerpts contain MULTIPLE quotes/prices "
+    "relevant to the question (e.g. different quote numbers, dates, or per-compound vs "
+    "total pricing), list ALL of them with their identifying context (quote number, "
+    "date, quantity) — do not pick just one. If the answer isn't present, set "
+    "found=false and, if a different search might help, put keywords in need_search. "
+    "Never invent values not in the excerpts.")
 
 
 def _fts_run(conn, program_id: str, expr: str, k: int) -> list[dict]:
@@ -75,6 +79,25 @@ def _or_expr(query: str) -> str | None:
 def _fts_search(conn, program_id: str, query: str, k: int = 8) -> list[dict]:
     e = _or_expr(query)
     return _fts_run(conn, program_id, e, k) if e else []
+
+
+_VALUE_RE = re.compile(r"\$ ?[0-9][0-9,]*\.?[0-9]*|[0-9]+\s*(?:working days|weeks|business days)")
+
+
+def _value_windows(body: str, radius: int = 160, maxw: int = 8) -> list[str]:
+    """Windows around every price/timeline token, so values deep in long quote
+    attachments reach the reader regardless of position."""
+    out, seen = [], set()
+    for m in _VALUE_RE.finditer(body or ""):
+        s = max(0, m.start() - radius)
+        w = body[s:m.end() + radius].strip()
+        key = w[:40]
+        if key not in seen:
+            seen.add(key)
+            out.append(w)
+        if len(out) >= maxw:
+            break
+    return out
 
 
 def _plan_queries(question: str, api_key: str | None) -> list[str]:
@@ -113,10 +136,12 @@ def _agentic_read(conn, program_id: str, question: str, cands: list[dict],
         for c in cands:
             row = conn.execute("SELECT raw_text FROM documents WHERE id=?", (c["id"],)).fetchone()
             body = (row["raw_text"] or "") if row else ""
-            # surface the FTS-matched region (prices/timelines often sit deep in
-            # attachment text) + a head window.
             snip = (c.get("snip") or "").replace("[", "").replace("]", "")
-            blocks.append(f"[doc {c['id']}] {c['subject']}\nMATCH: …{snip}…\n{body[:3500]}")
+            # prices/timelines/quote-numbers often sit deep in long quote PDFs (past
+            # any head window), so pull a window around every such token too.
+            windows = _value_windows(body)
+            blocks.append(f"[doc {c['id']}] {c['subject']}\nMATCH: …{snip}…\n{body[:3000]}"
+                          + ("\n…\n" + "\n…\n".join(windows) if windows else ""))
         fb = _Read(found=bool(cands),
                    answer=("Related emails:\n" + "\n".join(f"- [doc {c['id']}] {c['subject']}"
                            for c in cands[:5])) if cands else "Not found in the corpus.",
