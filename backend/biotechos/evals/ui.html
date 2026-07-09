@@ -6,7 +6,7 @@
 <title>BiotechOS · Evals</title>
 <style>
   :root { --bg:#f7f9fb; --panel:#fff; --border:#e2e8f0; --ink:#1e293b; --muted:#64748b;
-          --green:#059669; --red:#dc2626; --amber:#d97706; }
+          --green:#059669; --red:#dc2626; }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif;
          background:var(--bg); color:var(--ink); }
@@ -22,26 +22,34 @@
            padding:6px 12px; font-size:13px; color:var(--ink); }
   button.primary { background:var(--green); color:#fff; border-color:var(--green); }
   button.run { background:var(--ink); color:#fff; border-color:var(--ink); }
-  main { display:grid; grid-template-columns:1fr 360px; gap:16px; padding:16px 20px; align-items:start; }
-  .cases { display:flex; flex-direction:column; gap:10px; }
-  .case { border:1px solid var(--border); border-radius:8px; background:var(--panel); }
-  .case.pass { border-left:3px solid var(--green); }
-  .case.fail { border-left:3px solid var(--red); }
-  .case-head { display:flex; align-items:center; justify-content:space-between; padding:6px 10px;
+  main { display:grid; grid-template-columns:1fr 340px; gap:16px; padding:16px 20px; align-items:start; }
+  .cases { display:flex; flex-direction:column; gap:12px; }
+  .case { border:1px solid var(--border); border-radius:10px; background:var(--panel); overflow:hidden; }
+  .case.pass { border-left:4px solid var(--green); }
+  .case.fail { border-left:4px solid var(--red); }
+  .case-head { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#fafbfc;
                border-bottom:1px solid var(--border); }
-  .case-id { font-weight:600; font-size:13px; }
-  .badge { font-size:11px; padding:2px 7px; border-radius:10px; }
+  .case-head input.id { font-weight:600; font-size:13px; border:1px solid transparent; background:transparent;
+                        padding:3px 6px; border-radius:5px; width:200px; }
+  .case-head input.id:focus { border-color:var(--border); background:#fff; outline:none; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:10px; }
   .badge.pass { background:#dcfce7; color:var(--green); }
   .badge.fail { background:#fee2e2; color:var(--red); }
-  textarea { width:100%; border:0; border-radius:0 0 8px 8px; padding:10px; font:12px/1.5 ui-monospace,
-             SFMono-Regular,Menlo,monospace; resize:vertical; min-height:70px; color:var(--ink); }
-  textarea.err { background:#fff5f5; }
-  .toolbar { display:flex; gap:8px; margin-bottom:12px; }
-  aside { position:sticky; top:64px; border:1px solid var(--border); border-radius:8px;
-          background:var(--panel); padding:14px; max-height:80vh; overflow:auto; }
-  .score { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border); }
-  .fail-detail { font-size:12px; color:var(--muted); margin:6px 0 12px; white-space:pre-wrap;
-                 background:#fff5f5; border:1px solid #fecaca; border-radius:6px; padding:8px; }
+  .form { padding:12px 14px; display:grid; grid-template-columns:170px 1fr; gap:8px 14px; align-items:start; }
+  .form label { color:var(--muted); font-size:12px; padding-top:6px; }
+  .form .field input[type=text], .form .field input[type=number], .form .field select,
+  .form .field textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:6px 8px;
+                          font:13px/1.4 inherit; color:var(--ink); background:#fff; }
+  .form .field textarea { resize:vertical; min-height:52px; }
+  .hint { color:var(--muted); font-size:11px; margin-top:2px; }
+  .toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; }
+  aside { position:sticky; top:64px; border:1px solid var(--border); border-radius:10px;
+          background:var(--panel); padding:14px; max-height:82vh; overflow:auto; }
+  .score { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); }
+  .score .pct { font-variant-numeric:tabular-nums; }
+  .fail-detail { font-size:12px; color:#7f1d1d; margin:6px 0 10px; background:#fff5f5;
+                 border:1px solid #fecaca; border-radius:6px; padding:8px; }
+  .fail-detail b { color:#991b1b; }
   .muted { color:var(--muted); font-size:12px; }
   .del { color:var(--red); border:0; background:none; }
   #msg { font-size:12px; }
@@ -59,7 +67,7 @@
   <div>
     <div class="toolbar">
       <button onclick="addCase()">+ Add case</button>
-      <button class="primary" onclick="save()">Save suite</button>
+      <button class="primary" onclick="save()">Save</button>
       <button class="run" onclick="run([suite])">▶ Run this suite</button>
       <span class="muted" id="suitehint"></span>
     </div>
@@ -69,96 +77,157 @@
 </main>
 <script>
 const API = "/evals/api";
-let suite = null, suites = [], lastResults = {};
+let suite = null, suites = [], cases = [], results = {};
 
-const TEMPLATES = {
-  qa: {id:"qa-NEW", question:"", reference_answer:"", expect_source:"facts",
-       must_include:[], must_not_include:[], min_citations:1, rubric:""},
-  classify: {id:"cl-NEW", doc_subject:"", expect:{triage:"actionable", doc_type:"quote"}},
-  fields: {id:"fx-NEW", doc_subject:"", expect:{vendor:"", services:[]}, min_recall:1.0},
-  identity: {id:"id-NEW", token:"", expect_status:"resolved"},
-  decision: {id:"dec-NEW", doc_subject:"", expect_recommendation:"review_quote"},
+const DOC_TYPES = ["quote","invoice","cro_data","project_update","query","vendor_capability","contract","logistics","other"];
+const RECS = ["review_quote","review_data","draft_reply","acknowledge","review_invoice","review_contract","review_logistics"];
+// field spec per suite: {k:dot-path, label, t:text|textarea|number|select|list, opts?, hint?}
+const FIELDS = {
+  qa: [
+    {k:"question", label:"Question", t:"text"},
+    {k:"reference_answer", label:"Reference answer (gold)", t:"textarea", hint:"The correct answer the judge compares against."},
+    {k:"expect_source", label:"Expected source", t:"select", opts:["","facts","documents","none"], hint:"facts = answered from the knowledge base; documents = email search; none = should say ‘not found’."},
+    {k:"must_include", label:"Must include", t:"list", hint:"comma-separated — answer must contain all of these"},
+    {k:"must_not_include", label:"Must NOT include", t:"list", hint:"comma-separated — answer must contain none of these"},
+    {k:"min_citations", label:"Min citations", t:"number"},
+    {k:"rubric", label:"Grading notes", t:"textarea"},
+  ],
+  classify: [
+    {k:"doc_subject", label:"Email subject contains", t:"text", hint:"a distinctive part of the email subject"},
+    {k:"expect.triage", label:"Expected triage", t:"select", opts:["","actionable","fyi","noise"]},
+    {k:"expect.doc_type", label:"Expected type", t:"select", opts:[""].concat(DOC_TYPES)},
+  ],
+  fields: [
+    {k:"doc_subject", label:"Email subject contains", t:"text"},
+    {k:"expect.vendor", label:"Vendor", t:"text"},
+    {k:"expect.total", label:"Total ($)", t:"number"},
+    {k:"expect.cell_lines", label:"Cell lines", t:"list", hint:"comma-separated"},
+    {k:"expect.services", label:"Services", t:"list", hint:"comma-separated (e.g. intact_ms, synthesis)"},
+    {k:"min_recall", label:"Min recall (0–1)", t:"number"},
+  ],
+  identity: [
+    {k:"token", label:"Token / code", t:"text", hint:"the molecule name/code to resolve"},
+    {k:"smiles", label:"SMILES (optional)", t:"text"},
+    {k:"expect_status", label:"Expected status", t:"select", opts:["","resolved","inchikey_merge","created","unresolved"]},
+    {k:"expect_same_as", label:"Same molecule as (optional)", t:"text", hint:"another token that should resolve to the same molecule"},
+  ],
+  decision: [
+    {k:"doc_subject", label:"Email subject contains", t:"text"},
+    {k:"expect_recommendation", label:"Expected recommendation", t:"select", opts:[""].concat(RECS)},
+  ],
 };
+const HINTS = {
+  qa:"Ask a question, give the gold answer, and optional must-include/exclude guardrails.",
+  classify:"Point at an email and give the expected triage + document type.",
+  fields:"Point at an email and give the expected extracted fields.",
+  identity:"Give a molecule token and the expected resolution.",
+  decision:"Point at an email and give the expected inbox recommendation.",
+};
+
+// dot-path helpers
+function getP(o,p){ return p.split(".").reduce((x,k)=> (x==null?undefined:x[k]), o); }
+function setP(o,p,v){ const ks=p.split("."); let x=o;
+  for(let i=0;i<ks.length-1;i++){ if(typeof x[ks[i]]!=="object"||x[ks[i]]==null) x[ks[i]]={}; x=x[ks[i]]; }
+  const last=ks[ks.length-1];
+  if(v===undefined) delete x[last]; else x[last]=v; }
 
 async function boot(){
   suites = await (await fetch(`${API}/suites`)).json();
-  suite = suites[0]?.name;
-  renderTabs();
-  await loadCases();
+  suite = suites[0]?.name; renderTabs(); await loadCases();
 }
 function renderTabs(){
   document.getElementById("tabs").innerHTML = suites.map(s =>
     `<div class="tab ${s.name===suite?'active':''}" onclick="switchSuite('${s.name}')">${s.name}<span class="n">${s.count}</span></div>`).join("");
 }
-async function switchSuite(s){ suite = s; renderTabs(); await loadCases(); }
+async function switchSuite(s){ suite=s; renderTabs(); await loadCases(); }
 
 async function loadCases(){
-  const cases = await (await fetch(`${API}/cases/${suite}`)).json();
-  document.getElementById("suitehint").textContent =
-    ({qa:"question + reference_answer + must_include/exclude",
-      classify:"doc_subject + expect{triage,doc_type}",
-      fields:"doc_subject + expect{vendor,total,cell_lines,services}",
-      identity:"token + expect_status (+expect_same_as)",
-      decision:"doc_subject + expect_recommendation"})[suite] || "";
-  const res = lastResults[suite] || {};
+  cases = await (await fetch(`${API}/cases/${suite}`)).json();
+  document.getElementById("suitehint").textContent = HINTS[suite]||"";
+  render();
+}
+function render(){
+  const spec = FIELDS[suite]||[];
   document.getElementById("cases").innerHTML = cases.map((c,i)=>{
-    const r = (res[c.id]);
+    const r = results[suite]?.[c.id];
     const cls = r===undefined?'':(r.passed?'pass':'fail');
     const badge = r===undefined?'':`<span class="badge ${r.passed?'pass':'fail'}">${r.passed?'pass':'fail'}</span>`;
+    const rows = spec.map(f=>{
+      const val = getP(c, f.k);
+      return `<label>${f.label}</label><div class="field">${input(i,f,val)}${f.hint?`<div class="hint">${f.hint}</div>`:''}</div>`;
+    }).join("");
     return `<div class="case ${cls}">
-      <div class="case-head"><span class="case-id">${c.id||'(no id)'} ${badge}</span>
-        <button class="del" onclick="delCase(${i})">delete</button></div>
-      <textarea data-i="${i}" spellcheck="false" oninput="validate(this)">${JSON.stringify(c,null,2)}</textarea>
+      <div class="case-head">
+        <input class="id" value="${esc(c.id||'')}" oninput="setId(${i},this.value)" placeholder="case id"/>
+        ${badge}<span style="flex:1"></span>
+        <button class="del" onclick="delCase(${i})">delete</button>
+      </div>
+      <div class="form">${rows}</div>
     </div>`;
   }).join("") || `<div class="muted">No cases yet — click “+ Add case”.</div>`;
 }
-function validate(ta){ try{ JSON.parse(ta.value); ta.classList.remove("err"); }catch{ ta.classList.add("err"); } }
-function collect(){
-  const out=[]; for(const ta of document.querySelectorAll("#cases textarea")){
-    try{ out.push(JSON.parse(ta.value)); }catch(e){ throw new Error(`Invalid JSON in a case: ${e.message}`); } }
-  return out;
+function input(i,f,val){
+  const oi = `oninput="upd(${i},'${f.k}','${f.t}',this.value)"`;
+  const oc = `onchange="upd(${i},'${f.k}','${f.t}',this.value)"`;
+  if(f.t==="textarea") return `<textarea ${oi}>${esc(val??"")}</textarea>`;
+  if(f.t==="number") return `<input type="number" step="any" value="${val??""}" ${oi}/>`;
+  if(f.t==="list"){ const s = Array.isArray(val)? val.join(", ") : (val??""); return `<input type="text" value="${esc(s)}" ${oi}/>`; }
+  if(f.t==="select") return `<select ${oc}>`+ f.opts.map(o=>`<option value="${o}" ${o===(val??"")?"selected":""}>${o||"—"}</option>`).join("") +`</select>`;
+  return `<input type="text" value="${esc(val??"")}" ${oi}/>`;
 }
-function addCase(){
-  const cases = safeCollect(); if(cases===null) return;
-  cases.push(structuredClone(TEMPLATES[suite]||{id:"NEW"}));
-  renderCases(cases);
+function upd(i,key,type,raw){
+  let v = raw;
+  if(type==="number"){ v = raw===""? undefined : Number(raw); }
+  else if(type==="list"){ v = raw.split(",").map(x=>x.trim()).filter(Boolean); }
+  else if(type==="select"){ v = raw===""? undefined : raw; }
+  setP(cases[i], key, v);
 }
-function delCase(i){ const cases = safeCollect(); if(cases===null) return; cases.splice(i,1); renderCases(cases); }
-function safeCollect(){ try{ return collect(); }catch(e){ msg(e.message,true); return null; } }
-function renderCases(cases){
-  document.getElementById("cases").innerHTML = cases.map((c,i)=>`<div class="case">
-    <div class="case-head"><span class="case-id">${c.id||'(no id)'}</span>
-      <button class="del" onclick="delCase(${i})">delete</button></div>
-    <textarea data-i="${i}" spellcheck="false" oninput="validate(this)">${JSON.stringify(c,null,2)}</textarea>
-  </div>`).join("");
+function setId(i,v){ cases[i].id = v; }
+function addCase(){ const t = FIELDS[suite]; const c = {id:`${suite}-new`};
+  // seed nested defaults
+  if(suite==="classify") c.expect={triage:"actionable",doc_type:"quote"};
+  if(suite==="fields"){ c.expect={vendor:"",services:[]}; c.min_recall=1.0; }
+  if(suite==="identity") c.expect_status="resolved";
+  if(suite==="decision") c.expect_recommendation="review_quote";
+  if(suite==="qa"){ c.expect_source="facts"; c.must_include=[]; c.min_citations=1; }
+  cases.push(c); render();
 }
+function delCase(i){ cases.splice(i,1); render(); }
 async function save(){
-  const cases = safeCollect(); if(cases===null) return;
-  const r = await fetch(`${API}/cases/${suite}`,{method:"PUT",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(cases)});
-  if(r.ok){ const d=await r.json(); msg(`saved ${d.saved} cases`); suites.find(s=>s.name===suite).count=d.saved; renderTabs(); }
+  const r = await fetch(`${API}/cases/${suite}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(cases)});
+  if(r.ok){ const d=await r.json(); msg(`saved ${d.saved} cases`); const t=suites.find(s=>s.name===suite); if(t)t.count=d.saved; renderTabs(); }
   else msg("save failed: "+(await r.text()), true);
 }
 async function run(which){
-  msg("running…");
-  const cases = safeCollect(); if(cases!==null){ await save(); }
-  const body = which? {suites:which} : {};
-  const r = await fetch(`${API}/run`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  msg("running…"); await save();
+  const r = await fetch(`${API}/run`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(which?{suites:which}:{})});
   if(!r.ok){ msg("run failed: "+(await r.text()), true); return; }
-  const rep = await r.json();
-  lastResults = {};
-  for(const s of rep.suites){ lastResults[s.suite]={}; for(const res of s.results) lastResults[s.suite][res.id]=res; }
-  renderResults(rep); msg("done"); loadCases();
+  const rep = await r.json(); results={};
+  for(const s of rep.suites){ results[s.suite]={}; for(const res of s.results) results[s.suite][res.id]=res; }
+  renderResults(rep); render(); msg("done");
 }
 function renderResults(rep){
   const el = document.getElementById("results");
   el.innerHTML = "<div style='font-weight:600;margin-bottom:8px'>Scorecard</div>" + rep.suites.map(s=>{
     const pct = s.pass_rate==null?'—':Math.round(s.pass_rate*100)+'%';
     const fails = s.results.filter(r=>!r.passed);
-    return `<div class="score"><span>${s.suite}</span><span>${s.passed}/${s.total} · ${pct}</span></div>` +
-      fails.map(f=>`<div class="fail-detail">✗ ${f.id}\n${JSON.stringify(f.detail,null,1).slice(0,500)}</div>`).join("");
+    return `<div class="score"><span>${s.suite}</span><span class="pct">${s.passed}/${s.total} · ${pct}</span></div>` +
+      fails.map(f=>`<div class="fail-detail"><b>✗ ${f.id}</b><br>${readable(f.detail)}</div>`).join("");
   }).join("");
 }
+function readable(d){
+  if(d.error) return "error: "+esc(d.error);
+  const parts=[];
+  if(d.missing_include?.length) parts.push("missing: "+d.missing_include.join(", "));
+  if(d.must_not_violations?.length) parts.push("should not include: "+d.must_not_violations.join(", "));
+  if(d.source_ok===false) parts.push("wrong source: "+d.source);
+  if(d.judge_score!=null) parts.push("judge "+d.judge_score+(d.judge?": "+esc(String(d.judge).slice(0,120)):""));
+  for(const k of ["triage","doc_type","vendor","total","recommendation","status","same_as"])
+    if(d[k]!==undefined && Array.isArray(d[k])) parts.push(`${k}: got ${JSON.stringify(d[k][0])} · expected ${JSON.stringify(d[k][1])}`);
+  for(const k of ["cell_lines","services"]) if(d[k]?.missing?.length) parts.push(`${k} missing: ${d[k].missing.join(", ")}`);
+  return parts.map(esc).join("<br>") || "(see run for details)";
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function msg(t,err){ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?'var(--red)':'var(--muted)'; }
 boot();
 </script>
