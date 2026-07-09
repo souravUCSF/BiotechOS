@@ -71,11 +71,14 @@ def _eval_qa(program_id, case, conn, repeat):
     v = judge(case["question"], case.get("reference_answer", ""), ans,
               rubric=case.get("rubric", ""), repeat=repeat, fallback_passed=guardrails_ok)
     passed = v.passed and not violations and src_ok and cites_ok
-    return passed, {"source": r["source"], "citations": len(r["citations"]),
-                    "missing_include": missing, "must_not_violations": violations,
+    return passed, {"source": r["source"], "expected_source": case.get("expect_source"),
+                    "citations": len(r["citations"]),
+                    "missing_include": missing, "expected_include": case.get("must_include", []),
+                    "must_not_violations": violations,
                     "source_ok": src_ok, "citations_ok": cites_ok,
                     "groundedness": grd.get("grounded"), "unsupported": grd.get("unsupported"),
-                    "judge_score": v.score, "judge": v.reasons, "answer": ans[:200]}
+                    "judge_score": v.score, "judge": v.reasons,
+                    "returned": ans, "reference": case.get("reference_answer", "")}
 
 
 def _eval_extract(program_id, case, conn):

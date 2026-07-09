@@ -53,6 +53,18 @@
   .muted { color:var(--muted); font-size:12px; }
   .del { color:var(--red); border:0; background:none; }
   #msg { font-size:12px; }
+  .spinner { width:15px; height:15px; border:2px solid var(--border); border-top-color:var(--ink);
+             border-radius:50%; animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .overlay { position:fixed; inset:0; background:rgba(247,249,251,.6); backdrop-filter:blur(1px);
+             display:none; align-items:center; justify-content:center; z-index:50; }
+  .overlay.on { display:flex; }
+  .overlay .box { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+                  padding:16px 22px; display:flex; gap:12px; align-items:center;
+                  box-shadow:0 8px 30px rgba(0,0,0,.10); font-size:14px; }
+  .kv { display:grid; grid-template-columns:78px 1fr; gap:2px 8px; margin-top:4px; }
+  .kv .k { color:#991b1b; font-weight:600; }
+  .kv .ret { color:#7f1d1d; } .kv .exp { color:#065f46; }
 </style>
 </head>
 <body>
@@ -75,6 +87,7 @@
   </div>
   <aside id="results"><div class="muted">Run evals to see the scorecard.</div></aside>
 </main>
+<div class="overlay" id="overlay"><div class="box"><span class="spinner"></span><span id="overlay-msg">Running evals…</span></div></div>
 <script>
 const API = "/evals/api";
 let suite = null, suites = [], cases = [], results = {};
@@ -190,7 +203,9 @@ function addCase(){ const t = FIELDS[suite]; const c = {id:`${suite}-new`};
   if(suite==="identity") c.expect_status="resolved";
   if(suite==="decision") c.expect_recommendation="review_quote";
   if(suite==="qa"){ c.expect_source="facts"; c.must_include=[]; c.min_citations=1; }
-  cases.push(c); render();
+  cases.unshift(c); render();                     // new case goes on top
+  window.scrollTo({top:0, behavior:"smooth"});
+  const idInput = document.querySelector("#cases .case .id"); if(idInput){ idInput.focus(); idInput.select(); }
 }
 function delCase(i){ cases.splice(i,1); render(); }
 async function save(){
@@ -198,13 +213,23 @@ async function save(){
   if(r.ok){ const d=await r.json(); msg(`saved ${d.saved} cases`); const t=suites.find(s=>s.name===suite); if(t)t.count=d.saved; renderTabs(); }
   else msg("save failed: "+(await r.text()), true);
 }
+function setRunning(on, text){
+  const o=document.getElementById("overlay"); o.classList.toggle("on", on);
+  if(text) document.getElementById("overlay-msg").textContent=text;
+  document.querySelectorAll("button.run, button.primary").forEach(b=>b.disabled=on);
+}
 async function run(which){
-  msg("running…"); await save();
-  const r = await fetch(`${API}/run`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(which?{suites:which}:{})});
-  if(!r.ok){ msg("run failed: "+(await r.text()), true); return; }
-  const rep = await r.json(); results={};
-  for(const s of rep.suites){ results[s.suite]={}; for(const res of s.results) results[s.suite][res.id]=res; }
-  renderResults(rep); render(); msg("done");
+  const label = which ? `Running “${which[0]}” (the judge may take a moment)…` : "Running all suites (the judge may take a moment)…";
+  setRunning(true, label); msg("running…");
+  try {
+    await save();
+    const r = await fetch(`${API}/run`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(which?{suites:which}:{})});
+    if(!r.ok){ msg("run failed: "+(await r.text()), true); return; }
+    const rep = await r.json(); results={};
+    for(const s of rep.suites){ results[s.suite]={}; for(const res of s.results) results[s.suite][res.id]=res; }
+    renderResults(rep); render(); msg("done");
+  } catch(e){ msg("run failed: "+e.message, true); }
+  finally { setRunning(false); }
 }
 function renderResults(rep){
   const el = document.getElementById("results");
@@ -215,18 +240,32 @@ function renderResults(rep){
       fails.map(f=>`<div class="fail-detail"><b>✗ ${f.id}</b><br>${readable(f.detail)}</div>`).join("");
   }).join("");
 }
-function readable(d){
-  if(d.error) return "error: "+esc(d.error);
-  const parts=[];
-  if(d.missing_include?.length) parts.push("missing: "+d.missing_include.join(", "));
-  if(d.must_not_violations?.length) parts.push("should not include: "+d.must_not_violations.join(", "));
-  if(d.source_ok===false) parts.push("wrong source: "+d.source);
-  if(d.judge_score!=null) parts.push("judge "+d.judge_score+(d.judge?": "+esc(String(d.judge).slice(0,120)):""));
-  for(const k of ["triage","doc_type","vendor","total","recommendation","status","same_as"])
-    if(d[k]!==undefined && Array.isArray(d[k])) parts.push(`${k}: got ${JSON.stringify(d[k][0])} · expected ${JSON.stringify(d[k][1])}`);
-  for(const k of ["cell_lines","services"]) if(d[k]?.missing?.length) parts.push(`${k} missing: ${d[k].missing.join(", ")}`);
-  return parts.map(esc).join("<br>") || "(see run for details)";
+// render a returned-vs-expected block that reads clearly
+function kv(label, ret, exp){
+  return `<div class="kv"><span class="k">${esc(label)}</span><span></span>`+
+         (ret!==undefined?`<span class="ret">returned</span><span class="ret">${esc(ret)}</span>`:"")+
+         (exp!==undefined?`<span class="exp">expected</span><span class="exp">${esc(exp)}</span>`:"")+
+         `</div>`;
 }
+function readable(d){
+  if(d.error) return `<span class="ret">error: ${esc(d.error)}</span>`;
+  const out=[];
+  // qa
+  if(d.returned!==undefined) out.push(kv("Answer", d.returned, d.reference||"(see reference)"));
+  if(d.missing_include?.length) out.push(kv("Missing", "(absent) "+d.missing_include.join(", "), d.expected_include?.join(", ")));
+  if(d.must_not_violations?.length) out.push(kv("Forbidden", d.must_not_violations.join(", ")+" (present)", "none of these"));
+  if(d.source_ok===false) out.push(kv("Source", d.source, d.expected_source));
+  if(d.citations_ok===false) out.push(kv("Citations", String(d.citations), "≥ required"));
+  if(d.judge_score!=null && d.judge) out.push(kv("Judge", `${d.judge_score} — ${String(d.judge).slice(0,160)}`));
+  // classify / fields / decision / identity: (got, expected) tuples
+  const LBL={triage:"Triage",doc_type:"Doc type",vendor:"Vendor",total:"Total",
+             recommendation:"Recommendation",status:"Status",same_as:"Same molecule"};
+  for(const k of Object.keys(LBL)) if(Array.isArray(d[k])) out.push(kv(LBL[k], fmt(d[k][0]), fmt(d[k][1])));
+  for(const k of ["cell_lines","services"]) if(d[k]?.missing?.length)
+    out.push(kv(k==="cell_lines"?"Cell lines":"Services", "missing "+d[k].missing.join(", "), "all present"));
+  return out.join("") || "(see run for details)";
+}
+function fmt(v){ return v===null||v===undefined? "—" : (typeof v==="boolean"? (v?"yes":"no") : String(v)); }
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function msg(t,err){ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?'var(--red)':'var(--muted)'; }
 boot();
