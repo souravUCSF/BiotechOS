@@ -51,6 +51,25 @@ def latest_message(body: str) -> str:
     return top if len(top) >= 15 else body[:1500]   # fall back if we over-trimmed
 
 
+def classify_input(email) -> str:
+    """The text a classifier should read: the NEWEST message (quoted thread history
+    stripped) plus any attachment text. Thread-safe and attachment-aware, so the
+    call keys on what THIS email actually delivers — not the original thread topic."""
+    body = getattr(email, "body", "") or getattr(email, "full_text", "") or ""
+    newest = latest_message(body)
+    full = getattr(email, "full_text", "") or body
+    parts = [newest]
+    try:
+        from .attachments import parse_attachments
+        for fn, txt in parse_attachments(full):
+            if txt and txt.strip():
+                parts.append(f"\n\n--- attachment: {fn} ---\n{txt}")
+    except Exception:
+        pass
+    out = "\n".join(p for p in parts if p).strip()
+    return out or body[:2000]
+
+
 CATEGORIES = ["ignore", "knowledge", "processing", "action"]
 
 

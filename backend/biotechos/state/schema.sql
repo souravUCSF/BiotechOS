@@ -189,6 +189,9 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     amount      REAL,
     status      TEXT DEFAULT 'draft',   -- draft | issued | invoiced | closed
     email_draft_id TEXT,                -- Gmail draft id
+    line_items  TEXT,                   -- JSON: [{description,quantity,amount}] on the PO doc
+    vendor_name TEXT,                   -- editable vendor name on the PO doc
+    approved_at TEXT,                   -- when the PO was issued
     created_at  TEXT DEFAULT (datetime('now'))
 );
 
@@ -288,84 +291,6 @@ CREATE TABLE IF NOT EXISTS facts (
     status         TEXT DEFAULT 'current'        -- current | superseded
 );
 CREATE INDEX IF NOT EXISTS idx_facts_subject ON facts(program_id, subject_type, subject_key, predicate, status);
-
--- ===================================================================
--- Entity graph (Knowledge Layer v1 — relational, on top of the facts core)
--- ===================================================================
--- Promotes the string subjects of observations/facts into first-class,
--- deduplicated nodes, and records typed relationships between them. Edges are
--- bitemporal (mirroring `facts`): a superseded edge keeps its history.
-
-CREATE TABLE IF NOT EXISTS entities (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    program_id    TEXT NOT NULL REFERENCES programs(id),
-    entity_type   TEXT NOT NULL,   -- vendor|person|program|contract|molecule|assay|cell_line|material|budget
-    canonical_key TEXT NOT NULL,   -- normalized identity key (dedup key)
-    display_name  TEXT NOT NULL,   -- as first seen / preferred label
-    attrs_json    TEXT,            -- JSON blob of typed attributes (domain, email, ...)
-    created_at    TEXT DEFAULT (datetime('now')),
-    UNIQUE(program_id, entity_type, canonical_key)
-);
-CREATE INDEX IF NOT EXISTS idx_entities_lookup
-    ON entities(program_id, entity_type, canonical_key);
-
--- Many surface names → one entity id (generalizes molecule_aliases to all types).
-CREATE TABLE IF NOT EXISTS entity_aliases (
-    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-    program_id         TEXT NOT NULL REFERENCES programs(id),
-    entity_id          INTEGER NOT NULL REFERENCES entities(id),
-    alias              TEXT NOT NULL,     -- as written
-    alias_norm         TEXT NOT NULL,     -- normalized key
-    source_document_id INTEGER,
-    confidence         REAL DEFAULT 1.0,
-    created_at         TEXT DEFAULT (datetime('now')),
-    UNIQUE(program_id, entity_id, alias_norm)
-);
-CREATE INDEX IF NOT EXISTS idx_entalias_norm ON entity_aliases(program_id, alias_norm);
-
--- Typed relationships between entities. Bitemporal, like `facts`.
-CREATE TABLE IF NOT EXISTS edges (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    program_id     TEXT NOT NULL REFERENCES programs(id),
-    src_entity_id  INTEGER NOT NULL REFERENCES entities(id),
-    predicate      TEXT NOT NULL,   -- works_at|quoted|tests|offers_service|supplied|...
-    dst_entity_id  INTEGER NOT NULL REFERENCES entities(id),
-    observation_id INTEGER REFERENCES observations(id),
-    source_document_id INTEGER REFERENCES documents(id),
-    confidence     REAL DEFAULT 0.8,
-    props_json     TEXT,            -- Phase-2 hook: commitment force/hedge/honored
-    valid_from     TEXT DEFAULT (datetime('now')),
-    valid_to       TEXT,            -- NULL = current
-    status         TEXT DEFAULT 'current'   -- current | superseded
-);
-CREATE INDEX IF NOT EXISTS idx_edges_src ON edges(program_id, src_entity_id, predicate, status);
-CREATE INDEX IF NOT EXISTS idx_edges_dst ON edges(program_id, dst_entity_id, predicate, status);
-
--- Suspected-decisions confirmation queue (Knowledge Layer Phase 2).
--- Every decision-shaped claim is surfaced here for the founder to confirm; human
--- confirmation (not a keyword heuristic) is what promotes it into `facts` + the
--- Decision Log. `observations` stays immutable; this row carries the mutable status.
-CREATE TABLE IF NOT EXISTS decisions (
-    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-    program_id         TEXT NOT NULL REFERENCES programs(id),
-    kind               TEXT,   -- price_agreement|vendor_selection|scope_change|
-                               --   timeline_commitment|go_no_go|contract_term|other
-    subject_type       TEXT NOT NULL,
-    subject_key        TEXT NOT NULL,
-    predicate          TEXT NOT NULL,
-    value              TEXT,
-    source_document_id INTEGER REFERENCES documents(id),
-    observation_id     INTEGER REFERENCES observations(id),
-    status             TEXT DEFAULT 'suspected',  -- suspected|confirmed|dismissed|superseded
-    confidence         REAL DEFAULT 0.6,
-    rationale          TEXT,                       -- why suspected (snippet / heuristic note)
-    decided_by         TEXT,
-    decided_at         TEXT,
-    ledger_entry_id    INTEGER REFERENCES ledger_entries(id),
-    created_at         TEXT DEFAULT (datetime('now'))  -- event time (source sent_at)
-);
-CREATE INDEX IF NOT EXISTS idx_decisions_queue
-    ON decisions(program_id, status, confidence);
 
 -- Discovered attachment passwords, keyed by vendor domain. LOCAL ONLY.
 CREATE TABLE IF NOT EXISTS vendor_credentials (

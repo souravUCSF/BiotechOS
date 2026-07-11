@@ -41,12 +41,16 @@ def structured(
     fallback: T,
     max_tokens: int = 4096,
     api_key: str | None = None,
+    timeout: float | None = None,
 ) -> tuple[T, bool]:
-    """Return (result, used_llm). Falls back to `fallback` if no key or on error."""
+    """Return (result, used_llm). Falls back to `fallback` if no key or on error.
+    `timeout` (seconds) is worth raising for slower models (Opus) on large inputs."""
     if not has_api_key(api_key):
         return fallback, False
     try:
         client = _get_client(api_key)
+        if timeout is not None:
+            client = client.with_options(timeout=timeout)
         resp = client.messages.parse(
             model=model,
             max_tokens=max_tokens,
@@ -54,7 +58,8 @@ def structured(
             messages=[{"role": "user", "content": user}],
             output_format=schema,
         )
-        return resp.parsed_output, True
+        # a malformed/empty completion can parse to None — never propagate that
+        return (resp.parsed_output, True) if resp.parsed_output is not None else (fallback, False)
     except Exception as e:  # network, auth, parse — demo must not hard-fail
         print(f"[llm] structured() falling back ({type(e).__name__}: {e})")
         return fallback, False
@@ -74,7 +79,8 @@ def text(
         return fallback, False
     try:
         client = _get_client(api_key)
-        resp = client.messages.create(
+        resp = _create_with_retry(
+            client,
             model=model,
             max_tokens=max_tokens,
             system=system,
@@ -84,6 +90,102 @@ def text(
         return out or fallback, True
     except Exception as e:
         print(f"[llm] text() falling back ({type(e).__name__}: {e})")
+        return fallback, False
+
+
+def _create_with_retry(client, tries: int = 4, **kw):
+    """messages.create with backoff on transient 'overloaded' (529) errors."""
+    import time
+    last = None
+    for i in range(tries):
+        try:
+            return client.messages.create(**kw)
+        except Exception as e:                       # noqa: BLE001
+            last = e
+            if "overload" in str(e).lower() or "529" in str(e):
+                time.sleep(1.5 * (i + 1))
+                continue
+            raise
+    raise last
+
+
+def document_json(
+    *,
+    model: str,
+    system: str,
+    user: str,
+    files: list[tuple[str, bytes, str]],   # (media_type, bytes, filename)
+    fallback: dict,
+    max_tokens: int = 4096,
+    api_key: str | None = None,
+    timeout: float | None = None,
+) -> tuple[dict, bool]:
+    """Send real attachment binaries to Claude NATIVELY (PDF via document blocks,
+    images via image blocks) and parse a JSON object from the reply. For reading
+    figures/plots/scanned pages that text extraction can't see."""
+    import base64 as _b64
+    import json as _json
+    import re as _re
+    if not has_api_key(api_key) or not files:
+        return fallback, False
+    try:
+        client = _get_client(api_key)
+        if timeout is not None:
+            client = client.with_options(timeout=timeout)
+        content: list = [{"type": "text", "text": user}]
+        for media_type, data, _name in files:
+            b64 = _b64.standard_b64encode(data).decode()
+            if media_type.startswith("image/"):
+                content.append({"type": "image",
+                                "source": {"type": "base64", "media_type": media_type, "data": b64}})
+            else:  # application/pdf
+                content.append({"type": "document",
+                                "source": {"type": "base64", "media_type": media_type, "data": b64}})
+        resp = _create_with_retry(
+            client,
+            model=model, max_tokens=max_tokens,
+            system=system + "\n\nReturn ONLY a single JSON object, no prose, no code fences.",
+            messages=[{"role": "user", "content": content}])
+        txt = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+        m = _re.search(r"\{.*\}", txt, _re.S)
+        return (_json.loads(m.group(0)) if m else fallback), True
+    except Exception as e:
+        print(f"[llm] document_json() falling back ({type(e).__name__}: {e})")
+        return fallback, False
+
+
+def json_object(
+    *,
+    model: str,
+    system: str,
+    user: str,
+    fallback: dict,
+    max_tokens: int = 4096,
+    api_key: str | None = None,
+    timeout: float | None = None,
+) -> tuple[dict, bool]:
+    """Extract a JSON object via an UNCONSTRAINED completion + parse — for schemas too
+    rich for grammar-constrained decoding (which can 400 'grammar compilation timed
+    out'). Returns (obj, used_llm); falls back to `fallback` on no key / parse error."""
+    import json as _json
+    import re as _re
+    if not has_api_key(api_key):
+        return fallback, False
+    try:
+        client = _get_client(api_key)
+        if timeout is not None:
+            client = client.with_options(timeout=timeout)
+        resp = _create_with_retry(
+            client,
+            model=model, max_tokens=max_tokens,
+            system=system + "\n\nReturn ONLY a single JSON object, no prose, no code fences.",
+            messages=[{"role": "user", "content": user}],
+        )
+        txt = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+        m = _re.search(r"\{.*\}", txt, _re.S)      # tolerate stray text/fences around it
+        return (_json.loads(m.group(0)) if m else fallback), True
+    except Exception as e:
+        print(f"[llm] json_object() falling back ({type(e).__name__}: {e})")
         return fallback, False
 
 

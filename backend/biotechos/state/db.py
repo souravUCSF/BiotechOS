@@ -38,6 +38,10 @@ _MIGRATIONS = [
     # Inbox v3 (mailbox): precomputed LLM triage stored per email
     ("documents", "triage_json", "TEXT"),        # JSON: {category,next_step,reason,needs_reply,confidence}
     ("documents", "seen", "INTEGER DEFAULT 0"),  # read/unread in the mailbox UI
+    # PO document editor: line items + editable vendor name captured on the PO itself
+    ("purchase_orders", "line_items", "TEXT"),   # JSON: [{description,quantity,amount}]
+    ("purchase_orders", "vendor_name", "TEXT"),  # editable vendor name on the PO doc
+    ("purchase_orders", "approved_at", "TEXT"),  # when the PO was issued
 ]
 
 

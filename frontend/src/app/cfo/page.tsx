@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useProgram } from "@/lib/ProgramContext";
 import { fetchBudget, type BudgetResponse } from "@/lib/api";
 
@@ -71,7 +72,11 @@ export default function CfoPage() {
                   <tr><td colSpan={4} className="px-3 py-3 text-inkFaint">No POs yet — approve a quote.</td></tr>
                 ) : data.purchase_orders.map((po) => (
                   <tr key={po.id} className="border-t border-border">
-                    <td className="px-3 py-2 font-mono text-xs">{po.po_number}</td>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      <Link href={`/po/${po.id}`} className="text-sky-400 hover:underline">
+                        {po.po_number ?? "(draft)"}
+                      </Link>
+                    </td>
                     <td className="px-3 py-2">{po.vendor_name}</td>
                     <td className="px-3 py-2 font-mono">{usd(po.amount)}</td>
                     <td className="px-3 py-2">

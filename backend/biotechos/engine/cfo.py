@@ -150,6 +150,135 @@ def approve_quote(quote_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
             "email_used_llm": used_llm, "budget": snapshot}
 
 
+# ---------------------------------------------------------------------------
+# PO document editor (the /po/{id} page): view / edit a draft PO, then issue it.
+# The line items live on the PO itself (purchase_orders.line_items JSON); a PO
+# minted from a quote inherits the quote's line items on first read.
+# ---------------------------------------------------------------------------
+
+def _po_line_items(conn, po: dict) -> list[dict]:
+    """Line items for a PO, normalized to {description,quantity,amount}. Falls back
+    to the source quote's items (shape {item,amount}) when the PO has none yet."""
+    if po.get("line_items"):
+        try:
+            raw = json.loads(po["line_items"])
+        except (TypeError, json.JSONDecodeError):
+            raw = []
+    elif po.get("quote_id"):
+        q = conn.execute("SELECT line_items FROM quotes WHERE id=?", (po["quote_id"],)).fetchone()
+        raw = json.loads(q["line_items"]) if q and q["line_items"] else []
+    else:
+        raw = []
+    items = []
+    for li in raw:
+        items.append({
+            "description": li.get("description") or li.get("item") or "",
+            "quantity": li.get("quantity", 1),
+            "amount": li.get("amount", 0),
+        })
+    return items
+
+
+def _po_view(conn, po: dict) -> dict:
+    vendor = None
+    if po.get("vendor_id"):
+        vendor = conn.execute("SELECT name FROM vendors WHERE id=?", (po["vendor_id"],)).fetchone()
+    return {
+        "id": po["id"],
+        "program_id": po["program_id"],
+        "vendor_name": po.get("vendor_name") or (vendor["name"] if vendor else None),
+        "status": po["status"],
+        "po_number": po["po_number"],
+        "approved_at": po.get("approved_at") or po.get("created_at"),
+        "line_items": _po_line_items(conn, po),
+    }
+
+
+def get_po(po_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
+    conn = db.connect()
+    try:
+        po = conn.execute("SELECT * FROM purchase_orders WHERE id=? AND program_id=?",
+                          (po_id, program_id)).fetchone()
+        if po is None:
+            raise ValueError("PO not found")
+        return _po_view(conn, dict(po))
+    finally:
+        conn.close()
+
+
+def update_po(po_id: int, line_items: list, vendor_name: str | None = None,
+              program_id: str = DEMO_PROGRAM_ID) -> dict:
+    """Save edits to a DTGTAT PO's line items + vendor name. Issued POs are immutable."""
+    conn = db.connect()
+    try:
+        po = conn.execute("SELECT * FROM purchase_orders WHERE id=? AND program_id=?",
+                          (po_id, program_id)).fetchone()
+        if po is None:
+            raise ValueError("PO not found")
+        po = dict(po)
+        if po["status"] != "draft":
+            return _po_view(conn, po)
+        clean = [{"description": (li.get("description") or "").strip(),
+                  "quantity": li.get("quantity"),
+                  "amount": round(float(li.get("amount") or 0), 2)}
+                 for li in line_items]
+        amount = round(sum(li["amount"] for li in clean), 2)
+        with conn:
+            conn.execute(
+                "UPDATE purchase_orders SET line_items=?, vendor_name=?, amount=? WHERE id=?",
+                (json.dumps(clean), (vendor_name or "").strip() or None, amount, po_id))
+            po = dict(conn.execute("SELECT * FROM purchase_orders WHERE id=?", (po_id,)).fetchone())
+        return _po_view(conn, po)
+    finally:
+        conn.close()
+
+
+def approve_po(po_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
+    """Issue a DTGTAT PO: assign a number, encumber the budget, draft the vendor
+    cover email, and append the Decision Log. Mirrors approve_quote's tail but
+    runs on an already-edited PO document. Idempotent for non-draft POs."""
+    conn = db.connect()
+    try:
+        po = conn.execute("SELECT * FROM purchase_orders WHERE id=? AND program_id=?",
+                          (po_id, program_id)).fetchone()
+        if po is None:
+            raise ValueError("PO not found")
+        po = dict(po)
+        items = _po_line_items(conn, po)
+        vendor_name = po.get("vendor_name")
+        if not vendor_name and po.get("vendor_id"):
+            v = conn.execute("SELECT name FROM vendors WHERE id=?", (po["vendor_id"],)).fetchone()
+            vendor_name = v["name"] if v else "Vendor"
+        vendor_name = vendor_name or "Vendor"
+        amount = round(sum(float(li.get("amount") or 0) for li in items), 2) or (po.get("amount") or 0)
+        # email draft expects [{item, amount}]
+        scope_items = [{"item": li["description"], "amount": li["amount"]} for li in items]
+        email, used_llm = _draft_vendor_email(vendor_name, po.get("po_number") or _po_number(program_id, po_id),
+                                               amount, scope_items or [{"item": "agreed scope", "amount": amount}])
+        if po["status"] != "draft":
+            return {"email": email, "email_used_llm": used_llm, "po_number": po["po_number"],
+                    "status": po["status"]}
+        po_number = po.get("po_number") or _po_number(program_id, po_id)
+        with conn:
+            conn.execute(
+                "UPDATE purchase_orders SET status='issued', po_number=?, amount=?, "
+                "email_draft_id=?, approved_at=datetime('now') WHERE id=?",
+                (po_number, amount, f"draft:{po_id}", po_id))
+            conn.execute("INSERT INTO commitments(program_id,po_id,amount,status) VALUES (?,?,?,'committed')",
+                         (program_id, po_id, amount))
+            conn.execute("UPDATE budget SET committed = committed + ? WHERE program_id=?",
+                         (amount, program_id))
+            if po.get("quote_id"):
+                conn.execute("UPDATE quotes SET status='ordered' WHERE id=?", (po["quote_id"],))
+            conn.execute(
+                "INSERT INTO ledger_entries(program_id,kind,title,content,approved_by) VALUES (?,?,?,?,?)",
+                (program_id, "po_approval",
+                 f"PO issued: {po_number} — {vendor_name} (${amount:,.0f})", email, "founder"))
+        return {"email": email, "email_used_llm": used_llm, "po_number": po_number, "status": "issued"}
+    finally:
+        conn.close()
+
+
 def reconcile_invoice(po_id: int, invoice_amount: float | None = None,
                       program_id: str = DEMO_PROGRAM_ID) -> dict:
     """Invoice -> 2-way match vs PO -> release funds (committed->actual) -> budget recompute."""
