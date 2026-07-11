@@ -9,7 +9,7 @@ import re
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel
 
 from ..config import DEMO_PROGRAM_ID
@@ -768,6 +768,207 @@ def competitive(program_id: str = Query(default=DEMO_PROGRAM_ID),
                 refresh: bool = Query(default=False)):
     """Structured competitive radar (programs / catalysts / financings / news)."""
     return competitive_engine.build(program_id, use_cache=not refresh)
+
+
+# ==== reconstructed inbox-loop routes: data QC · legal · registry · quotes ====
+
+class RunBody(BaseModel):
+    source: str = "text"                    # "text" | "native"
+    files: list[str] | None = None
+    api_key: str | None = None
+
+
+def _doc_or_404(conn, doc_id: int, program_id: str):
+    doc = conn.execute("SELECT * FROM documents WHERE id=? AND program_id=?",
+                       (doc_id, program_id)).fetchone()
+    if not doc:
+        conn.close()
+        raise HTTPException(404, "email not found")
+    return doc
+
+
+def _attachments_for(doc, program_id: str) -> list[dict]:
+    """Attachment list with native-read availability — union of parsed-text names and
+    on-disk binaries (a file can exist on disk without being inlined into raw_text)."""
+    from ..engine.processors import data as data_proc
+    from ..engine.attachments import parse_attachments
+    att_names = [fn for fn, _ in parse_attachments(doc["raw_text"] or "")]
+    real = data_proc.real_attachments_anon(program_id, doc["source_ref"])
+    names = list(dict.fromkeys([*att_names, *real.keys()]))
+    return [{"filename": n, "native_available": n in real and data_proc.can_read_native(real[n])}
+            for n in names]
+
+
+# ---- Data QC ----
+@app.get("/data/analysis/{doc_id}")
+def data_analysis_get(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    conn = get_conn()
+    doc = _doc_or_404(conn, doc_id, program_id)
+    r = conn.execute("SELECT * FROM data_analyses WHERE document_id=? AND program_id=?",
+                     (doc_id, program_id)).fetchone()
+    atts = _attachments_for(doc, program_id)
+    conn.close()
+    if not r:
+        return {"found": False, "status": "pending", "attachments": atts}
+    try:
+        analysis = json.loads(r["analysis_json"] or "{}")
+    except json.JSONDecodeError:
+        analysis = {}
+    return {"found": True, "id": r["id"], "status": r["status"], "verdict": r["verdict"],
+            "analysis": analysis, "attachments": atts}
+
+
+@app.post("/data/analysis/{doc_id}/run")
+def data_analysis_run(doc_id: int, body: RunBody, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine.processors import data as data_proc
+    conn = get_conn()
+    doc = _doc_or_404(conn, doc_id, program_id)
+    aid = data_proc.analyze_and_store(conn, program_id, doc, api_key=body.api_key,
+                                      source=body.source, files=body.files)
+    conn.commit()
+    r = conn.execute("SELECT * FROM data_analyses WHERE id=?", (aid,)).fetchone()
+    atts = _attachments_for(doc, program_id)
+    conn.close()
+    analysis = json.loads(r["analysis_json"] or "{}") if r else {}
+    return {"found": True, "id": aid, "status": r["status"] if r else "pending",
+            "verdict": r["verdict"] if r else None, "analysis": analysis, "attachments": atts}
+
+
+@app.post("/data/{analysis_id}/approve")
+def data_analysis_approve(analysis_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine.processors import data as data_proc
+    conn = get_conn()
+    try:
+        res = data_proc.approve(conn, program_id, analysis_id)
+        conn.commit()
+        return res
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/data/{analysis_id}/dismiss")
+def data_analysis_dismiss(analysis_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    conn = get_conn()
+    conn.execute("UPDATE data_analyses SET status='dismissed' WHERE id=? AND program_id=?",
+                 (analysis_id, program_id))
+    conn.commit()
+    conn.close()
+    return {"id": analysis_id, "status": "dismissed"}
+
+
+# ---- Legal review ----
+@app.get("/legal/review/{doc_id}")
+def legal_review_get(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine.processors import legal
+    conn = get_conn()
+    doc = _doc_or_404(conn, doc_id, program_id)
+    r = conn.execute("SELECT * FROM legal_reviews WHERE document_id=? AND program_id=?",
+                     (doc_id, program_id)).fetchone()
+    out = {"document_text": legal.document_text(doc), "attachments": _attachments_for(doc, program_id)}
+    conn.close()
+    if not r:
+        return {"found": False, "review": None, **out}
+    try:
+        review = json.loads(r["review_json"] or "{}")
+    except json.JSONDecodeError:
+        review = {}
+    return {"found": True, "review": review, **out}
+
+
+@app.post("/legal/review/{doc_id}/run")
+def legal_review_run(doc_id: int, body: RunBody, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine.processors import legal
+    conn = get_conn()
+    doc = _doc_or_404(conn, doc_id, program_id)
+    rid = legal.review_and_store(conn, program_id, doc, api_key=body.api_key,
+                                 source=body.source, files=body.files)
+    conn.commit()
+    r = conn.execute("SELECT * FROM legal_reviews WHERE id=?", (rid,)).fetchone()
+    out = {"document_text": legal.document_text(doc), "attachments": _attachments_for(doc, program_id)}
+    conn.close()
+    review = json.loads(r["review_json"] or "{}") if r else {}
+    return {"found": True, "review": review, **out}
+
+
+@app.get("/legal/document/{doc_id}/download")
+def legal_document_download(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine.processors import data as data_proc, legal
+    conn = get_conn()
+    doc = _doc_or_404(conn, doc_id, program_id)
+    reals = data_proc.real_attachments(doc["source_ref"])
+    conn.close()
+    if reals:
+        import mimetypes
+        p = reals[0]
+        mt = mimetypes.guess_type(str(p))[0] or "application/octet-stream"
+        return FileResponse(str(p), media_type=mt, filename=p.name)
+    return PlainTextResponse(legal.document_text(doc))
+
+
+# ---- Quotes (related-quote grouping) ----
+@app.get("/quotes/groups")
+def quotes_groups(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine import quote_related
+    return quote_related.quote_groups(program_id)
+
+
+# ---- Compound registry ----
+@app.get("/registry/candidates")
+def registry_candidates(program_id: str = Query(default=DEMO_PROGRAM_ID),
+                        q: str | None = Query(default=None)):
+    from ..engine import registry
+    return registry.candidates(program_id, q)
+
+
+@app.get("/registry/{molecule_id}/detail")
+def registry_detail(molecule_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine import registry
+    return registry.detail(program_id, molecule_id)
+
+
+class RegistryConfirm(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    value: str | None = None
+
+
+@app.post("/registry/{molecule_id}/confirm")
+def registry_confirm(molecule_id: int, body: RegistryConfirm):
+    from ..engine import registry
+    return registry.confirm_new(body.program_id, molecule_id, value=body.value)
+
+
+class RegistryMerge(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    target_id: int
+    vendor: str | None = None
+
+
+@app.post("/registry/{candidate_id}/merge")
+def registry_merge(candidate_id: int, body: RegistryMerge):
+    from ..engine import registry
+    return registry.merge(body.program_id, candidate_id, body.target_id, vendor=body.vendor)
+
+
+@app.post("/registry/{molecule_id}/dismiss")
+def registry_dismiss(molecule_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    from ..engine import registry
+    return registry.dismiss(program_id, molecule_id)
+
+
+@app.get("/molecules/search")
+def molecules_search(program_id: str = Query(default=DEMO_PROGRAM_ID), q: str = Query(...)):
+    from ..engine import registry
+    return registry.search_molecules(program_id, q)
+
+
+@app.get("/structure/svg")
+def structure_svg(smiles: str = Query(...)):
+    svg = structure_engine.structure_svg(smiles)
+    if svg is None:
+        raise HTTPException(422, "could not render structure")
+    return Response(content=svg, media_type="image/svg+xml")
 
 
 @app.get("/healthz")

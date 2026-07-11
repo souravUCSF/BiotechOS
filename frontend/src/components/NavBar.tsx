@@ -11,7 +11,6 @@ const LINKS = [
   { href: "/mailbox", label: "Inbox" },
   { href: "/simulation", label: "Simulation" },
   { href: "/query", label: "QueryOS" },
-  { href: "/entities", label: "Knowledge Graph" },
   { href: "/quotes", label: "Quotes" },
   { href: "/tpp-builder", label: "TPP" },
   { href: "/tpp", label: "Molecule Database" },

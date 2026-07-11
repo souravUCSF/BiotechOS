@@ -572,3 +572,101 @@ export async function fetchMailEmail(id: number): Promise<MailEmail> {
   if (!res.ok) throw new Error(`GET /mailbox/${id} failed: ${res.status}`);
   return res.json();
 }
+
+// ---- Data QC (data-email analysis → QC → deposit) ----
+export type QCStep = { step: string; detail: string; status: "ok" | "warn" | "fail" };
+export type DataChart = {
+  kind: "dose_response" | "panel";
+  compound?: string; target?: string; units?: string;
+  points?: number[][];
+  fit?: { ic50: number; hill: number; top: number; bottom: number; r2: number } | null;
+  reported_ic50?: number | null; rederived_ic50?: number | null;
+  fold?: number | null; flagged?: boolean;
+  items?: { property: string; value: number; units: string; band: string; flagged: boolean }[];
+};
+export type DepositionRow = {
+  molecule: string; standard_type: string; target?: string;
+  value: number | string; units?: string; flags?: string[]; relation?: string;
+};
+export type DataAnalysisBody = {
+  vendor_summary?: string;
+  counts?: { datasets?: number; discrepancies?: number; warnings?: number };
+  qc_steps: QCStep[];
+  charts: DataChart[];
+  deposition: DepositionRow[];
+  read_source?: string;
+};
+export type DataAttachment = { filename: string; native_available: boolean };
+export type DataAnalysis = {
+  found?: boolean;
+  id?: number;
+  status: string;                       // pending | approved | dismissed
+  verdict?: "pass" | "warn" | "fail";
+  analysis?: DataAnalysisBody | null;
+  attachments?: DataAttachment[];
+};
+
+export async function fetchDataAnalysis(docId: number, programId: string): Promise<DataAnalysis | null> {
+  const res = await fetch(`${API_BASE}/data/analysis/${docId}?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  const d = await res.json();
+  return d && d.found === false ? { ...d, status: d.status ?? "pending" } : d;
+}
+export async function runDataAnalysis(
+  docId: number, programId: string, source: "text" | "native" = "text", files?: string[],
+): Promise<DataAnalysis> {
+  const res = await fetch(`${API_BASE}/data/analysis/${docId}/run?program_id=${programId}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source, files: files ?? null }),
+  });
+  if (!res.ok) throw new Error(`POST /data/analysis/${docId}/run failed: ${res.status}`);
+  return res.json();
+}
+export async function approveDataAnalysis(analysisId: number, programId: string) {
+  const res = await fetch(`${API_BASE}/data/${analysisId}/approve?program_id=${programId}`, { method: "POST" });
+  if (!res.ok) throw new Error(`POST /data/${analysisId}/approve failed: ${res.status}`);
+  return res.json();
+}
+export async function dismissDataAnalysis(analysisId: number, programId: string) {
+  const res = await fetch(`${API_BASE}/data/${analysisId}/dismiss?program_id=${programId}`, { method: "POST" });
+  if (!res.ok) throw new Error(`POST /data/${analysisId}/dismiss failed: ${res.status}`);
+  return res.json();
+}
+
+// ---- Legal review (contract → house-standards review → execute/store) ----
+export type LegalIssue = {
+  severity: "high" | "medium" | "low";
+  title: string; clause?: string | null; issue: string; recommendation?: string;
+};
+export type LegalReviewBody = {
+  agreement_type: string; parties: string[]; term?: string | null;
+  execution_status: "draft" | "in_revision" | "executed";
+  summary: string; issues: LegalIssue[];
+  counts: { high: number; medium: number; low: number };
+  read_source?: string;
+};
+export type LegalReview = {
+  found?: boolean;
+  review: LegalReviewBody | null;
+  document_text: string;
+  attachments: DataAttachment[];
+};
+
+export async function fetchLegalReview(docId: number, programId: string): Promise<LegalReview | null> {
+  const res = await fetch(`${API_BASE}/legal/review/${docId}?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  return res.json();
+}
+export async function runLegalReview(
+  docId: number, programId: string, source: "text" | "native" = "text", files?: string[],
+): Promise<LegalReview> {
+  const res = await fetch(`${API_BASE}/legal/review/${docId}/run?program_id=${programId}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source, files: files ?? null }),
+  });
+  if (!res.ok) throw new Error(`POST /legal/review/${docId}/run failed: ${res.status}`);
+  return res.json();
+}
+export function legalDocDownloadUrl(docId: number, programId: string): string {
+  return `${API_BASE}/legal/document/${docId}/download?program_id=${programId}`;
+}
