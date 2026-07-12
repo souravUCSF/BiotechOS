@@ -12,9 +12,12 @@ legal, data). Underneath sits a queryable knowledge base and a TPP scoring engin
 Everything is partitioned by `program_id`, so multi-program is a data property, not
 a bolt-on.
 
-Built around two real programs: a **TGTA kinase-inhibitor** program (Program A) and
-an **ADC** program (Program B), using anonymized CRO archives (target identity and
-chemical structures scrubbed; vendors, people, and values kept real).
+Ships with a **self-contained demo**: a fictional **KRAS G12C** program (`program_id:
+kras`) — 50 internal compounds (KES-####) with biochemical, cellular, and selectivity
+data scored against a TPP, a $500K budget, and four inbox emails (quote / invoice /
+data / legal). It seeds automatically on first boot (or run
+`uv run python -m biotechos.ingest.seed_kras`). All data is synthetic; molecules are
+public reference chemistry.
 
 ---
 

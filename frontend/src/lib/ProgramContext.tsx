@@ -13,7 +13,7 @@ type Ctx = {
 const ProgramCtx = createContext<Ctx | null>(null);
 
 export function ProgramProvider({ children }: { children: ReactNode }) {
-  const [programId, setProgramId] = useState<string>("demo");
+  const [programId, setProgramId] = useState<string>("kras");
   const [programs, setPrograms] = useState<Program[]>([]);
 
   useEffect(() => {

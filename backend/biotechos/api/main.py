@@ -63,6 +63,17 @@ def _startup() -> None:
                 pass
         conn.execute("DELETE FROM programs WHERE id='program-a-real'")
     conn.close()
+    # Turnkey demo: populate the self-contained KRAS G12C program on first boot so a
+    # fresh clone shows data without a manual load step (idempotent; seeds only if empty).
+    try:
+        conn = db.connect()
+        empty = conn.execute("SELECT COUNT(*) FROM molecules WHERE program_id='kras'").fetchone()[0] == 0
+        conn.close()
+        if empty:
+            from ..ingest.seed_kras import seed as _seed_kras
+            _seed_kras()
+    except Exception as _e:
+        print(f"[startup] KRAS demo seed skipped: {_e}")
     # Fold-backlog reconciler exists but the automatic periodic sweep is OFF by request —
     # the backlog is folded only on demand via POST /modeling/fold-backlog/run (the
     # "Fold backlog" button). Re-enable by calling structure.start_backlog_sweep() here.

@@ -1,0 +1,32 @@
+{
+  "program": {
+    "id": "kras",
+    "name": "KRAS G12C Program",
+    "target": "KRAS",
+    "anti_target": "WT-KRAS",
+    "indication": "KRAS G12C-mutant NSCLC / colorectal cancer",
+    "status": "active",
+    "company": "Kestrel Therapeutics"
+  },
+  "tpp": {
+    "version": "v1",
+    "notes": "Initial TPP for the KRAS G12C program — potency, cellular activity, WT selectivity, developability.",
+    "author": "Kestrel Therapeutics",
+    "params": [
+      {"axis": "potency", "label": "KRAS G12C biochemical IC50", "metric": "assay:biochemical_ic50:KRAS", "operator": "<", "threshold": 50, "units": "nM", "weight": 1.0, "rationale": "Sub-50 nM biochemical potency vs GDP-loaded G12C."},
+      {"axis": "cellular", "label": "Cellular p-ERK IC50 (H358)", "metric": "assay:cellular_antiprolif:KRAS", "operator": "<", "threshold": 100, "units": "nM", "weight": 1.0, "rationale": "Pathway modulation in a KRAS G12C line."},
+      {"axis": "selectivity", "label": "WT-KRAS selectivity", "metric": "assay:selectivity:KRAS/WT", "operator": ">", "threshold": 10, "units": "x", "weight": 1.0, "rationale": "Mutant-selective to spare wild-type signalling."},
+      {"axis": "adme", "label": "cLogP", "metric": "adme:cLogP", "operator": "<", "threshold": 5, "units": "", "weight": 0.5, "rationale": "Developability / permeability."},
+      {"axis": "adme", "label": "Molecular weight", "metric": "adme:MW", "operator": "<", "threshold": 600, "units": "", "weight": 0.5, "rationale": "Keep MW in oral small-molecule space."}
+    ]
+  },
+  "budget": {"total": 500000, "committed": 48000, "actual": 22500, "monthly_burn": 35000},
+  "vendors": [
+    {"name": "Cell Kinetics CRO", "email": "quotes@cellkinetics.example", "kind": "in_vitro_pharmacology"},
+    {"name": "Northgate BioServices", "email": "results@northgatebio.example", "kind": "cell_biology"},
+    {"name": "Crestline Bio", "email": "contracts@crestlinebio.example", "kind": "medchem"}
+  ],
+  "quote": {"vendor": "Cell Kinetics CRO", "description": "KRAS G12C cellular p-ERK panel (Q-2041)", "amount": 48000, "status": "received"},
+  "purchase_order": {"vendor": "Cell Kinetics CRO", "po_number": "KES-PO-0007", "amount": 48000, "status": "issued"},
+  "invoice": {"vendor": "Cell Kinetics CRO", "invoice_number": "CK-2041", "amount": 22500, "status": "paid"}
+}
