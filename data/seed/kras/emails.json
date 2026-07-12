@@ -8,7 +8,7 @@
     "sent_at": "2026-06-03T09:14:00Z",
     "vendor": "Cell Kinetics CRO",
     "amount": 48000,
-    "raw_text": "Hi,\n\nThank you for the enquiry. Please find our quotation for the KRAS G12C cellular p-ERK inhibition panel.\n\nScope: dose-response p-ERK (MSD ELISA) IC50 in three KRAS G12C lines — NCI-H358 (lung), MIA PaCa-2 (pancreatic) and SW1573 (lung) — for up to 8 test compounds, 10-point curves in duplicate, plus sotorasib as reference control.\n\nDeliverables: per-compound IC50 per line, curve fits, raw plate data.\nTurnaround: 3-4 weeks from compound receipt.\nPrice: USD 48,000 (fixed).\nQuote ref: Q-2041, valid 60 days.\n\nBest regards,\nPriya Nair\nCell Kinetics CRO",
+    "raw_text": "Hi,\n\nThank you for the enquiry. Please find our quotation for the KRAS G12C cellular p-ERK inhibition panel.\n\nScope: dose-response p-ERK (MSD ELISA) IC50 in three KRAS G12C lines — NCI-H358 (lung), MIA PaCa-2 (pancreatic) and SW1573 (lung) — for up to 8 test compounds, 10-point curves in duplicate, plus a reference control compound.\n\nDeliverables: per-compound IC50 per line, curve fits, raw plate data.\nTurnaround: 3-4 weeks from compound receipt.\nPrice: USD 48,000 (fixed).\nQuote ref: Q-2041, valid 60 days.\n\nBest regards,\nPriya Nair\nCell Kinetics CRO",
     "line_items": [
       {"description": "p-ERK IC50 panel, 3 cell lines x 8 compounds", "quantity": 8, "amount": 42000},
       {"description": "Reference control + assay QC", "quantity": 1, "amount": 6000}

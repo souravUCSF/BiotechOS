@@ -394,9 +394,13 @@ def analyze(program_id: str, doc_row, api_key: str | None = None,
 
 def analyze_and_store(conn, program_id: str, doc_row, api_key: str | None = None,
                       redo: bool = False, source: str = "text", files: list | None = None) -> int | None:
+    import os
     doc_id = doc_row["id"]
     existing = conn.execute("SELECT id FROM data_analyses WHERE document_id=?", (doc_id,)).fetchone()
-    if existing and not redo:
+    # Keyless demo: with no LLM key, keep any precomputed analysis instead of recomputing
+    # to an empty stub — so the DataQC button works offline.
+    eff_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    if existing and (not redo or not eff_key):
         return existing["id"]
     a = analyze(program_id, doc_row, api_key=api_key, source=source, files=files)
     summary = (a["vendor_summary"] or "")[:200]

@@ -1,0 +1,14 @@
+{
+  "agreement_type": "Mutual CDA",
+  "parties": ["Kestrel Therapeutics", "Crestline Bio"],
+  "term": "2 years; 5-year confidentiality survival",
+  "execution_status": "draft",
+  "summary": "Standard mutual confidentiality agreement to evaluate a potential KRAS medicinal-chemistry collaboration. Terms are broadly within house standards; two minor items to align before signature.",
+  "issues": [
+    { "severity": "medium", "title": "No residuals clause", "clause": "—", "issue": "The agreement lacks a residuals clause; personnel retained-knowledge is not carved out.", "recommendation": "Add the standard residuals clause to protect independent development." },
+    { "severity": "low", "title": "Confidentiality survival period", "clause": "§5", "issue": "5-year survival exceeds the 3-year house default.", "recommendation": "Acceptable for early evaluation; negotiate to 3 years if convenient." },
+    { "severity": "low", "title": "Governing law", "clause": "§9", "issue": "Delaware governing law.", "recommendation": "Accept — standard." }
+  ],
+  "counts": { "high": 0, "medium": 1, "low": 2 },
+  "read_source": "email body"
+}

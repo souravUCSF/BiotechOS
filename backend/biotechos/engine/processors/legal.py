@@ -168,10 +168,14 @@ def review(program_id: str, doc_row, api_key: str | None = None,
 
 def review_and_store(conn, program_id: str, doc_row, api_key: str | None = None,
                      source: str = "text", files: list | None = None) -> int:
-    r = review(program_id, doc_row, api_key=api_key, source=source, files=files)
-    summary = (r.get("summary") or "")[:200]
+    import os
     existing = conn.execute("SELECT id FROM legal_reviews WHERE document_id=?",
                             (doc_row["id"],)).fetchone()
+    # Keyless demo: with no LLM key, keep any precomputed review instead of recomputing.
+    if existing and not (api_key or os.environ.get("ANTHROPIC_API_KEY")):
+        return existing["id"]
+    r = review(program_id, doc_row, api_key=api_key, source=source, files=files)
+    summary = (r.get("summary") or "")[:200]
     if existing:
         conn.execute("UPDATE legal_reviews SET status='pending', summary=?, review_json=? WHERE id=?",
                      (summary, json.dumps(r), existing["id"]))

@@ -27,7 +27,7 @@ def _load(name: str):
 def _clear(conn):
     for tbl in ("assays", "molecules", "tpp_params", "tpp_versions", "documents",
                 "invoices", "purchase_orders", "quotes", "vendors", "budget",
-                "molecule_groups"):
+                "data_analyses", "legal_reviews", "molecule_groups"):
         try:
             conn.execute(f"DELETE FROM {tbl} WHERE program_id=?", (PROG,))
         except Exception:
@@ -56,6 +56,12 @@ def seed() -> dict:
                 "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out,status,adme_json) "
                 "VALUES (?,?,?,?,0,'active',?)",
                 (PROG, m["name"], m["smiles"], identity.inchikey(m["smiles"]), json.dumps(adme))).lastrowid
+            # register the code as a verified alias so incoming CRO data resolves to this
+            # molecule (attaches) instead of creating a duplicate registry candidate
+            conn.execute(
+                "INSERT OR IGNORE INTO molecule_aliases(program_id,molecule_id,alias,alias_norm,"
+                "alias_type,verified) VALUES (?,?,?,?, 'internal', 1)",
+                (PROG, mid, m["name"], identity.normalize(m["name"])))
             rows = [
                 ("biochemical_ic50", "KRAS", "IC50", m["kras_g12c_ic50_nM"], "nM", "protein", "KRAS-G12C",
                  "KRAS G12C(GDP) biochemical inhibition IC50 (TR-FRET)"),
@@ -107,15 +113,32 @@ def seed() -> dict:
             (PROG, poid, inv["amount"], inv["status"], inv["vendor"], inv["invoice_number"]))
 
         # inbox emails (documents)
+        doc_by_cat = {}
         for e in emails:
             extraction = {k: e[k] for k in ("dataset", "line_items", "amount", "legal", "invoice_number") if k in e}
-            conn.execute(
+            did = conn.execute(
                 "INSERT INTO documents(program_id,direction,email_from,email_to,subject,sent_at,doc_type,"
                 "triage,raw_text,extraction_json,triage_json,seen) "
                 "VALUES (?, 'inbound', ?,?,?,?,?, 'actionable', ?,?,?, 0)",
                 (PROG, e["email_from"], e["email_to"], e["subject"], e["sent_at"], e["doc_type"],
                  e["raw_text"], json.dumps(extraction) if extraction else None,
-                 json.dumps({"category": e["category"], "triage": "actionable"})))
+                 json.dumps({"category": e["category"], "triage": "actionable"}))).lastrowid
+            doc_by_cat[e["category"]] = did
+
+        # precomputed DataQC + Legal review so the buttons work with no LLM key
+        if "data" in doc_by_cat and (SEED / "data_analysis.json").exists():
+            da = _load("data_analysis.json")
+            conn.execute(
+                "INSERT INTO data_analyses(program_id,document_id,status,verdict,summary,analysis_json) "
+                "VALUES (?,?, 'pending', ?, ?, ?)",
+                (PROG, doc_by_cat["data"], da.get("verdict"),
+                 (da["analysis"].get("vendor_summary") or "")[:200], json.dumps(da["analysis"])))
+        if "legal" in doc_by_cat and (SEED / "legal_review.json").exists():
+            lr = _load("legal_review.json")
+            conn.execute(
+                "INSERT INTO legal_reviews(program_id,document_id,status,summary,review_json) "
+                "VALUES (?,?, 'pending', ?, ?)",
+                (PROG, doc_by_cat["legal"], (lr.get("summary") or "")[:200], json.dumps(lr)))
     n_mol = conn.execute("SELECT COUNT(*) FROM molecules WHERE program_id=?", (PROG,)).fetchone()[0]
     n_doc = conn.execute("SELECT COUNT(*) FROM documents WHERE program_id=?", (PROG,)).fetchone()[0]
     conn.close()
