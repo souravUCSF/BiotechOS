@@ -8,6 +8,7 @@ user's `draft_legal` skill instructions to use that exact logic instead.
 from __future__ import annotations
 
 import json
+import re
 
 from ...config import MODEL_ARTIFACTS, org_for_program
 from .. import llm
@@ -98,6 +99,38 @@ def document_text(doc_row) -> str:
     raw = doc_row["raw_text"] or ""
     atts = "\n\n".join(f"--- {fn} ---\n{txt}" for fn, txt in parse_attachments(raw))
     return atts or raw
+
+
+# Strong signals that an attached legal doc is already fully signed / completed and
+# returned for our records (so it needs filing, not a redline review).
+_EXECUTED_RX = re.compile(
+    r"\bfully[-\s]?executed\b|\bexecuted (?:copy|copies|version|document|documents|agreement|contract)\b"
+    r"|\bcountersigned\b|\bduly signed\b|\bsignature block[s]? completed\b"
+    r"|docusign[^.\n]{0,30}complet|\bcompleted via docusign\b|\bexecution version\b(?=.*sign)",
+    re.IGNORECASE)
+
+
+def detect_execution_status(program_id: str, doc_row, api_key: str | None = None) -> dict:
+    """Cheap up-front classifier: is this legal email an ALREADY-EXECUTED document
+    (file it) or something to review (draft/redline)? Keyword-first on the email +
+    attachment text, with an LLM fallback when ambiguous. Avoids the full redline
+    review just to learn execution status."""
+    text = ((doc_row["raw_text"] or "") + "\n" + document_text(doc_row))[:8000]
+    if _EXECUTED_RX.search(text):
+        return {"execution_status": "executed", "method": "keyword",
+                "reason": "phrasing indicates a fully-executed document returned for records"}
+    # LLM fallback: single focused question, cheap
+    sys = ("Classify whether the attached/described legal document is ALREADY FULLY EXECUTED "
+           "(signed/countersigned/completed by all parties and returned for records) versus a "
+           "DTGTAT or REDLINE still under negotiation. Return JSON "
+           '{"execution_status":"executed"|"in_revision"|"draft","reason":str}.')
+    obj, _ = llm.json_object(model=MODEL_ARTIFACTS, system=sys, user=text[:6000],
+                             fallback={"execution_status": "draft", "reason": "no signature signals"},
+                             api_key=api_key, max_tokens=200, timeout=60)
+    st = str(obj.get("execution_status") or "draft").lower()
+    if st not in ("executed", "in_revision", "draft"):
+        st = "draft"
+    return {"execution_status": st, "method": "llm", "reason": obj.get("reason", "")}
 
 
 def review(program_id: str, doc_row, api_key: str | None = None,

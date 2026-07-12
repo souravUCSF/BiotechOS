@@ -14,6 +14,7 @@ export type Assay = {
   source: string | null;
   assay_desc: string | null;
   flags: string | null;
+  source_document_id: number | null;
 };
 
 export type Molecule = {

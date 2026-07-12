@@ -139,13 +139,21 @@ def pass2_collect_assays(source_refs: set[str], path=RAW_DEMO) -> dict[str, list
             if val is None:
                 continue
             from ..engine.metrics import extract_cell_line
+            # typed biological system (target-orthogonal): cellular -> cell_line system;
+            # biochemical/binding with a molecular target -> protein system (=target).
+            if mod == "cellular_antiprolif":
+                sys_type, sys_val = "cell_line", extract_cell_line(r["assay_description"])
+            elif tgt:
+                sys_type, sys_val = "protein", tgt
+            else:
+                sys_type, sys_val = None, None
             out[r["molecule_chembl_id"]].append({
                 "modality": mod, "target": tgt,
                 "standard_type": r["standard_type"], "value": val,
                 "units": r["standard_units"], "relation": r["standard_relation"],
                 "pchembl": _to_float(r["pchembl_value"]),
                 "assay_desc": r["assay_description"],
-                "cell_line": extract_cell_line(r["assay_description"]) if mod == "cellular_antiprolif" else None,
+                "system_type": sys_type, "system": sys_val,
                 "flags": r["data_validity_comment"],
                 "source": "internal_dataset",
             })
@@ -243,12 +251,12 @@ def load(reset: bool = True) -> dict:
                 for a in assays:
                     conn.execute(
                         "INSERT INTO assays(program_id,molecule_id,modality,target,"
-                        "standard_type,value,units,relation,pchembl,source,cell_line,assay_desc,flags)"
-                        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        "standard_type,value,units,relation,pchembl,source,system_type,system,assay_desc,flags)"
+                        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                         (DEMO_PROGRAM_ID, mol_id, a["modality"], a["target"],
                          a["standard_type"], a["value"], a["units"], a["relation"],
-                         a["pchembl"], a["source"], a.get("cell_line"), a["assay_desc"],
-                         json.dumps([a["flags"]]) if a["flags"] else None),
+                         a["pchembl"], a["source"], a.get("system_type"), a.get("system"),
+                         a["assay_desc"], json.dumps([a["flags"]]) if a["flags"] else None),
                     )
                 if selectivity is not None:
                     conn.execute(
@@ -342,11 +350,12 @@ def add_molecules(n: int = 250, program_id: str = DEMO_PROGRAM_ID) -> dict:
             for a in assays:
                 conn.execute(
                     "INSERT INTO assays(program_id,molecule_id,modality,target,standard_type,"
-                    "value,units,relation,pchembl,source,cell_line,assay_desc,flags)"
-                    " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "value,units,relation,pchembl,source,system_type,system,assay_desc,flags)"
+                    " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (program_id, mol_id, a["modality"], a["target"], a["standard_type"],
                      a["value"], a["units"], a["relation"], a["pchembl"], a["source"],
-                     a.get("cell_line"), a["assay_desc"], json.dumps([a["flags"]]) if a["flags"] else None),
+                     a.get("system_type"), a.get("system"), a["assay_desc"],
+                     json.dumps([a["flags"]]) if a["flags"] else None),
                 )
             if selectivity is not None:
                 conn.execute(

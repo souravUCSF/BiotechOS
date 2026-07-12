@@ -103,6 +103,8 @@ const API = "/evals/api";
 let suite = null, suites = [], cases = [], results = {};
 
 const DOC_TYPES = ["quote","invoice","cro_data","project_update","query","vendor_capability","contract","logistics","other"];
+// The 5-way business classification the classifier now produces (no more triage).
+const CATS = ["quote","invoice","legal","data","other"];
 const RECS = ["review_quote","review_data","draft_reply","acknowledge","review_invoice","review_contract","review_logistics"];
 // field spec per suite: {k:dot-path, label, t:text|textarea|number|select|list, opts?, hint?}
 const FIELDS = {
@@ -116,9 +118,8 @@ const FIELDS = {
     {k:"rubric", label:"Grading notes", t:"textarea"},
   ],
   classify: [
-    {k:"doc_subject", label:"Email subject contains", t:"text", hint:"a distinctive part of the email subject"},
-    {k:"expect.triage", label:"Expected triage", t:"select", opts:["","actionable","fyi","noise"]},
-    {k:"expect.doc_type", label:"Expected type", t:"select", opts:[""].concat(DOC_TYPES)},
+    {k:"doc_id", label:"Email ID", t:"number", hint:"the document/email id to classify"},
+    {k:"expect_type", label:"Expected type", t:"select", opts:[""].concat(CATS), hint:"the 5-way business category the classifier should return"},
   ],
   fields: [
     {k:"doc_subject", label:"Email subject contains", t:"text"},
@@ -141,14 +142,14 @@ const FIELDS = {
 };
 // Every case belongs to a program (default demo). Prepend a program selector to
 // each suite's fields so cases can be authored/retargeted per program.
-const PROGRAMS = ["demo","program-b"];
+const PROGRAMS = ["demo","program-b","program-a"];
 const PROGRAM_FIELD = {k:"program", label:"Program", t:"select", opts:PROGRAMS,
   hint:"which program's corpus this case runs against"};
 for(const s in FIELDS){ FIELDS[s] = [PROGRAM_FIELD].concat(FIELDS[s]); }
 
 const HINTS = {
   qa:"Ask a question, give the gold answer, and optional must-include/exclude guardrails.",
-  classify:"Point at an email and give the expected triage + document type.",
+  classify:"Point at an email by ID and give its expected type (quote/invoice/legal/data/other).",
   fields:"Point at an email and give the expected extracted fields.",
   identity:"Give a molecule token and the expected resolution.",
   decision:"Point at an email and give the expected inbox recommendation.",
@@ -217,7 +218,7 @@ function upd(i,key,type,raw){
 function setId(i,v){ cases[i].id = v; }
 function addCase(){ const t = FIELDS[suite]; const c = {id:`${suite}-new`};
   // seed nested defaults
-  if(suite==="classify") c.expect={triage:"actionable",doc_type:"quote"};
+  if(suite==="classify") c.expect_type="quote";
   if(suite==="fields"){ c.expect={vendor:"",services:[]}; c.min_recall=1.0; }
   if(suite==="identity") c.expect_status="resolved";
   if(suite==="decision") c.expect_recommendation="review_quote";

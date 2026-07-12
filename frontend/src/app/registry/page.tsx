@@ -75,6 +75,8 @@ export default function RegistryPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [detail, setDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [canonBusy, setCanonBusy] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   // server-side search: default = structure-less orphans; a query also surfaces
   // detected molecules that already have a structure (never the ChEMBL seed set).
@@ -88,7 +90,7 @@ export default function RegistryPage() {
         .catch(() => setItems([])).finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(t);
-  }, [programId, q]);
+  }, [programId, q, refreshTick]);
 
   const drop = (id: number) => { setItems((xs) => xs.filter((x) => x.id !== id)); setTotal((t) => Math.max(0, t - 1)); };
   function openDetail(id: number) {
@@ -99,6 +101,15 @@ export default function RegistryPage() {
   async function post(url: string, body?: unknown) {
     return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined });
+  }
+  // Promote an alias to the molecule's canonical name (re-keys the whole system).
+  async function makeCanonical(molId: number, alias: string) {
+    if (!confirm(`Make "${alias}" the canonical name? This re-keys every reference across the system.`)) return;
+    setCanonBusy(alias);
+    try {
+      const r = await post(`${API_BASE}/registry/${molId}/set-canonical`, { program_id: programId, alias });
+      if (r.ok) { openDetail(molId); setRefreshTick((t) => t + 1); }
+    } finally { setCanonBusy(null); }
   }
   async function register(c: Candidate) {
     const val = (smiles[c.id] || "").trim();
@@ -245,9 +256,32 @@ export default function RegistryPage() {
                   <button onClick={() => setDetail(null)} className="text-inkMuted hover:text-ink">✕</button>
                 </div>
                 {detail.aliases?.length > 0 && (
-                  <div className="mb-3 text-xs text-inkMuted">
-                    aliases: {detail.aliases.map((a: {alias: string; vendor: string | null}) =>
-                      a.alias + (a.vendor ? ` (${a.vendor})` : "")).join(", ")}
+                  <div className="mb-3">
+                    <div className="mb-1 text-xs text-inkMuted">
+                      aliases — promote any to the canonical name:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {detail.aliases.map((a: { alias: string; vendor: string | null }, i: number) => {
+                        const isCanon = a.alias === detail.molecule?.name;
+                        return (
+                          <span key={i} className="inline-flex items-center gap-1 rounded border border-border bg-panel2 px-1.5 py-0.5 text-xs">
+                            <span className="text-ink">{a.alias}</span>
+                            {a.vendor && <span className="text-inkFaint">({a.vendor})</span>}
+                            {isCanon ? (
+                              <span className="rounded bg-emerald-500/15 px-1 text-[10px] text-emerald-800">canonical</span>
+                            ) : (
+                              <button
+                                onClick={() => makeCanonical(detail.molecule.id, a.alias)}
+                                disabled={canonBusy === a.alias}
+                                className="rounded bg-sky-500/15 px-1 text-[10px] text-sky-300 hover:bg-sky-500/25 disabled:opacity-50"
+                                title="Make this the canonical name (re-keys the whole system)">
+                                {canonBusy === a.alias ? "…" : "make canonical"}
+                              </button>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 

@@ -2,12 +2,37 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  fetchDataAnalysis, runDataAnalysis, approveDataAnalysis, dismissDataAnalysis,
-  type DataAnalysis, type DataChart, type QCStep,
+  fetchDataAnalysis, runDataAnalysis, approveDataAnalysis, setEmailIgnored,
+  type DataAnalysis, type DataChart, type QCStep, type DepositionRow,
 } from "@/lib/api";
 
+// a deposition cell that turns into an input on double-click
+function EditCell({ value, onCommit, align = "left", mono = false, className = "" }: {
+  value: string | number | null | undefined; onCommit: (v: string) => void;
+  align?: "left" | "right"; mono?: boolean; className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(String(value ?? ""));
+  useEffect(() => { setV(String(value ?? "")); }, [value]);
+  const base = `px-2 py-1 ${align === "right" ? "text-right" : ""} ${mono ? "font-mono" : ""} ${className}`;
+  if (editing) {
+    return (
+      <td className={base}>
+        <input autoFocus value={v} onChange={(e) => setV(e.target.value)}
+          onBlur={() => { onCommit(v); setEditing(false); }}
+          onKeyDown={(e) => { if (e.key === "Enter") { onCommit(v); setEditing(false); } if (e.key === "Escape") setEditing(false); }}
+          className={`w-full rounded border border-sky-400 bg-white px-1 py-0.5 ${align === "right" ? "text-right" : ""} ${mono ? "font-mono" : ""}`} />
+      </td>
+    );
+  }
+  return (
+    <td className={`${base} cursor-text hover:bg-sky-50`} onDoubleClick={() => setEditing(true)}
+      title="double-click to edit">{value === "" || value == null ? "—" : String(value)}</td>
+  );
+}
+
 const VERDICT: Record<string, string> = {
-  pass: "bg-emerald-500/15 text-emerald-300", warn: "bg-amber-500/15 text-amber-300",
+  pass: "bg-emerald-500/15 text-emerald-800", warn: "bg-amber-500/15 text-amber-300",
   fail: "bg-rose-500/15 text-rose-300",
 };
 const STEP_ICON: Record<string, string> = { ok: "✓", warn: "⚠", fail: "✕" };
@@ -98,78 +123,72 @@ function Running({ mode }: { mode: "text" | "native" }) {
   );
 }
 
-function SourcePicker({ da, mode, setMode, sel, setSel }: {
-  da: DataAnalysis; mode: "text" | "native"; setMode: (m: "text" | "native") => void;
-  sel: string[]; setSel: (s: string[]) => void;
-}) {
-  const atts = da.attachments ?? [];
-  const anyNative = atts.some((a) => a.native_available);
-  return (
-    <div className="mb-2 rounded border border-border bg-black/20 p-2 text-xs">
-      <div className="mb-1 font-semibold text-inkMuted">Read from</div>
-      <label className="mr-3 inline-flex items-center gap-1 text-ink">
-        <input type="radio" checked={mode === "text"} onChange={() => setMode("text")} /> Anonymized text
-      </label>
-      <label className={`inline-flex items-center gap-1 ${anyNative ? "text-ink" : "text-inkFaint"}`}>
-        <input type="radio" checked={mode === "native"} disabled={!anyNative} onChange={() => setMode("native")} /> Native attachment
-      </label>
-      {mode === "native" && (
-        <div className="mt-1 space-y-0.5">
-          {atts.map((a) => (
-            <label key={a.filename} className={`flex items-center gap-1.5 ${a.native_available ? "text-ink" : "text-inkFaint"}`}>
-              <input type="checkbox" disabled={!a.native_available}
-                checked={sel.includes(a.filename)}
-                onChange={(e) => setSel(e.target.checked ? [...sel, a.filename] : sel.filter((f) => f !== a.filename))} />
-              📎 {a.filename}
-              {!a.native_available && <span className="text-[10px]">(no binary / needs LibreOffice)</span>}
-            </label>
-          ))}
-          <div className="text-[10px] text-amber-400">⚠ sends the real file to Anthropic; extracted identities are re-anonymized before storing.</div>
-        </div>
-      )}
-    </div>
-  );
-}
 
-export function DataQC({ docId, programId }: { docId: number; programId: string }) {
+export function DataQC({ docId, programId, onIgnored }: { docId: number; programId: string; onIgnored?: () => void }) {
   const [da, setDa] = useState<DataAnalysis | null>(null);
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"text" | "native">("text");
-  const [sel, setSel] = useState<string[]>([]);
+  const [dep, setDep] = useState<DepositionRow[]>([]);   // editable copy of the proposed deposition
+  const [approveMsg, setApproveMsg] = useState("");
 
   const load = useCallback(() => {
     fetchDataAnalysis(docId, programId).then(setDa).catch(() => setDa(null));
   }, [docId, programId]);
   useEffect(load, [load]);
-  useEffect(() => { setMode("text"); setSel([]); }, [docId]);
+  // sync the editable deposition whenever a fresh analysis loads
+  useEffect(() => { setDep(da?.analysis?.deposition ?? []); setApproveMsg(""); }, [da]);
+
+  function editDep(i: number, field: keyof DepositionRow, raw: string) {
+    setDep((rows) => rows.map((r, j) => {
+      if (j !== i) return r;
+      const v = field === "value" ? (raw.trim() === "" ? "" : (isNaN(Number(raw)) ? raw : Number(raw))) : raw;
+      return { ...r, [field]: v };
+    }));
+  }
+
+  // native-only: QC reads the real attachment (Sonnet + LibreOffice); no anonymized-text path
+  const nativeFiles = (da?.attachments ?? []).filter((x) => x.native_available).map((x) => x.filename);
+  const hasNative = nativeFiles.length > 0;
 
   async function run() {
     setBusy(true);
-    try { setDa(await runDataAnalysis(docId, programId, mode, mode === "native" ? sel : undefined)); }
+    try { setDa(await runDataAnalysis(docId, programId, "native", nativeFiles)); }
     finally { setBusy(false); }
   }
-  async function approve() { if (!da?.id) return; setBusy(true); try { await approveDataAnalysis(da.id, programId); load(); } finally { setBusy(false); } }
-  async function dismiss() { if (!da?.id) return; setBusy(true); try { await dismissDataAnalysis(da.id, programId); load(); } finally { setBusy(false); } }
+  async function ignore() {
+    setBusy(true);
+    try { await setEmailIgnored(docId, true, programId); onIgnored?.(); }
+    finally { setBusy(false); }
+  }
+  async function approve() {
+    if (!da?.id) return; setBusy(true);
+    try {
+      const r = await approveDataAnalysis(da.id, programId, dep);
+      const parts = [`${r.deposited} measurement(s) deposited`];
+      if (r.new_candidates > 0)
+        parts.push(`${r.new_candidates} new compound(s) sent to the Registry — approve them there before they appear in the Molecule Database`);
+      setApproveMsg(parts.join(" · "));
+      load();
+    } finally { setBusy(false); }
+  }
 
   if (!da) return null;
   if (!da.found) {
     return (
       <div className="mb-4 rounded-lg border border-borderStrong bg-panel2 p-3">
         <div className="mb-2 text-sm font-semibold text-ink">🧪 Data QC</div>
-        {busy ? <Running mode={mode} /> : (
-          <div className="mb-2 text-xs text-inkMuted">No analysis yet for this data email.</div>
+        {busy ? <Running mode="native" /> : hasNative ? (
+          <div className="mb-2 text-xs text-inkMuted">Reads the native attachment: {nativeFiles.join(", ")}</div>
+        ) : (
+          <div className="mb-2 text-xs text-inkMuted">No native attachment on this email to QC (needs a readable file / LibreOffice).</div>
         )}
-        <SourcePicker da={da} mode={mode} setMode={setMode} sel={sel} setSel={setSel} />
-        <button onClick={run} disabled={busy || (mode === "native" && sel.length === 0)}
+        <button onClick={run} disabled={busy || !hasNative}
           className="mt-1 rounded bg-sky-600 px-3 py-1.5 text-sm text-white disabled:opacity-50">
-          {busy ? "Analyzing…" : "Analyze data"}
+          {busy ? "Analyzing…" : "Analyze native attachment"}
         </button>
       </div>
     );
   }
   const a = da.analysis!;
-  const rs = (a as { read_source?: string }).read_source || "anonymized text";
-  const analyzedThisSource = mode === "native" ? rs.startsWith("native") : rs.startsWith("anonymized");
   return (
     <div className="mb-4 rounded-lg border border-borderStrong bg-panel2 p-3">
       <div className="mb-2 flex items-center gap-2">
@@ -180,7 +199,7 @@ export function DataQC({ docId, programId }: { docId: number; programId: string 
         </span>
         <span className="ml-auto text-xs text-inkFaint capitalize">{da.status}</span>
       </div>
-      {busy && <Running mode={mode} />}
+      {busy && <Running mode="native" />}
       {a.vendor_summary && <div className="mb-2 text-xs text-inkMuted">Vendor says: “{a.vendor_summary}”</div>}
 
       {/* traceable QC steps */}
@@ -202,23 +221,38 @@ export function DataQC({ docId, programId }: { docId: number; programId: string 
         </div>
       )}
 
-      {/* proposed deposition */}
-      {a.deposition.length > 0 && (
+      {/* proposed deposition — every extracted measurement; double-click a cell to edit */}
+      {dep.length > 0 && (
         <div className="mb-3">
-          <div className="mb-1 text-xs font-semibold text-inkMuted">Proposed deposition ({a.deposition.length})</div>
-          <div className="overflow-hidden rounded border border-border text-xs">
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-inkMuted">
+            Proposed deposition ({dep.length})
+            <span className="font-normal text-inkFaint">· double-click any cell to edit before approving</span>
+          </div>
+          <div className="overflow-x-auto rounded border border-border text-xs">
             <table className="w-full text-left">
               <thead className="bg-panel text-inkMuted">
-                <tr><th className="px-2 py-1">Compound</th><th className="px-2 py-1">Assay</th>
-                  <th className="px-2 py-1 text-right">Value</th><th className="px-2 py-1">Flags</th></tr>
+                <tr>
+                  <th className="px-2 py-1">Compound</th>
+                  <th className="px-2 py-1">Modality</th>
+                  <th className="px-2 py-1">Target</th>
+                  <th className="px-2 py-1">System</th>
+                  <th className="px-2 py-1">Type</th>
+                  <th className="px-2 py-1 text-right">Value</th>
+                  <th className="px-2 py-1">Units</th>
+                  <th className="px-2 py-1">Flags</th>
+                </tr>
               </thead>
               <tbody>
-                {a.deposition.map((d, i) => (
+                {dep.map((d, i) => (
                   <tr key={i} className="border-t border-border">
-                    <td className="px-2 py-1 font-mono text-ink">{d.molecule}</td>
-                    <td className="px-2 py-1 text-inkMuted">{d.standard_type}{d.target ? ` · ${d.target}` : ""}</td>
-                    <td className="px-2 py-1 text-right font-mono text-ink">{d.value} {d.units}</td>
-                    <td className="px-2 py-1 text-amber-300">{d.flags?.length ? "⚠" : ""}</td>
+                    <EditCell value={d.molecule} mono className="text-ink" onCommit={(v) => editDep(i, "molecule", v)} />
+                    <EditCell value={d.modality} className="text-inkMuted" onCommit={(v) => editDep(i, "modality", v)} />
+                    <EditCell value={d.target} className="text-ink" onCommit={(v) => editDep(i, "target", v)} />
+                    <td className="px-2 py-1 text-inkMuted">{d.system ? `${d.system_type ?? ""}: ${d.system}` : "—"}</td>
+                    <EditCell value={d.standard_type} className="text-inkMuted" onCommit={(v) => editDep(i, "standard_type", v)} />
+                    <EditCell value={d.value} align="right" mono className="text-ink" onCommit={(v) => editDep(i, "value", v)} />
+                    <EditCell value={d.units} className="text-inkMuted" onCommit={(v) => editDep(i, "units", v)} />
+                    <td className="px-2 py-1 text-amber-300" title={d.flags?.join(", ")}>{d.flags?.length ? "⚠" : ""}</td>
                   </tr>
                 ))}
               </tbody>
@@ -229,22 +263,24 @@ export function DataQC({ docId, programId }: { docId: number; programId: string 
 
       {da.status === "pending" ? (
         <div>
-          <SourcePicker da={da} mode={mode} setMode={setMode} sel={sel} setSel={setSel} />
           <div className="flex gap-2">
-            <button onClick={run} disabled={busy || (mode === "native" && sel.length === 0)}
+            <button onClick={run} disabled={busy || !hasNative}
               className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
-              {analyzedThisSource ? "Re-analyze" : "Analyze"} ({mode === "native" ? "native" : "text"})
-            </button>
+              Re-analyze native</button>
             <button onClick={approve} disabled={busy}
               className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
               Approve → deposit to DB
             </button>
-            <button onClick={dismiss} disabled={busy}
-              className="rounded border border-borderStrong px-3 py-1.5 text-sm text-ink">Dismiss</button>
+            <button onClick={ignore} disabled={busy}
+              title="Ignore for now — sets this data email aside; it drops out of the inbox counters"
+              className="rounded border border-borderStrong px-3 py-1.5 text-sm text-ink">🚫 Ignore for now</button>
           </div>
         </div>
       ) : (
-        <div className="text-xs text-emerald-400 capitalize">✓ {da.status}</div>
+        <div>
+          <div className="text-xs capitalize text-emerald-800">✓ {da.status}</div>
+          {approveMsg && <div className="mt-1 rounded border border-amber-400/40 bg-amber-50/40 px-2 py-1 text-xs text-amber-900">{approveMsg}</div>}
+        </div>
       )}
     </div>
   );

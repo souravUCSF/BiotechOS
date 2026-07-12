@@ -9,7 +9,7 @@ import {
 
 const EXAMPLES = [
   "Which cell lines can Vendor 2 test?",
-  "What services does Vendor 1 offer?",
+  "What was the results with CLO-00002",
   "How much are ADP-Glo kinase assays at Vendor 6?",
   "Who can run Caco-2 assays?",
 ];
@@ -47,7 +47,8 @@ function renderAnswer(
 }
 
 export default function QueryOSPage() {
-  const { programId } = useProgram();
+  const { programId, programs } = useProgram();
+  const programName = programs.find((p) => p.id === programId)?.name ?? "this program";
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [ans, setAns] = useState<KnowledgeAnswer | null>(null);
@@ -94,8 +95,8 @@ export default function QueryOSPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && run(q)}
-          placeholder="e.g. which cell lines can Vendor 22 test?"
-          className="flex-1 rounded border border-borderStrong bg-panel px-3 py-2 text-sm"
+          placeholder={`Ask anything about ${programName}`}
+          className="flex-1 rounded border border-borderStrong bg-panel px-3 py-2 text-sm placeholder:text-inkFaint"
         />
         <button
           onClick={() => run(q)}

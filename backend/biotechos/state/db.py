@@ -42,6 +42,24 @@ _MIGRATIONS = [
     ("purchase_orders", "line_items", "TEXT"),   # JSON: [{description,quantity,amount}]
     ("purchase_orders", "vendor_name", "TEXT"),  # editable vendor name on the PO doc
     ("purchase_orders", "approved_at", "TEXT"),  # when the PO was issued
+    # Compound registry lifecycle (molecules) — candidate/confirm/merge/dismiss.
+    ("molecules", "status", "TEXT DEFAULT 'active'"),  # active | candidate | dismissed | merged
+    ("molecules", "merged_into", "INTEGER"),     # surviving molecules.id when merged
+    ("molecules", "descriptor", "TEXT"),         # freeform identity descriptor
+    ("molecules", "sequence", "TEXT"),           # biologic sequence
+    # Typed biological system on assays (target-orthogonal); cell_line kept as legacy.
+    ("assays", "system_type", "TEXT"),           # protein|cell_line|subcellular|matrix|organism|tissue
+    ("assays", "system", "TEXT"),                # system value (HEK293, plasma, TGTA, ...)
+    ("assays", "species", "TEXT"),               # human|mouse|rat|...
+    ("assays", "conditions", "TEXT"),            # JSON exposure/dosing
+    ("assays", "source_document_id", "INTEGER"), # provenance
+    # PO / invoice provenance + fields (finance loop).
+    ("purchase_orders", "source_document_id", "INTEGER"),
+    ("purchase_orders", "notes", "TEXT"),
+    ("invoices", "source_document_id", "INTEGER"),
+    ("invoices", "vendor_name", "TEXT"),
+    ("invoices", "invoice_number", "TEXT"),
+    ("invoices", "paid_at", "TEXT"),
 ]
 
 

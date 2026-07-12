@@ -196,6 +196,10 @@ def confirm_new(program_id: str, molecule_id: int, *, value: str | None = None) 
                 "UPDATE molecules SET status='active', smiles=?, inchi_key=?, sequence=?, descriptor=? "
                 "WHERE id=? AND program_id=?", (smiles, ik, sequence, descriptor, molecule_id, program_id))
         kind = "smiles" if smiles else "sequence" if sequence else "descriptor"
+        # structure now known → RDKit ADME + enqueue Boltz co-fold (SMILES) / fold (sequence)
+        if smiles or sequence:
+            from . import structure
+            structure.on_structure_detected(molecule_id, program_id)
         return {"molecule_id": molecule_id, "status": "active", "identity_kind": kind}
     finally:
         conn.close()
@@ -358,26 +362,8 @@ def alias_map(program_id: str, molecule_id: int) -> dict:
     return {"molecule": p["molecule"], "by_vendor": by_vendor, "documents": p["documents"]}
 
 
-# doc_type → 5-way classifier category. Handles both legacy doc_types (contract,
-# cro_data, …) and cases where doc_type already holds a 5-way category value.
-_DT2CAT = {"quote": "quote", "invoice": "invoice", "contract": "legal", "cro_data": "data",
-           "data": "data", "legal": "legal", "other": "other"}
-_MOLECULE_CATEGORIES = {"quote", "invoice", "legal", "data"}
-
-
-def _doc_category(conn, doc_id: int | None, doc_type: str | None) -> str:
-    """Effective 5-way category for a document — a human reclassification stored in
-    triage_json wins; otherwise map the doc_type."""
-    if doc_id is not None:
-        r = conn.execute("SELECT triage_json FROM documents WHERE id=?", (doc_id,)).fetchone()
-        if r and r["triage_json"]:
-            try:
-                cat = json.loads(r["triage_json"]).get("category")
-                if cat in ("quote", "invoice", "legal", "data", "other"):
-                    return cat
-            except (TypeError, ValueError):
-                pass
-    return _DT2CAT.get(doc_type or "", "other")
+# 5-way category logic lives in engine/categories.py (single source of truth).
+from .categories import ACTIONABLE as _MOLECULE_CATEGORIES, category_for as _doc_category  # noqa: E402
 
 
 def rebuild_from_categories(program_id: str = DEMO_PROGRAM_ID) -> dict:

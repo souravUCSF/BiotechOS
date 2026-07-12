@@ -20,6 +20,7 @@ type Viewer = {
   render: () => void;
   clear: () => void;
   resize: () => void;
+  spin: (axis: boolean | string) => void;
 };
 
 function ensure3Dmol(src: string): Promise<void> {
@@ -46,9 +47,11 @@ function ensure3Dmol(src: string): Promise<void> {
   });
 }
 
-export function Structure3D({ moleculeId, className = "h-64" }: { moleculeId: number; className?: string }) {
+/** Generic 3Dmol viewer: fetches structure text from `url`, renders protein cartoon +
+ *  ligand sticks, optionally auto-spins. Header X-Structure-Format picks the parser. */
+export function MolViewer({ url, className = "h-64", spin = false, defaultFormat = "pdb" }:
+  { url: string; className?: string; spin?: boolean; defaultFormat?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { programId } = useProgram();
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [label, setLabel] = useState<string>("");
 
@@ -56,39 +59,32 @@ export function Structure3D({ moleculeId, className = "h-64" }: { moleculeId: nu
     let cancelled = false;
     (async () => {
       setState("loading");
-      const res = await fetch(`${API_BASE}/molecule/${moleculeId}/structure3d?program_id=${programId}`);
-      if (!res.ok) {
-        if (!cancelled) setState("error");
-        return;
-      }
+      const res = await fetch(url);
+      if (!res.ok) { if (!cancelled) setState("error"); return; }
       if (!cancelled) setLabel(res.headers.get("X-Structure-Label") ?? "");
-      const fmt = res.headers.get("X-Structure-Format") ?? "pdb";
-      const pdb = await res.text();
+      const fmt = res.headers.get("X-Structure-Format") ?? defaultFormat;
+      const text = await res.text();
       try {
         await ensure3Dmol("https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js");
-      } catch {
-        if (!cancelled) setState("error");
-        return;
-      }
+      } catch { if (!cancelled) setState("error"); return; }
       if (cancelled || !ref.current || !window.$3Dmol) return;
       try {
         const viewer = window.$3Dmol.createViewer(ref.current, { backgroundColor: "#f7f9fb" });
-        viewer.addModel(pdb, fmt);
+        viewer.addModel(text, fmt);
         viewer.setStyle({}, { cartoon: { color: "spectrum" } });
         viewer.setStyle({ hetflag: true }, { stick: { colorscheme: "greenCarbon" } });
         viewer.zoomTo();
         viewer.render();
         viewer.resize();
+        if (spin) viewer.spin("y");
         if (!cancelled) setState("ready");
       } catch (e) {
         console.error("3Dmol render failed:", e);
         if (!cancelled) setState("error");
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [moleculeId, programId]);
+    return () => { cancelled = true; };
+  }, [url, spin, defaultFormat]);
 
   return (
     <div className={`relative ${className} w-full overflow-hidden rounded border border-border bg-bg`}>
@@ -104,4 +100,9 @@ export function Structure3D({ moleculeId, className = "h-64" }: { moleculeId: nu
       )}
     </div>
   );
+}
+
+export function Structure3D({ moleculeId, className = "h-64" }: { moleculeId: number; className?: string }) {
+  const { programId } = useProgram();
+  return <MolViewer url={`${API_BASE}/molecule/${moleculeId}/structure3d?program_id=${programId}`} className={className} />;
 }

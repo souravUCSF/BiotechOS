@@ -197,28 +197,33 @@ def extract_cell_line(desc: str | None) -> str | None:
 
 
 def backfill_cell_lines(program_id: str = DEMO_PROGRAM_ID) -> int:
-    """Populate assays.cell_line for cellular assays from their descriptions."""
+    """Populate the typed biological system for cellular assays from their descriptions.
+    Writes system_type='cell_line'/system (the cell line); the legacy cell_line column is
+    left as-is. Kept for callers; registry.backfill_system covers the broader migration."""
     conn = db.connect()
     rows = conn.execute(
         "SELECT id, assay_desc FROM assays WHERE program_id=? AND modality='cellular_antiprolif'"
-        " AND cell_line IS NULL", (program_id,)).fetchall()
+        " AND system IS NULL", (program_id,)).fetchall()
     n = 0
     with conn:
         for r in rows:
             cl = extract_cell_line(r["assay_desc"])
             if cl:
-                conn.execute("UPDATE assays SET cell_line=? WHERE id=?", (cl, r["id"]))
+                conn.execute("UPDATE assays SET system_type='cell_line', system=? WHERE id=?",
+                             (cl, r["id"]))
                 n += 1
     conn.close()
     return n
 
 
 def _cellline_metrics(conn, program_id: str, min_mols: int = 3) -> list[dict]:
-    """One metric per cell line with anti-proliferation data on enough molecules."""
+    """One metric per cell line with anti-proliferation data on enough molecules.
+    Reads the typed `system` (falling back to legacy `cell_line` during transition)."""
     rows = conn.execute(
-        "SELECT cell_line, COUNT(DISTINCT molecule_id) nmol FROM assays "
-        "WHERE program_id=? AND modality='cellular_antiprolif' AND cell_line IS NOT NULL "
-        "GROUP BY cell_line HAVING nmol >= ? ORDER BY nmol DESC",
+        "SELECT COALESCE(system, cell_line) AS cell_line, COUNT(DISTINCT molecule_id) nmol "
+        "FROM assays WHERE program_id=? AND modality='cellular_antiprolif' "
+        "AND COALESCE(system, cell_line) IS NOT NULL "
+        "GROUP BY COALESCE(system, cell_line) HAVING nmol >= ? ORDER BY nmol DESC",
         (program_id, min_mols)).fetchall()
     out = []
     for r in rows:
@@ -269,12 +274,32 @@ def _measurement_metrics(conn, program_id: str) -> list[dict]:
     return out
 
 
+def _tpp_metrics(conn, program_id: str) -> list[dict]:
+    """Every metric the current TPP references, so any TPP criterion is discoverable
+    in the column picker under the SAME key the TPP scores against (e.g. a derived
+    selectivity key that isn't a plain stored assay). Appended last → only fills gaps."""
+    rows = conn.execute(
+        "SELECT DISTINCT metric, label, units FROM tpp_params WHERE program_id=? AND metric IS NOT NULL",
+        (program_id,)).fetchall()
+    out = []
+    for r in rows:
+        key = r["metric"]
+        if not key:
+            continue
+        kind = ("formula" if key.startswith("formula:") else
+                "adme" if key.startswith("adme:") else
+                "boltz" if key.startswith("boltz:") else "assay")
+        out.append({"key": key, "label": r["label"] or key, "units": r["units"] or "", "kind": kind})
+    return out
+
+
 def catalog(program_id: str = DEMO_PROGRAM_ID, include_counts: bool = True) -> list[dict]:
     conn = db.connect()
     metrics = (_assay_metrics(conn, program_id) + _measurement_metrics(conn, program_id)
                + _cellline_metrics(conn, program_id)
                + _adme_metrics() + _boltz_metrics(conn, program_id)
-               + _custom_metrics(conn, program_id))
+               + _custom_metrics(conn, program_id)
+               + _tpp_metrics(conn, program_id))
     # de-dup by key (a custom metric may shadow a discovered assay one)
     seen, uniq = set(), []
     for m in metrics:
@@ -368,7 +393,7 @@ def resolve(conn, program_id: str, molecule_id: int, key: str) -> float | None:
         cl = key[5:]
         rows = conn.execute(
             "SELECT value FROM assays WHERE molecule_id=? AND modality='cellular_antiprolif' "
-            "AND cell_line=?", (molecule_id, cl)).fetchall()
+            "AND COALESCE(system, cell_line)=?", (molecule_id, cl)).fetchall()
         vals = [r["value"] for r in rows if r["value"] is not None]
         return statistics.median(vals) if vals else None
     if key.startswith("meas:"):  # measurement-specific assay axis

@@ -9,14 +9,13 @@ import { API_BASE } from "@/lib/apiBase";
 
 const LINKS = [
   { href: "/mailbox", label: "Inbox" },
-  { href: "/simulation", label: "Simulation" },
-  { href: "/query", label: "QueryOS" },
-  { href: "/quotes", label: "Quotes" },
-  { href: "/tpp-builder", label: "TPP" },
-  { href: "/tpp", label: "Molecule Database" },
   { href: "/registry", label: "Registry" },
+  { href: "/tpp-builder", label: "TPP" },
+  { href: "/moleculedb", label: "Molecule Database" },
   { href: "/molecules", label: "Molecule Dashboard" },
-  { href: "/cfo", label: "CFO / Budget" },
+  { href: "/modeling", label: "Modeling" },
+  { href: "/cfo", label: "Budget" },
+  { href: "/query", label: "QueryOS" },
   { href: "/ledger", label: "Logs" },
 ];
 
@@ -41,7 +40,7 @@ export function NavBar() {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-panel px-6 py-3">
       <div className="flex items-center gap-6">
-        <span className="text-sm font-semibold tracking-wide text-ink">BiotechOS</span>
+        <Link href="/" className="text-sm font-semibold tracking-wide text-ink hover:text-emerald-700">BiotechOS</Link>
         <nav className="flex gap-4">
           {LINKS.map((l) => (
             <Link

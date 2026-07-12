@@ -344,7 +344,7 @@ export default function POPage() {
 
       {email && (
         <div className="no-print mt-4 rounded border border-emerald-500/30 bg-panel p-3">
-          <div className="mb-1 text-xs font-semibold text-emerald-300">Drafted vendor email (simulated — not sent)</div>
+          <div className="mb-1 text-xs font-semibold text-emerald-800">Drafted vendor email (simulated — not sent)</div>
           <div className="whitespace-pre-wrap text-sm text-ink">{email}</div>
         </div>
       )}

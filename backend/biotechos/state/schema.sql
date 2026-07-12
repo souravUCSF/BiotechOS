@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS molecules (
     favorite            INTEGER DEFAULT 0,   -- 1 = bookmarked/favorite (user-toggled)
     structure_cache_ref TEXT,                -- path to cached Boltz .cif/.pdb
     adme_json           TEXT,                -- predicted ADME blob (JSON)
+    status              TEXT DEFAULT 'active',  -- active | candidate | dismissed | merged (registry lifecycle)
+    merged_into         INTEGER,             -- if merged, the surviving molecules.id
+    descriptor          TEXT,                -- freeform identity descriptor (when no SMILES/sequence)
+    sequence            TEXT,                -- biologic sequence (peptide/protein), when applicable
     created_at          TEXT DEFAULT (datetime('now')),
     UNIQUE(program_id, internal_ref)
 );
@@ -43,7 +47,13 @@ CREATE TABLE IF NOT EXISTS assays (
     relation       TEXT,                 -- =, >, < ...
     pchembl        REAL,
     source         TEXT,                 -- chembl | cro_synthetic | ...
-    cell_line      TEXT,                 -- normalized cell line for cellular assays (CellLine-2, CellLine-1, ...)
+    cell_line      TEXT,                 -- DEPRECATED legacy column; superseded by system_type/system (kept read-only)
+    -- Typed biological system (target-orthogonal): WHERE the measurement was made.
+    system_type    TEXT,                 -- protein | cell_line | subcellular | matrix | organism | tissue
+    system         TEXT,                 -- the system value (HEK293, plasma, TGTA, nude mouse, ...)
+    species        TEXT,                 -- human | mouse | rat | ...
+    conditions     TEXT,                 -- JSON exposure/dosing: {test_conc,incubation} | {dose,dose_units,route,regimen}
+    source_document_id INTEGER,          -- provenance: the email/attachment this row came from
     assay_desc     TEXT,
     flags          TEXT,                 -- JSON list of QC flags
     created_at     TEXT DEFAULT (datetime('now'))
@@ -192,6 +202,8 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     line_items  TEXT,                   -- JSON: [{description,quantity,amount}] on the PO doc
     vendor_name TEXT,                   -- editable vendor name on the PO doc
     approved_at TEXT,                   -- when the PO was issued
+    source_document_id INTEGER,         -- source quote/email this PO derives from
+    notes       TEXT,                   -- freeform notes on the PO
     created_at  TEXT DEFAULT (datetime('now'))
 );
 
@@ -210,6 +222,10 @@ CREATE TABLE IF NOT EXISTS invoices (
     amount       REAL,
     status       TEXT DEFAULT 'received',  -- received | matched | mismatch | paid
     match_notes  TEXT,
+    source_document_id INTEGER,             -- source invoice email/attachment
+    vendor_name  TEXT,
+    invoice_number TEXT,
+    paid_at      TEXT,
     created_at   TEXT DEFAULT (datetime('now'))
 );
 
@@ -307,3 +323,167 @@ CREATE TABLE IF NOT EXISTS vendor_credentials (
 CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
     subject, raw_text, content='documents', content_rowid='id'
 );
+
+-- ===================================================================
+-- Entity graph (knowledge layer): entities + typed edges + aliases.
+-- ===================================================================
+CREATE TABLE IF NOT EXISTS entities (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id    TEXT NOT NULL REFERENCES programs(id),
+    entity_type   TEXT NOT NULL,   -- vendor|person|program|contract|molecule|assay|cell_line|material|budget
+    canonical_key TEXT NOT NULL,   -- normalized identity key (dedup key)
+    display_name  TEXT NOT NULL,   -- as first seen / preferred label
+    attrs_json    TEXT,            -- JSON blob of typed attributes (domain, email, ...)
+    created_at    TEXT DEFAULT (datetime('now')),
+    UNIQUE(program_id, entity_type, canonical_key)
+);
+CREATE INDEX IF NOT EXISTS idx_entities_lookup ON entities(program_id, entity_type, canonical_key);
+
+CREATE TABLE IF NOT EXISTS edges (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id     TEXT NOT NULL REFERENCES programs(id),
+    src_entity_id  INTEGER NOT NULL REFERENCES entities(id),
+    predicate      TEXT NOT NULL,   -- works_at|quoted|tests|offers_service|supplied|...
+    dst_entity_id  INTEGER NOT NULL REFERENCES entities(id),
+    observation_id INTEGER REFERENCES observations(id),
+    source_document_id INTEGER REFERENCES documents(id),
+    confidence     REAL DEFAULT 0.8,
+    props_json     TEXT,            -- Phase-2 hook: commitment force/hedge/honored
+    valid_from     TEXT DEFAULT (datetime('now')),
+    valid_to       TEXT,            -- NULL = current
+    status         TEXT DEFAULT 'current'   -- current | superseded
+);
+CREATE INDEX IF NOT EXISTS idx_edges_src ON edges(program_id, src_entity_id, predicate, status);
+CREATE INDEX IF NOT EXISTS idx_edges_dst ON edges(program_id, dst_entity_id, predicate, status);
+
+CREATE TABLE IF NOT EXISTS entity_aliases (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id         TEXT NOT NULL REFERENCES programs(id),
+    entity_id          INTEGER NOT NULL REFERENCES entities(id),
+    alias              TEXT NOT NULL,     -- as written
+    alias_norm         TEXT NOT NULL,     -- normalized key
+    source_document_id INTEGER,
+    confidence         REAL DEFAULT 1.0,
+    created_at         TEXT DEFAULT (datetime('now')),
+    UNIQUE(program_id, entity_id, alias_norm)
+);
+CREATE INDEX IF NOT EXISTS idx_entalias_norm ON entity_aliases(program_id, alias_norm);
+
+-- Suspected/confirmed decisions surfaced from observations (decisions queue).
+CREATE TABLE IF NOT EXISTS decisions (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id         TEXT NOT NULL REFERENCES programs(id),
+    kind               TEXT,   -- price_agreement|vendor_selection|scope_change|timeline_commitment|go_no_go|contract_term|other
+    subject_type       TEXT NOT NULL,
+    subject_key        TEXT NOT NULL,
+    predicate          TEXT NOT NULL,
+    value              TEXT,
+    source_document_id INTEGER REFERENCES documents(id),
+    observation_id     INTEGER REFERENCES observations(id),
+    status             TEXT DEFAULT 'suspected',  -- suspected|confirmed|dismissed|superseded
+    confidence         REAL DEFAULT 0.6,
+    rationale          TEXT,                       -- why suspected (snippet / heuristic note)
+    decided_by         TEXT,
+    decided_at         TEXT,
+    ledger_entry_id    INTEGER REFERENCES ledger_entries(id),
+    created_at         TEXT DEFAULT (datetime('now'))  -- event time (source sent_at)
+);
+CREATE INDEX IF NOT EXISTS idx_decisions_queue ON decisions(program_id, status, confidence);
+
+-- Human review notes flagged on emails / decisions (for "check my flagged notes").
+CREATE TABLE IF NOT EXISTS email_notes (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id   TEXT NOT NULL REFERENCES programs(id),
+    document_id  INTEGER,
+    decision_id  INTEGER,
+    source_ref   TEXT,
+    note         TEXT NOT NULL,
+    flagged      INTEGER DEFAULT 1,
+    resolved     INTEGER DEFAULT 0,
+    author       TEXT DEFAULT 'founder',
+    created_at   TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_notes_program ON email_notes(program_id, flagged, resolved);
+
+-- Structured quote line items parsed from quote documents.
+CREATE TABLE IF NOT EXISTS quote_lines (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id          TEXT NOT NULL REFERENCES programs(id),
+    document_id         INTEGER,
+    observation_id      INTEGER,
+    decision_id         INTEGER,
+    vendor              TEXT,
+    scope               TEXT,            -- full line description (what the price is for)
+    compound            TEXT,            -- compound/sample code if detected
+    quantity            REAL,            -- numeric quantity (e.g. 10)
+    unit                TEXT,            -- mg | g | mL | …
+    amount              REAL NOT NULL,   -- price
+    currency            TEXT DEFAULT 'USD',
+    turnaround_raw      TEXT,            -- e.g. "2-3 weeks"
+    turnaround_days_min INTEGER,
+    turnaround_days_max INTEGER,
+    status              TEXT DEFAULT 'suspected',  -- suspected | confirmed | dismissed
+    sent_at             TEXT,            -- event time (email date) for as-of filtering
+    method              TEXT DEFAULT 'regex',
+    source_span         TEXT,
+    flagged             INTEGER DEFAULT 0,
+    flag_reasons        TEXT,
+    service             TEXT,
+    created_at          TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_quote_lines_program ON quote_lines(program_id, vendor, amount);
+
+-- Data QC analyses + legal reviews (inbox processors persist their runs here).
+CREATE TABLE IF NOT EXISTS data_analyses (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id    TEXT NOT NULL REFERENCES programs(id),
+    document_id   INTEGER,
+    status        TEXT DEFAULT 'pending',   -- pending | approved | dismissed
+    verdict       TEXT,                     -- pass | warn | fail
+    summary       TEXT,
+    analysis_json TEXT,                      -- {vendor_summary, measurements, qc_steps, charts, deposition}
+    created_at    TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_data_analyses ON data_analyses(program_id, document_id, status);
+
+CREATE TABLE IF NOT EXISTS legal_reviews (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id    TEXT NOT NULL REFERENCES programs(id),
+    document_id   INTEGER,
+    status        TEXT DEFAULT 'pending',
+    summary       TEXT,
+    review_json   TEXT,                      -- {agreement_type, parties, term, summary, issues[]}
+    created_at    TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_legal_reviews ON legal_reviews(program_id, document_id, status);
+
+-- Company cash + payment ledger (CFO loop).
+CREATE TABLE IF NOT EXISTS company_cash (
+    id              INTEGER PRIMARY KEY CHECK (id = 1),
+    opening_balance REAL DEFAULT 500000,
+    balance         REAL DEFAULT 500000,   -- cash actually paid out is deducted here
+    currency        TEXT DEFAULT 'USD',
+    updated_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS cash_transactions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind          TEXT NOT NULL,          -- opening | po_payment
+    amount        REAL NOT NULL,          -- signed: +deposit, −payment
+    balance_after REAL,
+    program_id    TEXT,
+    po_id         INTEGER,
+    invoice_id    INTEGER,
+    description   TEXT,
+    created_at    TEXT DEFAULT (datetime('now'))
+);
+
+-- User-defined molecule groups (cohorts) for modeling on multiple molecules.
+CREATE TABLE IF NOT EXISTS molecule_groups (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id   TEXT NOT NULL REFERENCES programs(id),
+    name         TEXT NOT NULL,
+    molecule_ids TEXT,                    -- JSON list of molecules.id
+    created_at   TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_molecule_groups_program ON molecule_groups(program_id);

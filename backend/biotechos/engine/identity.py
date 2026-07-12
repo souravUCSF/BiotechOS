@@ -112,12 +112,14 @@ def resolve_molecule(program_id: str, token: str, smiles: str | None = None, *,
                 add_alias(program_id, r["id"], token, source_document_id=source_document_id,
                           confidence=1.0, verified=True, conn=conn)
                 return {"molecule_id": r["id"], "status": "inchikey_merge", "norm": norm}
-        # 3) create a new molecule (used by anonymized import / provisional)
+        # 3) create a new molecule. Compounds first seen via the inbox (data deposit)
+        # are provisional → status='candidate' so they surface in the Registry for the
+        # user to approve BEFORE they (and their data) appear in the Molecule Database.
         if create:
             with conn:
                 cur = conn.execute(
-                    "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out) "
-                    "VALUES (?,?,?,?,0)", (program_id, token, smiles, ik))
+                    "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out,status) "
+                    "VALUES (?,?,?,?,0,'candidate')", (program_id, token, smiles, ik))
                 mid = cur.lastrowid
             add_alias(program_id, mid, token, source_document_id=source_document_id,
                       confidence=1.0, verified=True, conn=conn)

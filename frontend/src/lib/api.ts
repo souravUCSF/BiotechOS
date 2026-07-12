@@ -184,11 +184,178 @@ export async function setFoldConfig(
   return res.json();
 }
 
+export type MoleculeAlias = {
+  alias: string; alias_type: string | null; vendor: string | null; verified?: number;
+};
+
 export async function fetchMolecule(id: number): Promise<
-  Molecule & { has_structure: boolean }
+  Molecule & { has_structure: boolean; program_id: string; aliases: MoleculeAlias[] }
 > {
   const res = await fetch(`${API_BASE}/molecule/${id}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`GET /molecule/${id} failed: ${res.status}`);
+  return res.json();
+}
+
+export type MoleculeGroup = {
+  id: number; name: string; created_at: string; molecule_ids: number[];
+  members: { id: number; name: string }[];
+};
+export async function createGroup(programId: string, name: string, moleculeIds: number[]): Promise<{ group_id: number; count: number }> {
+  const res = await fetch(`${API_BASE}/groups`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, name, molecule_ids: moleculeIds }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `create group failed: ${res.status}`);
+  return res.json();
+}
+export async function fetchGroups(programId: string): Promise<MoleculeGroup[]> {
+  const res = await fetch(`${API_BASE}/groups?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`fetch groups failed: ${res.status}`);
+  return res.json();
+}
+
+// --- Modeling (ProLIF contact map + Boltz generate) ---
+export type ModelingMember = { id: number; name: string; has_cofold: boolean };
+export type ContactMap = {
+  residues: string[];
+  frequency: { residue: string; count: number }[];
+  molecules: { id: number; name: string; interactions: Record<string, string[]> }[];
+  skipped: { id: number; name: string; reason: string }[];
+  glyphs: Record<string, string>;
+  n_cofolded: number;
+};
+export async function fetchModelingSubject(programId: string, sel: { group_id?: number; molecule_id?: number }): Promise<{ members: ModelingMember[]; n_cofolded: number }> {
+  const p = new URLSearchParams({ program_id: programId });
+  if (sel.group_id != null) p.set("group_id", String(sel.group_id));
+  if (sel.molecule_id != null) p.set("molecule_id", String(sel.molecule_id));
+  const res = await fetch(`${API_BASE}/modeling/subject?${p}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`subject failed: ${res.status}`);
+  return res.json();
+}
+export async function runContactMap(programId: string, moleculeIds: number[], interactions?: string[]): Promise<ContactMap> {
+  const res = await fetch(`${API_BASE}/modeling/contact-map`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, molecule_ids: moleculeIds, interactions }),
+  });
+  if (!res.ok) throw new Error(`contact map failed: ${res.status}`);
+  return res.json();
+}
+export function ligplotUrl(moleculeId: number): string {
+  return `${API_BASE}/modeling/contact-map/${moleculeId}/ligplot`;
+}
+export async function estimateGenerate(programId: string, numMolecules: number): Promise<{ usd: string | null }> {
+  const res = await fetch(`${API_BASE}/modeling/generate/estimate`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, num_molecules: numMolecules }),
+  });
+  if (!res.ok) throw new Error(`estimate failed: ${res.status}`);
+  return res.json();
+}
+export async function startGenerate(programId: string, seedIds: number[], numMolecules: number, moleculeFilters?: Record<string, unknown>): Promise<{ job_id: string }> {
+  const res = await fetch(`${API_BASE}/modeling/generate`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, seed_ids: seedIds, num_molecules: numMolecules, molecule_filters: moleculeFilters }),
+  });
+  if (!res.ok) throw new Error(`generate failed: ${res.status}`);
+  return res.json();
+}
+export async function fetchSeedData(programId: string, ids: number[]): Promise<Record<string, unknown>[]> {
+  if (!ids.length) return [];
+  const res = await fetch(`${API_BASE}/modeling/seed-data?program_id=${programId}&ids=${ids.join(",")}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+export async function fetchCachedGenerate(): Promise<{ job_id: string | null; molecules: Record<string, unknown>[] }> {
+  const res = await fetch(`${API_BASE}/modeling/generate-cached`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`cached generate failed: ${res.status}`);
+  return res.json();
+}
+export async function adoptGenerate(jobId: string, presId: string, name: string, programId: string): Promise<{ molecule_id: number; has_structure: boolean }> {
+  const res = await fetch(`${API_BASE}/modeling/generate/${jobId}/adopt`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pres_id: presId, name, program_id: programId }),
+  });
+  if (!res.ok) throw new Error(`adopt failed: ${res.status}`);
+  return res.json();
+}
+export async function exportGenerate(jobId: string, ids: string[]): Promise<void> {
+  const res = await fetch(`${API_BASE}/modeling/generate/${jobId}/export`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) throw new Error(`export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `generated_${jobId}.zip`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+export async function pollGenerate(jobId: string): Promise<{ status: string; molecules: Record<string, unknown>[]; error: string | null }> {
+  const res = await fetch(`${API_BASE}/modeling/generate/${jobId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`poll failed: ${res.status}`);
+  return res.json();
+}
+
+export type FoldBacklog = {
+  count: number; per_cofold_usd: string | null; total_usd: string | null;
+  boltz_available: boolean; molecule_ids: number[];
+};
+export async function fetchFoldBacklog(programId?: string): Promise<FoldBacklog> {
+  const q = programId ? `?program_id=${programId}` : "";
+  const res = await fetch(`${API_BASE}/modeling/fold-backlog${q}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`backlog failed: ${res.status}`);
+  return res.json();
+}
+export async function runFoldBacklog(programId?: string): Promise<{ enqueued: number; reason?: string }> {
+  const res = await fetch(`${API_BASE}/modeling/fold-backlog/run`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(programId ? { program_id: programId } : {}),
+  });
+  if (!res.ok) throw new Error(`backlog run failed: ${res.status}`);
+  return res.json();
+}
+
+export type ManualAssayInput = {
+  modality?: string; target?: string | null; standard_type?: string | null;
+  value?: number | null; units?: string | null; system_type?: string | null; system?: string | null;
+};
+export async function addManualMolecule(
+  body: { program_id: string; name: string; smiles?: string; aliases?: string[]; assays?: ManualAssayInput[] },
+): Promise<{ molecule_id: number; deposited: number }> {
+  const res = await fetch(`${API_BASE}/molecules/add-manual`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `add molecule failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateMoleculeSmiles(id: number, smiles: string, programId: string): Promise<{ smiles: string; inchi_key: string }> {
+  const res = await fetch(`${API_BASE}/molecule/${id}/smiles`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ smiles, program_id: programId }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `set smiles failed: ${res.status}`);
+  return res.json();
+}
+
+export async function addMoleculeAlias(id: number, alias: string, programId: string): Promise<{ aliases: MoleculeAlias[] }> {
+  const res = await fetch(`${API_BASE}/molecule/${id}/alias`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ alias, program_id: programId }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `add alias failed: ${res.status}`);
+  return res.json();
+}
+
+export async function setCanonicalName(
+  moleculeId: number, alias: string, programId: string,
+): Promise<{ canonical: string; was?: string }> {
+  const res = await fetch(`${API_BASE}/registry/${moleculeId}/set-canonical`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, alias }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `set-canonical failed: ${res.status}`);
   return res.json();
 }
 
@@ -544,23 +711,41 @@ export async function declineInbox(itemId: number, programId: string): Promise<{
   return res.json();
 }
 
-// --- Mailbox (triaged inbox) ---
-export type TriageCategory = "ignore" | "knowledge" | "processing" | "action";
+// --- Mailbox (triaged inbox) — 5-way business category ---
+export type TriageCategory = "quote" | "invoice" | "legal" | "data" | "other";
 export type MailItem = {
   id: number; from: string; subject: string; sent_at: string; doc_type: string;
-  seen: boolean; category: TriageCategory; next_step: string; reason: string;
+  seen: boolean; category: TriageCategory; ignored: boolean; next_step: string; reason: string;
   needs_reply: boolean; confidence: number; preview: string;
 };
-export type Mailbox = { counts: Record<TriageCategory, number>; emails: MailItem[] };
+export type Mailbox = { counts: Record<string, number>; emails: MailItem[] };
+
+export async function setEmailCategory(id: number, category: TriageCategory, programId: string): Promise<{ category: TriageCategory }> {
+  const res = await fetch(`${API_BASE}/mailbox/${id}/category`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, category }),
+  });
+  if (!res.ok) throw new Error(`set category failed: ${res.status}`);
+  return res.json();
+}
+
+export async function setEmailIgnored(id: number, ignored: boolean, programId: string): Promise<{ ignored: boolean }> {
+  const res = await fetch(`${API_BASE}/mailbox/${id}/ignore`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, ignored }),
+  });
+  if (!res.ok) throw new Error(`ignore failed: ${res.status}`);
+  return res.json();
+}
 export type MailEmail = {
   id: number; from: string; to: string; subject: string; sent_at: string;
   doc_type: string; body: string; triage: Partial<MailItem>;
 };
 
 export async function fetchMailbox(
-  programId: string, category?: string, includeIgnored = false,
+  programId: string, category?: string, includeOther = false,
 ): Promise<Mailbox> {
-  const p = new URLSearchParams({ program_id: programId, include_ignored: String(includeIgnored) });
+  const p = new URLSearchParams({ program_id: programId, include_ignored: String(includeOther) });
   if (category) p.set("category", category);
   const res = await fetch(`${API_BASE}/mailbox?${p}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`GET /mailbox failed: ${res.status}`);
@@ -570,6 +755,64 @@ export async function fetchMailbox(
 export async function fetchMailEmail(id: number): Promise<MailEmail> {
   const res = await fetch(`${API_BASE}/mailbox/${id}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`GET /mailbox/${id} failed: ${res.status}`);
+  return res.json();
+}
+
+export type EmailNote = { id: number; note: string; created_at: string };
+
+export async function addEmailNote(id: number, note: string, programId: string): Promise<{ saved: boolean }> {
+  const res = await fetch(`${API_BASE}/mailbox/${id}/note`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, note }),
+  });
+  if (!res.ok) throw new Error(`add note failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchEmailNotes(id: number, programId: string): Promise<EmailNote[]> {
+  const res = await fetch(`${API_BASE}/mailbox/${id}/notes?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`fetch notes failed: ${res.status}`);
+  return (await res.json()).notes;
+}
+
+export async function reclassifyEmail(id: number, programId: string): Promise<{ category: TriageCategory; confidence: number }> {
+  const res = await fetch(`${API_BASE}/mailbox/${id}/reclassify?program_id=${programId}`, { method: "POST" });
+  if (!res.ok) throw new Error(`reclassify failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createPoFromEmail(id: number, programId: string): Promise<{ po_id: number; line_items: number; amount: number }> {
+  const res = await fetch(`${API_BASE}/mailbox/${id}/create-po?program_id=${programId}`, { method: "POST" });
+  if (!res.ok) throw new Error(`create PO failed: ${res.status}`);
+  return res.json();
+}
+
+export type RelatedQuoteLine = {
+  line_id: number; document_id: number; vendor: string | null; scope: string | null;
+  amount: number; turnaround?: string | null;
+};
+export type RelatedQuotes = {
+  document_id: number; vendor: string | null; buckets: string[];
+  this_quote: RelatedQuoteLine[]; related: RelatedQuoteLine[];
+};
+
+export async function fetchRelatedQuotes(id: number, programId: string): Promise<RelatedQuotes> {
+  const res = await fetch(`${API_BASE}/quotes/related/${id}?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`related quotes failed: ${res.status}`);
+  return res.json();
+}
+
+export async function saveLegalDoc(id: number, programId: string): Promise<{ status: string }> {
+  const res = await fetch(`${API_BASE}/legal/review/${id}/save?program_id=${programId}`, { method: "POST" });
+  if (!res.ok) throw new Error(`save legal doc failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchLegalExecutionStatus(id: number, programId: string): Promise<{
+  execution_status: "executed" | "in_revision" | "draft"; reason: string; method: string;
+}> {
+  const res = await fetch(`${API_BASE}/legal/execution-status/${id}?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`execution-status failed: ${res.status}`);
   return res.json();
 }
 
@@ -587,6 +830,8 @@ export type DataChart = {
 export type DepositionRow = {
   molecule: string; standard_type: string; target?: string;
   value: number | string; units?: string; flags?: string[]; relation?: string;
+  modality?: string; system_type?: string | null; system?: string | null;
+  species?: string | null; reported_value?: number | null;
 };
 export type DataAnalysisBody = {
   vendor_summary?: string;
@@ -622,8 +867,11 @@ export async function runDataAnalysis(
   if (!res.ok) throw new Error(`POST /data/analysis/${docId}/run failed: ${res.status}`);
   return res.json();
 }
-export async function approveDataAnalysis(analysisId: number, programId: string) {
-  const res = await fetch(`${API_BASE}/data/${analysisId}/approve?program_id=${programId}`, { method: "POST" });
+export async function approveDataAnalysis(analysisId: number, programId: string, deposition?: DepositionRow[]) {
+  const res = await fetch(`${API_BASE}/data/${analysisId}/approve?program_id=${programId}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program_id: programId, ...(deposition ? { deposition } : {}) }),
+  });
   if (!res.ok) throw new Error(`POST /data/${analysisId}/approve failed: ${res.status}`);
   return res.json();
 }

@@ -206,6 +206,42 @@ def get_po(po_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
         conn.close()
 
 
+def create_draft_po_from_document(program_id: str, document_id: int) -> dict:
+    """Build a DTGTAT purchase order from a quote email's parsed quote_lines, so the
+    user can review/issue it in the PO template editor (/po/{id}). Reuses one draft per
+    document (idempotent) rather than spawning duplicates."""
+    conn = db.connect()
+    try:
+        existing = conn.execute(
+            "SELECT id FROM purchase_orders WHERE program_id=? AND source_document_id=? "
+            "AND status='draft' ORDER BY id DESC LIMIT 1", (program_id, document_id)).fetchone()
+        lines = conn.execute(
+            "SELECT vendor, scope, service, compound, quantity, unit, amount FROM quote_lines "
+            "WHERE program_id=? AND document_id=? ORDER BY id", (program_id, document_id)).fetchall()
+        line_items = [{
+            "description": (li["scope"] or li["service"] or li["compound"] or "Line item").strip(),
+            "quantity": li["quantity"],
+            "amount": round(float(li["amount"] or 0), 2),
+        } for li in lines]
+        amount = round(sum(li["amount"] for li in line_items), 2)
+        vendor_name = next((li["vendor"] for li in lines if li["vendor"]), None)
+        with conn:
+            if existing:
+                po_id = existing["id"]
+                conn.execute(
+                    "UPDATE purchase_orders SET line_items=?, vendor_name=?, amount=? WHERE id=?",
+                    (json.dumps(line_items), vendor_name, amount, po_id))
+            else:
+                po_id = conn.execute(
+                    "INSERT INTO purchase_orders(program_id,status,line_items,vendor_name,amount,"
+                    "source_document_id) VALUES (?,'draft',?,?,?,?)",
+                    (program_id, json.dumps(line_items), vendor_name, amount, document_id)).lastrowid
+        return {"po_id": po_id, "line_items": len(line_items), "amount": amount,
+                "vendor_name": vendor_name}
+    finally:
+        conn.close()
+
+
 def update_po(po_id: int, line_items: list, vendor_name: str | None = None,
               program_id: str = DEMO_PROGRAM_ID) -> dict:
     """Save edits to a DTGTAT PO's line items + vendor name. Issued POs are immutable."""

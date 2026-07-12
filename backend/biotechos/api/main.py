@@ -6,11 +6,12 @@ import json
 import csv
 import io
 import re
+import sqlite3
 
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import Body, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, FileResponse
-from pydantic import BaseModel
+from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse
+from pydantic import BaseModel, field_validator
 
 from ..config import DEMO_PROGRAM_ID
 from ..engine import cfo as cfo_engine
@@ -43,7 +44,28 @@ def _startup() -> None:
             " VALUES (?,?,?,?,?,?)",
             (PROGRAM_B_ID, "Program B", "TGTA", None,
              "TGTA-expressing solid tumors", "active"))
+        # Real (un-anonymized) Program A archive as its own program. Row is seeded here;
+        # its corpus is ingested separately via store.ingest("program-a", source="real").
+        conn.execute(
+            "INSERT OR IGNORE INTO programs(id,name,target,anti_target,indication,status)"
+            " VALUES (?,?,?,?,?,?)",
+            ("program-a", "Program A", "TGTA", "TGTB",
+             "TGTA-driven cancers", "active"))
+        # Remove the orphaned 'program-a-real' program (never seeded by code). Delete its
+        # (empty) child rows first, then the program row — idempotent so a stray row from
+        # an old DB can't reappear in the program switcher.
+        for tbl in ("assays", "molecule_aliases", "molecules", "inbox_items", "documents",
+                    "observations", "facts", "ledger_entries", "competitive_items",
+                    "tpp_params", "tpp_versions", "budget", "fold_settings"):
+            try:
+                conn.execute(f"DELETE FROM {tbl} WHERE program_id='program-a-real'")
+            except sqlite3.OperationalError:
+                pass
+        conn.execute("DELETE FROM programs WHERE id='program-a-real'")
     conn.close()
+    # Fold-backlog reconciler exists but the automatic periodic sweep is OFF by request —
+    # the backlog is folded only on demand via POST /modeling/fold-backlog/run (the
+    # "Fold backlog" button). Re-enable by calling structure.start_backlog_sweep() here.
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,8 +111,11 @@ def get_state(program_id: str = Query(default=DEMO_PROGRAM_ID)):
         conn.close()
         raise HTTPException(404, f"unknown program_id {program_id}")
 
+    # Only confirmed (active) molecules appear in the database; 'candidate' molecules
+    # (new compounds detected from the inbox) are gated to the Registry until approved.
     molecules = db.rows_to_dicts(conn.execute(
-        "SELECT * FROM molecules WHERE program_id=? AND held_out=0 ORDER BY id",
+        "SELECT * FROM molecules WHERE program_id=? AND held_out=0 "
+        "AND (status='active' OR status IS NULL) ORDER BY id",
         (program_id,),
     ).fetchall())
 
@@ -172,7 +197,393 @@ def get_molecule(molecule_id: int):
         except (TypeError, json.JSONDecodeError):
             d["adme"] = None
     d["has_structure"] = structure_engine.structure_path(molecule_id).exists()
+    # every name/alias the system knows for this molecule (for the aliases + canonical UI)
+    from ..engine import identity
+    d["aliases"] = identity.passport(mol["program_id"], molecule_id).get("aliases", [])
     return _scrub(d)
+
+
+class ManualAssay(BaseModel):
+    modality: str = "generic_numeric"
+    target: str | None = None
+    standard_type: str | None = None
+    value: float | None = None
+    units: str | None = None
+    system_type: str | None = None
+    system: str | None = None
+
+
+class ManualMolecule(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    name: str
+    smiles: str | None = None
+    aliases: list[str] = []
+    assays: list[ManualAssay] = []
+
+
+@app.post("/molecules/add-manual")
+def add_manual_molecule(body: ManualMolecule):
+    """Manually add a molecule + its data straight into the Molecule Database (status
+    'active' — bypasses the registry, since the user is deliberately adding it)."""
+    from ..engine import identity
+    name = (body.name or "").strip()
+    if not name:
+        raise HTTPException(400, "name is required")
+    smi = (body.smiles or "").strip() or None
+    ik = identity.inchikey(smi) if smi else None
+    if smi and ik is None:
+        raise HTTPException(400, "not a valid SMILES")
+    conn = get_conn()
+    with conn:
+        mid = conn.execute(
+            "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out,status) "
+            "VALUES (?,?,?,?,0,'active')", (body.program_id, name, smi, ik)).lastrowid
+        deposited = 0
+        for a in body.assays:
+            if a.value is None:
+                continue
+            conn.execute(
+                "INSERT INTO assays(program_id,molecule_id,modality,target,standard_type,value,"
+                "units,system_type,system,source) VALUES (?,?,?,?,?,?,?,?,?, 'manual')",
+                (body.program_id, mid, (a.modality or "generic_numeric"), a.target,
+                 a.standard_type, a.value, a.units, a.system_type, a.system))
+            deposited += 1
+    conn.close()
+    for al in body.aliases:
+        if al.strip():
+            identity.add_alias(body.program_id, mid, al.strip(), verified=True)
+    # structure detected → RDKit ADME + enqueue Boltz co-fold (SMILES) / fold (sequence)
+    if smi:
+        structure_engine.on_structure_detected(mid, body.program_id)
+    return {"molecule_id": mid, "deposited": deposited}
+
+
+class GroupCreate(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    name: str
+    molecule_ids: list[int]
+
+
+@app.post("/groups")
+def create_group(body: GroupCreate):
+    """Create a named molecule group (cohort) from selected molecules — for modeling."""
+    name = (body.name or "").strip()
+    if not name:
+        raise HTTPException(400, "group name is required")
+    if not body.molecule_ids:
+        raise HTTPException(400, "select at least one molecule")
+    ids = sorted(set(int(i) for i in body.molecule_ids))
+    conn = get_conn()
+    with conn:
+        gid = conn.execute(
+            "INSERT INTO molecule_groups(program_id,name,molecule_ids) VALUES (?,?,?)",
+            (body.program_id, name, json.dumps(ids))).lastrowid
+    conn.close()
+    return {"group_id": gid, "name": name, "count": len(ids)}
+
+
+# ==== Modeling (group/single-molecule structure-based widgets) ================
+
+def _subject_members(conn, program_id: str, group_id: int | None, molecule_id: int | None):
+    """Resolve the modeling 'unit' (a group or a single molecule) → [(id, name, has_cofold)]."""
+    from ..engine import structure as _st
+    if group_id is not None:
+        r = conn.execute("SELECT molecule_ids FROM molecule_groups WHERE id=? AND program_id=?",
+                         (group_id, program_id)).fetchone()
+        ids = json.loads(r["molecule_ids"] or "[]") if r else []
+    elif molecule_id is not None:
+        ids = [molecule_id]
+    else:
+        ids = []
+    out = []
+    for i in ids:
+        row = conn.execute("SELECT name FROM molecules WHERE id=? AND program_id=?",
+                           (i, program_id)).fetchone()
+        out.append({"id": i, "name": row["name"] if row else f"#{i}",
+                    "has_cofold": _st.structure_path(i).exists()})
+    return out
+
+
+@app.get("/modeling/subject")
+def modeling_subject(program_id: str = Query(default=DEMO_PROGRAM_ID),
+                     group_id: int | None = Query(default=None),
+                     molecule_id: int | None = Query(default=None)):
+    conn = get_conn()
+    members = _subject_members(conn, program_id, group_id, molecule_id)
+    conn.close()
+    return {"members": members, "n_cofolded": sum(1 for m in members if m["has_cofold"])}
+
+
+class ContactMapReq(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    molecule_ids: list[int]
+    interactions: list[str] | None = None
+
+
+@app.post("/modeling/contact-map")
+def modeling_contact_map(body: ContactMapReq):
+    from ..engine import prolif_contacts
+    conn = get_conn()
+    names = {r["id"]: r["name"] for r in conn.execute(
+        "SELECT id,name FROM molecules WHERE program_id=?", (body.program_id,)).fetchall()}
+    conn.close()
+    return prolif_contacts.contact_map(body.program_id, body.molecule_ids, names=names,
+                                       interactions=body.interactions)
+
+
+@app.get("/modeling/contact-map/{molecule_id}/ligplot", response_class=HTMLResponse)
+def modeling_ligplot(molecule_id: int):
+    from ..engine import prolif_contacts
+    html = prolif_contacts.ligplot_html(molecule_id)
+    if html is None:
+        raise HTTPException(404, "no co-fold structure for this molecule")
+    return HTMLResponse(html)
+
+
+class GenerateReq(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    seed_ids: list[int] = []
+    num_molecules: int = 20
+    molecule_filters: dict | None = None
+
+    @field_validator("num_molecules")
+    @classmethod
+    def _clamp_num(cls, v: int) -> int:
+        # Boltz small-molecule design accepts 10 .. 1,000,000 molecules per job.
+        return max(10, min(1_000_000, v))
+
+
+@app.post("/modeling/generate/estimate")
+def modeling_generate_estimate(body: GenerateReq):
+    """Live cost estimate for the current generate params."""
+    from ..engine import boltz, structure as _st
+    seq = _st.get_fold_config(body.program_id).get("target_value")
+    try:
+        return boltz.estimate_generate_cost(seq, body.num_molecules)
+    except Exception as e:
+        raise HTTPException(502, f"Boltz estimate failed: {e}")
+
+
+# in-memory generate job store (single-user local app)
+_GEN_JOBS: dict[str, dict] = {}
+
+
+@app.post("/modeling/generate")
+def modeling_generate(body: GenerateReq):
+    """Start a Boltz small-molecule design job (background) → returns a job id to poll."""
+    import threading, uuid
+    from ..engine import boltz, structure as _st
+    seq = _st.get_fold_config(body.program_id).get("target_value")
+    if not seq:
+        raise HTTPException(400, "program has no folding-target sequence configured")
+    job_id = uuid.uuid4().hex[:12]
+    _GEN_JOBS[job_id] = {"status": "running", "molecules": [], "error": None}
+
+    def _run():
+        try:
+            mols = boltz.generate(seq, num_molecules=body.num_molecules,
+                                  molecule_filters=body.molecule_filters, name=f"gen_{job_id}")
+            _GEN_JOBS[job_id] = {"status": "done", "molecules": mols, "error": None}
+        except Exception as e:
+            _GEN_JOBS[job_id] = {"status": "error", "molecules": [], "error": str(e)}
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"job_id": job_id, "status": "running"}
+
+
+@app.get("/modeling/generate-cached")
+def modeling_generate_cached():
+    """Most recent completed generate run, read from disk — no new Boltz job / no cost.
+    Lets the UI be built/iterated against real candidates without re-running."""
+    from ..engine import boltz
+    return boltz.latest_generated()
+
+
+@app.get("/modeling/seed-data")
+def modeling_seed_data(program_id: str = Query(default=DEMO_PROGRAM_ID), ids: str = Query(default="")):
+    """Normalized rows for the seed (co-folded) molecules, in the same shape as generated
+    candidates, so they can be shown/sorted alongside them and highlighted as seeds."""
+    conn = get_conn()
+    out = []
+    for tok in [t for t in ids.split(",") if t.strip()]:
+        try:
+            mid = int(tok)
+        except ValueError:
+            continue
+        r = conn.execute("SELECT id,name,smiles,boltz_json FROM molecules WHERE id=? AND program_id=?",
+                         (mid, program_id)).fetchone()
+        if not r or not r["smiles"]:
+            continue
+        bj = json.loads(r["boltz_json"]) if r["boltz_json"] else {}
+        out.append({
+            "id": f"seed_{r['id']}", "molecule_id": r["id"], "name": r["name"],
+            "smiles": r["smiles"], "seed": True,
+            "iptm": bj.get("iptm") or bj.get("ligand_iptm"),
+            "binding_confidence": bj.get("binding_confidence"),
+            "ptm": bj.get("ptm"), "complex_plddt": bj.get("complex_plddt"),
+            "structure_confidence": bj.get("structure_confidence"),
+            "optimization_score": bj.get("optimization_score"),
+            "adme": {"lipophilicity": bj.get("lipophilicity"), "permeability": bj.get("permeability"),
+                     "solubility": bj.get("solubility_class") or bj.get("solubility")},
+        })
+    conn.close()
+    return out
+
+
+@app.get("/modeling/generate/{job_id}/structure/{pres_id}", response_class=PlainTextResponse)
+def modeling_generate_structure(job_id: str, pres_id: str):
+    """Predicted co-fold CIF for one generated molecule (for the spinning 3D viewer)."""
+    from ..engine import boltz
+    cif = boltz.generated_structure_path(job_id, pres_id)
+    if not cif:
+        raise HTTPException(404, "no structure for that generated molecule")
+    return PlainTextResponse(cif.read_text(), headers={"X-Structure-Format": "cif"})
+
+
+@app.post("/modeling/generate/{job_id}/adopt")
+def modeling_generate_adopt(job_id: str, body: dict = Body(default={})):
+    """Promote a generated molecule into the Molecule Database, carrying its Boltz
+    co-fold structure + metrics + ADME — WITHOUT running a new co-fold job."""
+    from ..engine import boltz, identity
+    pres_id = body.get("pres_id")
+    name = (body.get("name") or "").strip()
+    program_id = body.get("program_id") or DEMO_PROGRAM_ID
+    if not (pres_id and name):
+        raise HTTPException(400, "pres_id and name are required")
+    real_job = boltz.latest_generated()["job_id"] if job_id in (None, "latest") else job_id
+    mols = boltz._read_generated(boltz._RUN_ROOT / f"gen_{real_job}")
+    rec = next((m for m in mols if m.get("id") == pres_id), None)
+    if not rec:
+        raise HTTPException(404, "generated molecule not found in that run")
+    smi = rec.get("smiles")
+    ik = identity.inchikey(smi) if smi else None
+    conn = get_conn()
+    with conn:
+        mid = conn.execute(
+            "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out,status) "
+            "VALUES (?,?,?,?,0,'active')", (program_id, name, smi, ik)).lastrowid
+    # attach the already-computed Boltz co-fold structure (no new job)
+    cif = boltz.generated_structure_path(real_job, pres_id)
+    if cif:
+        try:
+            structure_engine.store_cofold_cif(mid, cif)
+        except Exception as e:
+            print(f"[adopt] store structure failed for {mid}: {e}")
+    # RDKit ADME (system-standard) + Boltz metrics/ADME → boltz_json
+    adme = structure_engine.predicted_adme(smi) if smi else None
+    boltz_json = {k: rec.get(k) for k in ("iptm", "binding_confidence", "ptm", "complex_plddt",
+                                          "complex_iplddt", "structure_confidence", "optimization_score")}
+    boltz_json["adme_boltz"] = rec.get("adme") or {}
+    boltz_json["generated_from"] = real_job
+    with conn:
+        conn.execute("UPDATE molecules SET adme_json=?, boltz_json=? WHERE id=?",
+                     (json.dumps(adme) if adme else None, json.dumps(boltz_json), mid))
+    conn.close()
+    return {"molecule_id": mid, "has_structure": bool(cif)}
+
+
+@app.post("/modeling/generate/{job_id}/export")
+def modeling_generate_export(job_id: str, body: dict = Body(default={})):
+    """ZIP of selected generated molecules: molecules.xlsx (SMILES + data) + co-fold CIFs."""
+    from ..engine import boltz
+    data = boltz.export_generated(job_id, body.get("ids"))
+    return Response(content=data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="generated_{job_id}.zip"'})
+
+
+@app.get("/modeling/generate/{job_id}")
+def modeling_generate_poll(job_id: str):
+    job = _GEN_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "unknown job")
+    return {"job_id": job_id, **job}
+
+
+@app.get("/modeling/fold-backlog")
+def modeling_fold_backlog(program_id: str | None = None):
+    """Count + live cost estimate of active molecules with a SMILES/sequence but no co-fold."""
+    from ..engine import structure as _st
+    return _st.fold_backlog_summary(program_id)
+
+
+@app.post("/modeling/fold-backlog/run")
+def modeling_fold_backlog_run(body: dict = Body(default={})):
+    """Enqueue co-folds for the whole un-folded backlog (real Boltz spend; explicit confirm)."""
+    from ..engine import structure as _st
+    return _st.run_fold_backlog(program_id=body.get("program_id"), limit=body.get("limit"))
+
+
+@app.get("/groups")
+def list_groups(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """List molecule groups for a program (with member ids + a name lookup)."""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id,name,molecule_ids,created_at FROM molecule_groups WHERE program_id=? ORDER BY id DESC",
+        (program_id,)).fetchall()
+    names = {r["id"]: r["name"] for r in conn.execute(
+        "SELECT id,name FROM molecules WHERE program_id=?", (program_id,)).fetchall()}
+    conn.close()
+    out = []
+    for r in rows:
+        try:
+            ids = json.loads(r["molecule_ids"] or "[]")
+        except json.JSONDecodeError:
+            ids = []
+        out.append({"id": r["id"], "name": r["name"], "created_at": r["created_at"],
+                    "molecule_ids": ids,
+                    "members": [{"id": i, "name": names.get(i, f"#{i}")} for i in ids]})
+    return out
+
+
+@app.delete("/groups/{group_id}")
+def delete_group(group_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    conn = get_conn()
+    with conn:
+        conn.execute("DELETE FROM molecule_groups WHERE id=? AND program_id=?", (group_id, program_id))
+    conn.close()
+    return {"deleted": group_id}
+
+
+class SmilesRequest(BaseModel):
+    smiles: str
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/molecule/{molecule_id}/smiles")
+def molecule_set_smiles(molecule_id: int, req: SmilesRequest):
+    """Update a molecule's SMILES (validated via RDKit) + recompute its InChIKey."""
+    from ..engine import identity
+    smi = (req.smiles or "").strip()
+    ik = identity.inchikey(smi)
+    if not smi or ik is None:
+        raise HTTPException(400, "not a valid SMILES")
+    conn = get_conn()
+    with conn:
+        cur = conn.execute("UPDATE molecules SET smiles=?, inchi_key=? WHERE id=?",
+                           (smi, ik, molecule_id))
+    conn.close()
+    if cur.rowcount == 0:
+        raise HTTPException(404, "molecule not found")
+    # SMILES detected → RDKit ADME now + enqueue Boltz co-fold with the folding target
+    fold = structure_engine.on_structure_detected(molecule_id, req.program_id)
+    return {"molecule_id": molecule_id, "smiles": smi, "inchi_key": ik, "fold": fold}
+
+
+class AliasRequest(BaseModel):
+    alias: str
+    program_id: str = DEMO_PROGRAM_ID
+
+
+@app.post("/molecule/{molecule_id}/alias")
+def molecule_add_alias(molecule_id: int, req: AliasRequest):
+    """Add a name/alias to a molecule."""
+    from ..engine import identity
+    alias = (req.alias or "").strip()
+    if not alias:
+        raise HTTPException(400, "alias is empty")
+    identity.add_alias(req.program_id, molecule_id, alias, verified=True)
+    return {"molecule_id": molecule_id, "alias": alias, "aliases":
+            identity.passport(req.program_id, molecule_id).get("aliases", [])}
 
 
 class FavoriteRequest(BaseModel):
@@ -356,36 +767,105 @@ def mailbox(program_id: str = Query(default=DEMO_PROGRAM_ID),
             include_ignored: bool = Query(default=False),
             limit: int = Query(default=60)):
     """Triaged inbound emails for the mailbox view — most recent first."""
+    from ..engine import categories
     conn = get_conn()
     rows = conn.execute(
         "SELECT id,email_from,subject,sent_at,doc_type,raw_text,triage_json,seen "
         "FROM documents WHERE program_id=? AND direction='inbound' AND triage_json IS NOT NULL "
         "ORDER BY sent_at DESC LIMIT ?", (program_id, max(limit, 1) * 2)).fetchall()
-    out, counts = [], {"ignore": 0, "knowledge": 0, "processing": 0, "action": 0}
+    out, counts = [], {c: 0 for c in categories.CATEGORIES}
+    counts["ignored"] = 0
+    from ..engine.triage import latest_message
     for r in rows:
         try:
             t = json.loads(r["triage_json"])
         except (TypeError, json.JSONDecodeError):
             continue
-        cat = t.get("category", "action")
-        counts[cat] = counts.get(cat, 0) + 1
-        if category and cat != category:
-            continue
-        if not include_ignored and not category and cat == "ignore":
-            continue
-        from ..engine.triage import latest_message
-        preview = latest_message(r["raw_text"] or "")[:200]
+        # 5-way business category (quote|invoice|legal|data|other), triage_json override wins
+        cat = categories.category_for(conn, r["id"], r["doc_type"])
+        ignored = bool(t.get("ignored"))
+        # counters only include UN-ignored emails
+        if ignored:
+            counts["ignored"] += 1
+        else:
+            counts[cat] = counts.get(cat, 0) + 1
+        # filtering: the 'ignored' tab shows only ignored; every other view hides ignored
+        if category == "ignored":
+            if not ignored:
+                continue
+        else:
+            if ignored:
+                continue
+            if category and cat != category:
+                continue
+            if not include_ignored and not category and cat == "other":
+                continue
         out.append({
             "id": r["id"], "from": r["email_from"], "subject": r["subject"],
             "sent_at": r["sent_at"], "doc_type": r["doc_type"], "seen": bool(r["seen"]),
-            "category": cat, "next_step": t.get("next_step"), "reason": t.get("reason"),
+            "category": cat, "ignored": ignored,
+            "next_step": t.get("next_step"), "reason": t.get("reason"),
             "needs_reply": t.get("needs_reply", False), "confidence": t.get("confidence"),
-            "preview": preview,
+            "preview": latest_message(r["raw_text"] or "")[:200],
         })
         if len(out) >= limit:
             break
     conn.close()
     return {"counts": counts, "emails": out}
+
+
+class SetCategory(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    category: str
+
+
+@app.post("/mailbox/{doc_id}/category")
+def mailbox_set_category(doc_id: int, body: SetCategory):
+    """Manually set an email's 5-way category (double-click override in the inbox)."""
+    from ..engine import categories
+    if body.category not in categories.CATEGORIES:
+        raise HTTPException(400, f"category must be one of {categories.CATEGORIES}")
+    conn = get_conn()
+    r = conn.execute("SELECT triage_json FROM documents WHERE id=? AND program_id=?",
+                     (doc_id, body.program_id)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "email not found")
+    try:
+        tj = json.loads(r["triage_json"] or "{}")
+    except json.JSONDecodeError:
+        tj = {}
+    tj["category"] = body.category
+    tj["manual_category"] = True
+    with conn:
+        conn.execute("UPDATE documents SET triage_json=? WHERE id=?", (json.dumps(tj), doc_id))
+    conn.close()
+    return {"id": doc_id, "category": body.category}
+
+
+class SetIgnored(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    ignored: bool = True
+
+
+@app.post("/mailbox/{doc_id}/ignore")
+def mailbox_set_ignored(doc_id: int, body: SetIgnored):
+    """Ignore-for-now (or un-ignore) an email — ignored emails drop out of the counters."""
+    conn = get_conn()
+    r = conn.execute("SELECT triage_json FROM documents WHERE id=? AND program_id=?",
+                     (doc_id, body.program_id)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "email not found")
+    try:
+        tj = json.loads(r["triage_json"] or "{}")
+    except json.JSONDecodeError:
+        tj = {}
+    tj["ignored"] = bool(body.ignored)
+    with conn:
+        conn.execute("UPDATE documents SET triage_json=? WHERE id=?", (json.dumps(tj), doc_id))
+    conn.close()
+    return {"id": doc_id, "ignored": bool(body.ignored)}
 
 
 @app.get("/mailbox/{doc_id}")
@@ -407,6 +887,65 @@ def mailbox_email(doc_id: int):
     return {"id": d["id"], "from": d["email_from"], "to": d["email_to"],
             "subject": d["subject"], "sent_at": d["sent_at"], "doc_type": d["doc_type"],
             "body": d["raw_text"], "triage": d["triage"]}
+
+
+class EmailNote(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    note: str
+
+
+@app.post("/mailbox/{doc_id}/note")
+def mailbox_add_note(doc_id: int, body: EmailNote):
+    """Leave a note on an email for Claude to action later (flagged for review).
+    Retrieved via `python -m biotechos.review notes` → data/review_notes.md."""
+    note = (body.note or "").strip()
+    if not note:
+        raise HTTPException(400, "note is empty")
+    conn = get_conn()
+    with conn:
+        conn.execute(
+            "INSERT INTO email_notes(program_id,document_id,note,flagged,resolved,author) "
+            "VALUES (?,?,?,1,0,'founder')", (body.program_id, doc_id, note))
+    conn.close()
+    return {"document_id": doc_id, "saved": True}
+
+
+@app.get("/mailbox/{doc_id}/notes")
+def mailbox_get_notes(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Open (unresolved) notes left on this email."""
+    conn = get_conn()
+    rows = db.rows_to_dicts(conn.execute(
+        "SELECT id,note,created_at FROM email_notes WHERE document_id=? AND program_id=? "
+        "AND resolved=0 ORDER BY created_at DESC", (doc_id, program_id)).fetchall())
+    conn.close()
+    return {"notes": rows}
+
+
+@app.post("/mailbox/{doc_id}/reclassify")
+def mailbox_reclassify(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Re-run the 5-way classifier LLM on this email and store the result as the
+    authoritative category (a triage_json override that wins over the doc_type map)."""
+    import os
+    from ..engine import classifier
+    from ..engine.triage import _doc_email
+    conn = get_conn()
+    r = conn.execute("SELECT * FROM documents WHERE id=? AND program_id=?",
+                     (doc_id, program_id)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "email not found")
+    res = classifier.classify_email(_doc_email(r), api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    try:
+        tj = json.loads(r["triage_json"] or "{}")
+    except json.JSONDecodeError:
+        tj = {}
+    tj["category"] = res.category
+    tj["reclassified"] = True
+    with conn:
+        conn.execute("UPDATE documents SET triage_json=? WHERE id=?", (json.dumps(tj), doc_id))
+    conn.close()
+    return {"id": doc_id, "category": res.category, "reason": res.reason,
+            "confidence": res.confidence}
 
 
 @app.get("/molecules/values")
@@ -773,7 +1312,7 @@ def competitive(program_id: str = Query(default=DEMO_PROGRAM_ID),
 # ==== reconstructed inbox-loop routes: data QC · legal · registry · quotes ====
 
 class RunBody(BaseModel):
-    source: str = "text"                    # "text" | "native"
+    source: str = "native"                  # native-only (real attachment via Sonnet + LibreOffice)
     files: list[str] | None = None
     api_key: str | None = None
 
@@ -788,12 +1327,16 @@ def _doc_or_404(conn, doc_id: int, program_id: str):
 
 
 def _attachments_for(doc, program_id: str) -> list[dict]:
-    """Attachment list with native-read availability — union of parsed-text names and
-    on-disk binaries (a file can exist on disk without being inlined into raw_text)."""
+    """Attachment list with native-read availability. For the anonymized demo program
+    the filenames are anonymized (matching the extractor); the real programs (program-b,
+    program-a) use the real on-disk filenames."""
     from ..engine.processors import data as data_proc
     from ..engine.attachments import parse_attachments
     att_names = [fn for fn, _ in parse_attachments(doc["raw_text"] or "")]
-    real = data_proc.real_attachments_anon(program_id, doc["source_ref"])
+    if program_id == DEMO_PROGRAM_ID:
+        real = data_proc.real_attachments_anon(program_id, doc["source_ref"])   # {anon_name: Path}
+    else:
+        real = {f.name: f for f in data_proc.real_attachments(doc["source_ref"])}  # real names
     names = list(dict.fromkeys([*att_names, *real.keys()]))
     return [{"filename": n, "native_available": n in real and data_proc.can_read_native(real[n])}
             for n in names]
@@ -824,7 +1367,7 @@ def data_analysis_run(doc_id: int, body: RunBody, program_id: str = Query(defaul
     conn = get_conn()
     doc = _doc_or_404(conn, doc_id, program_id)
     aid = data_proc.analyze_and_store(conn, program_id, doc, api_key=body.api_key,
-                                      source=body.source, files=body.files)
+                                      source=body.source, files=body.files, redo=True)
     conn.commit()
     r = conn.execute("SELECT * FROM data_analyses WHERE id=?", (aid,)).fetchone()
     atts = _attachments_for(doc, program_id)
@@ -834,12 +1377,19 @@ def data_analysis_run(doc_id: int, body: RunBody, program_id: str = Query(defaul
             "verdict": r["verdict"] if r else None, "analysis": analysis, "attachments": atts}
 
 
+class DataApproveBody(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    deposition: list[dict] | None = None      # user-edited proposed-deposition rows
+
+
 @app.post("/data/{analysis_id}/approve")
-def data_analysis_approve(analysis_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+def data_analysis_approve(analysis_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID),
+                          body: DataApproveBody | None = None):
     from ..engine.processors import data as data_proc
+    dep = body.deposition if body else None
     conn = get_conn()
     try:
-        res = data_proc.approve(conn, program_id, analysis_id)
+        res = data_proc.approve(conn, program_id, analysis_id, deposition=dep)
         conn.commit()
         return res
     except ValueError as e:
@@ -914,12 +1464,58 @@ def quotes_groups(program_id: str = Query(default=DEMO_PROGRAM_ID)):
     return quote_related.quote_groups(program_id)
 
 
+@app.get("/quotes/related/{doc_id}")
+def quotes_related(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Competing quotes for the same service as this quote email (compare price/turnaround)."""
+    from ..engine import quote_related
+    return quote_related.related_to_document(program_id, doc_id)
+
+
+@app.post("/mailbox/{doc_id}/create-po")
+def mailbox_create_po(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Draft a PO from this quote email's parsed line items → open in the PO editor."""
+    try:
+        return cfo_engine.create_draft_po_from_document(program_id, doc_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/legal/execution-status/{doc_id}")
+def legal_execution_status(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Lightweight classifier: is this legal email an already-executed doc (file it)
+    or a draft/redline to review? Used to branch the inbox before any full review."""
+    import os
+    from ..engine.processors import legal
+    conn = get_conn()
+    doc = _doc_or_404(conn, doc_id, program_id)
+    conn.close()
+    return legal.detect_execution_status(program_id, doc, api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+
+@app.post("/legal/review/{doc_id}/save")
+def legal_review_save(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Save a completed/executed legal document to records. Upserts a 'filed' row so it
+    works whether or not a full review was run first."""
+    conn = get_conn()
+    with conn:
+        cur = conn.execute("UPDATE legal_reviews SET status='filed' WHERE document_id=? AND program_id=?",
+                           (doc_id, program_id))
+        if cur.rowcount == 0:
+            conn.execute(
+                "INSERT INTO legal_reviews(program_id,document_id,status,summary,review_json) "
+                "VALUES (?,?, 'filed', 'Filed executed document', ?)",
+                (program_id, doc_id, json.dumps({"execution_status": "executed", "filed": True})))
+    conn.close()
+    return {"document_id": doc_id, "status": "filed"}
+
+
 # ---- Compound registry ----
 @app.get("/registry/candidates")
 def registry_candidates(program_id: str = Query(default=DEMO_PROGRAM_ID),
                         q: str | None = Query(default=None)):
     from ..engine import registry
-    return registry.candidates(program_id, q)
+    cands = registry.candidates(program_id, q)
+    return {"candidates": cands, "total": registry.remaining_count(program_id)}
 
 
 @app.get("/registry/{molecule_id}/detail")
@@ -957,10 +1553,40 @@ def registry_dismiss(molecule_id: int, program_id: str = Query(default=DEMO_PROG
     return registry.dismiss(program_id, molecule_id)
 
 
-@app.get("/molecules/search")
-def molecules_search(program_id: str = Query(default=DEMO_PROGRAM_ID), q: str = Query(...)):
+class RegistrySetCanonical(BaseModel):
+    program_id: str = DEMO_PROGRAM_ID
+    alias: str
+
+
+@app.post("/registry/{molecule_id}/set-canonical")
+def registry_set_canonical(molecule_id: int, body: RegistrySetCanonical):
+    """Promote an alias to the molecule's canonical name (re-keys the whole system)."""
     from ..engine import registry
-    return registry.search_molecules(program_id, q)
+    try:
+        return registry.set_canonical(body.program_id, molecule_id, body.alias)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/registry/rebuild-from-categories")
+def registry_rebuild_from_categories(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Restrict registry candidates to molecules sourced from quote/invoice/legal/data emails."""
+    from ..engine import registry
+    return registry.rebuild_from_categories(program_id)
+
+
+@app.post("/registry/flag-unconfirmed")
+def registry_flag_unconfirmed(program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """Reconcile the registry: seed molecules → active; detected structure-less → candidate."""
+    from ..engine import registry
+    return registry.flag_unconfirmed(program_id)
+
+
+@app.get("/molecules/search")
+def molecules_search(program_id: str = Query(default=DEMO_PROGRAM_ID), q: str = Query(...),
+                     limit: int = Query(default=8)):
+    from ..engine import registry
+    return registry.search_molecules(program_id, q, limit=limit)
 
 
 @app.get("/structure/svg")

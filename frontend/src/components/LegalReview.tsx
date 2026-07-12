@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  fetchLegalReview, runLegalReview, legalDocDownloadUrl,
+  fetchLegalReview, runLegalReview, legalDocDownloadUrl, saveLegalDoc, fetchLegalExecutionStatus,
   type LegalReview as LR, type LegalIssue,
 } from "@/lib/api";
 
 const EXEC: Record<string, { label: string; chip: string }> = {
   draft: { label: "Draft — for execution", chip: "bg-sky-500/15 text-sky-300" },
   in_revision: { label: "In revision", chip: "bg-amber-500/15 text-amber-300" },
-  executed: { label: "Executed / countersigned", chip: "bg-emerald-500/15 text-emerald-300" },
+  executed: { label: "Executed / countersigned", chip: "bg-emerald-500/15 text-emerald-800" },
 };
 
 const SEV: Record<string, { label: string; chip: string; dot: string; ring: string }> = {
@@ -43,12 +43,27 @@ export function LegalReview({ docId, programId }: { docId: number; programId: st
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"text" | "native">("text");
   const [execTBD, setExecTBD] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [execStatus, setExecStatus] = useState<string | null>(null);
+  const [reviewAnyway, setReviewAnyway] = useState(false);
 
   const load = useCallback(() => {
     fetchLegalReview(docId, programId).then(setLr).catch(() => setLr(null));
   }, [docId, programId]);
   useEffect(load, [load]);
-  useEffect(() => { setOpen(false); setMode("text"); }, [docId]);
+  useEffect(() => { setOpen(false); setMode("text"); setSaved(false); setReviewAnyway(false); }, [docId]);
+  // up-front: is this an already-executed doc (file it) or a draft to review?
+  useEffect(() => {
+    setExecStatus(null);
+    fetchLegalExecutionStatus(docId, programId)
+      .then((r) => setExecStatus(r.execution_status)).catch(() => setExecStatus(null));
+  }, [docId, programId]);
+
+  async function saveToFiles() {
+    setBusy(true);
+    try { await saveLegalDoc(docId, programId); setSaved(true); }
+    finally { setBusy(false); }
+  }
 
   async function run() {
     setBusy(true);
@@ -90,7 +105,24 @@ export function LegalReview({ docId, programId }: { docId: number; programId: st
         </div>
       )}
 
-      {rv ? (
+      {execStatus === "executed" && !reviewAnyway ? (
+        // Already fully executed → file it, don't run a redline review.
+        <div className="rounded border border-emerald-500/30 bg-emerald-500/5 p-2">
+          <div className="mb-2 text-xs font-medium text-emerald-800">
+            📁 This looks like a <b>fully-executed</b> document returned for records — no review needed, just file it for later.
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={saveToFiles} disabled={busy || saved}
+              className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
+              {saved ? "✓ Saved to files" : "🗄 Save to files"}
+            </button>
+            <a href={legalDocDownloadUrl(docId, programId)} download
+              className="rounded border border-borderStrong px-3 py-1.5 text-sm text-ink">📥 Download</a>
+            <button onClick={() => setReviewAnyway(true)}
+              className="text-xs text-inkFaint hover:text-ink">Review anyway</button>
+          </div>
+        </div>
+      ) : rv ? (
         <>
           <div className="mb-2 text-xs text-inkMuted">{rv.summary}</div>
           <div className="flex flex-wrap items-center gap-2">
@@ -100,10 +132,17 @@ export function LegalReview({ docId, programId }: { docId: number; programId: st
             </button>
             {/* workflow action depends on execution status */}
             {rv.execution_status === "executed" ? (
-              <a href={legalDocDownloadUrl(docId, programId)} download
-                className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white">
-                📥 Store Doc
-              </a>
+              <>
+                <button onClick={async () => { await saveLegalDoc(docId, programId).catch(() => {}); setSaved(true); }}
+                  disabled={saved}
+                  className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
+                  {saved ? "✓ Saved to records" : "🗄 Save to records"}
+                </button>
+                <a href={legalDocDownloadUrl(docId, programId)} download
+                  className="rounded border border-borderStrong px-3 py-1.5 text-sm text-ink">
+                  📥 Download
+                </a>
+              </>
             ) : (
               <button onClick={() => setExecTBD(true)}
                 className="rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white">
@@ -129,7 +168,9 @@ export function LegalReview({ docId, programId }: { docId: number; programId: st
         </>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-inkMuted">Run the document through draft-legal.</span>
+          <span className="text-xs text-inkMuted">
+            {execStatus === null ? "Checking execution status…" : "Run the document through draft-legal."}
+          </span>
           <label className="inline-flex items-center gap-1 text-xs text-inkMuted">
             <input type="radio" checked={mode === "text"} onChange={() => setMode("text")} /> text
           </label>

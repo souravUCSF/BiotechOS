@@ -1,5 +1,10 @@
-{"id":"cl-cda","doc_subject":"Program A CDA","expect":{"triage":"actionable","doc_type":"contract"}}
-{"id":"cl-invoice","doc_subject":"1222473","expect":{"triage":"actionable","doc_type":"invoice"}}
-{"id":"cl-weekly","doc_subject":"Chemistry Weekly","expect":{"doc_type":"project_update"}}
-{"id":"cl-capability","doc_subject":"Services at ICE Bioscien","expect":{"doc_type":"vendor_capability"}}
-{"id":"cl-quote","doc_subject":"IntactMS Assays","expect":{"doc_type":"quote"}}
+{"id": "cls-quote", "program": "demo", "doc_id": 10391, "expect_type": "quote", "note": "Vendor 3 proposal reply; a real quote (was mis-tagged invoice from thread)"}
+{"id": "cls-invoice", "program": "demo", "doc_id": 10415, "expect_type": "invoice", "note": "Vendor 1 invoice no. 1222473"}
+{"id": "cls-legal", "program": "demo", "doc_id": 10424, "expect_type": "legal", "note": "Vendor 3 CDA/NDA+MSA; legal (was mis-tagged invoice from thread)"}
+{"id": "cls-legal-2", "program": "demo", "doc_id": 10261, "expect_type": "legal", "note": "Cell Line profiling at ICE; legal"}
+{"id": "cls-data", "program": "demo", "doc_id": 10486, "expect_type": "data", "note": "MS QC data reply in a quote thread; data, not a quote"}
+{"id": "cls-other-caco2", "program": "demo", "doc_id": 10305, "expect_type": "other", "note": "CACO2 assay logistics chatter; other"}
+{"id": "cls-other-intactms", "program": "demo", "doc_id": 10270, "expect_type": "other", "note": "IntactMS assays thread; other"}
+{"id": "cls-not-legal", "program": "demo", "doc_id": 10356, "expect_type_any": ["data", "other"], "note": "Km-for-kinases assay question; must NOT be legal just because legal appeared earlier in the thread"}
+{"id": "cls-program-a-other", "program": "program-a", "doc_id": 11146, "expect_type": "other", "note": "IntactMS Assays thread; should be other (from flagged note)"}
+{"id": "cls-program-a-data", "program": "program-a", "doc_id": 11170, "expect_type": "data", "note": "IntactMS Assays thread; should be data (from flagged note)"}

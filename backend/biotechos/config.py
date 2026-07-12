@@ -34,11 +34,14 @@ RAW_DEMO = RAW_DIR / "demo_activities_long.csv.gz"
 # Hero program
 DEMO_PROGRAM_ID = "demo"
 PROGRAM_B_ID = "program-b"
+# Real (un-anonymized) Program A archive loaded as its own program (local only).
+PROGRAM_A_ID = "program-a"
 
 # program_id → raw archive / corpus org subdir under DATASTORE_ROOT and CORPUS_DIR.
 PROGRAM_ORG = {
     "demo": "Program A",
     "program-b": "Program B",
+    "program-a": "Program A",   # real archive at DATASTORE_ROOT/Program A (un-anonymized)
 }
 
 

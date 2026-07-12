@@ -106,6 +106,26 @@ def _eval_extract(program_id, case, conn):
     return ok, detail
 
 
+def _eval_classify(program_id, case, conn):
+    """Run the 5-way business classifier (engine/classifier.py) on one email and
+    check its category against the expected type. Case = {program, doc_id, expect_type}
+    where expect_type ∈ {quote, invoice, legal, data, other}."""
+    import os
+    from ..engine import classifier
+    row = _find_doc(conn, program_id, case)
+    if not row:
+        return False, {"error": f"doc not found: {case.get('doc_id') or case.get('doc_subject')}"}
+    res = classifier.classify_email(_doc_email(row), api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    got = res.category
+    # expected type: expect_type (canonical) with back-compat for the old expect.doc_type
+    exp = case.get("expect_type") or (case.get("expect") or {}).get("doc_type") \
+        or (case.get("expect") or {}).get("category")
+    any_ = case.get("expect_type_any")
+    ok = (got in any_) if any_ else graders.exact(exp, got)
+    return ok, {"doc": (row["subject"] or "")[:50], "type": (got, any_ or exp),
+                "reason": getattr(res, "reason", "")}
+
+
 def _eval_decision(program_id, case, conn):
     row = _find_doc(conn, program_id, case)
     if not row:
@@ -138,7 +158,9 @@ def eval_one(name: str, case: dict, program_id: str = DEMO_PROGRAM_ID,
     try:
         if name == "qa":
             passed, detail = _eval_qa(program_id, case, conn, repeat)
-        elif name in ("classify", "fields"):
+        elif name == "classify":
+            passed, detail = _eval_classify(program_id, case, conn)
+        elif name == "fields":
             passed, detail = _eval_extract(program_id, case, conn)
         elif name == "decision":
             passed, detail = _eval_decision(program_id, case, conn)

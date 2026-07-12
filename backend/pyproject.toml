@@ -6,10 +6,15 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "anthropic>=0.116.0",
+    "boltz-api>=0.43.0",
     "fastapi>=0.139.0",
     "gemmi>=0.7.5",
+    "mdanalysis>=2.10.0",
     "numpy>=2.5.1",
+    "openbabel-wheel>=3.1.1.23",
+    "openpyxl>=3.1.5",
     "pandas>=3.0.3",
+    "prolif>=2.2.0",
     "pydantic>=2.13.4",
     "python-multipart>=0.0.32",
     "rdkit>=2026.3.3",

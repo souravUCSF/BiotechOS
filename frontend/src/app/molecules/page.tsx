@@ -9,6 +9,7 @@ import {
   fetchTppScores,
   fetchMetrics,
   fetchMoleculeValues,
+  createGroup,
   type TppScores,
   type MetricDef,
   type MoleculeValues,
@@ -130,6 +131,25 @@ export default function MoleculesPage() {
   const [tableValues, setTableValues] = useState<MoleculeValues[]>([]);
   const [showTableColPicker, setShowTableColPicker] = useState(false);
   const tcKey = `moldash.tableCols.${programId}`;
+  const [groupBusy, setGroupBusy] = useState(false);
+  const [groupDlg, setGroupDlg] = useState<{ name: string } | null>(null);
+  const [tableSearch, setTableSearch] = useState("");
+  const [tSortKey, setTSortKey] = useState<string | null>(null);
+  const [tSortDir, setTSortDir] = useState<"asc" | "desc">("asc");
+  function tSortBy(key: string) {
+    if (tSortKey === key) setTSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setTSortKey(key); setTSortDir("asc"); }
+  }
+  const tArrow = (k: string) => (tSortKey === k ? (tSortDir === "asc" ? " ↑" : " ↓") : "");
+  async function confirmGroup() {
+    const name = groupDlg?.name.trim();
+    if (!name) return;
+    setGroupBusy(true);
+    try {
+      await createGroup(programId, name, brushIds);
+      setGroupDlg(null);
+    } catch (e) { alert(String(e)); } finally { setGroupBusy(false); }
+  }
 
   useEffect(() => {
     fetchTppScores(programId).then(setScores).catch(() => setScores(null));
@@ -191,6 +211,29 @@ export default function MoleculesPage() {
     return m;
   }, [tableValues]);
 
+  // "All molecules" table: search by name + sort by any column
+  const tableRows = useMemo(() => {
+    let list = state?.molecules ?? [];
+    const q = tableSearch.trim().toLowerCase();
+    if (q) list = list.filter((mo) => mo.name.toLowerCase().includes(q));
+    if (!tSortKey) return list;
+    const arr = [...list];
+    arr.sort((a, b) => {
+      let av: number | string | null | undefined;
+      let bv: number | string | null | undefined;
+      if (tSortKey === "name") { av = a.name.toLowerCase(); bv = b.name.toLowerCase(); }
+      else { av = (tableValsByMol.get(a.id) ?? {})[tSortKey]; bv = (tableValsByMol.get(b.id) ?? {})[tSortKey]; }
+      const an = av == null, bn = bv == null;
+      if (an && bn) return 0;
+      if (an) return 1;
+      if (bn) return -1;
+      if (typeof av === "string" && typeof bv === "string")
+        return tSortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      return tSortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
+    });
+    return arr;
+  }, [state, tableSearch, tSortKey, tSortDir, tableValsByMol]);
+
   // values for the configurable card fields (resolved metric keys)
   const [cardValues, setCardValues] = useState<MoleculeValues[]>([]);
   useEffect(() => {
@@ -224,6 +267,25 @@ export default function MoleculesPage() {
 
   return (
     <div>
+      {/* create-group dialog (system-styled, centered) */}
+      {groupDlg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !groupBusy && setGroupDlg(null)}>
+          <div className="w-full max-w-sm rounded-lg border border-border bg-panel p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 text-sm font-semibold text-ink">Create a group</div>
+            <div className="mb-2 text-xs text-inkMuted">{brushIds.length} selected molecule(s)</div>
+            <label className="mb-1 block text-xs text-inkMuted">Group name</label>
+            <input autoFocus value={groupDlg.name} onChange={(e) => setGroupDlg({ name: e.target.value })}
+              onKeyDown={(e) => { if (e.key === "Enter" && groupDlg.name.trim()) confirmGroup(); }}
+              className="mb-3 w-full rounded border border-borderStrong bg-panel2 px-2 py-1.5 text-sm text-ink" />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setGroupDlg(null)} disabled={groupBusy} className="rounded border border-borderStrong px-3 py-1.5 text-sm text-ink hover:bg-panel2 disabled:opacity-50">Cancel</button>
+              <button onClick={confirmGroup} disabled={groupBusy || !groupDlg.name.trim()} className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+                {groupBusy ? "Creating…" : "Create group"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mb-1 flex items-center gap-2">
         <h1 className="text-xl font-semibold">Molecule Tracking Dashboard</h1>
         <button
@@ -292,7 +354,13 @@ export default function MoleculesPage() {
         <div className="mb-8 rounded border border-blue-300 bg-blue-50 p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium text-ink">Selected molecules ({brushIds.length})</span>
-            <button onClick={() => setBrushIds([])} className="text-xs text-inkMuted hover:text-ink">Clear ✕</button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setGroupDlg({ name: "Selection" })} disabled={groupBusy}
+                className="rounded bg-sky-600 px-3 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50">
+                ＋ Create group
+              </button>
+              <button onClick={() => setBrushIds([])} className="text-xs text-inkMuted hover:text-ink">Clear ✕</button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {brushIds.map((id) => {
@@ -317,11 +385,19 @@ export default function MoleculesPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-panel2 text-inkMuted">
             <tr>
-              <th className="px-3 py-2 font-medium">Compound</th>
+              <th className="px-3 py-2 font-medium">
+                <button onClick={() => tSortBy("name")} className="hover:text-ink">Compound{tArrow("name")}</button>
+                <input
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                  placeholder="🔍 search…"
+                  className="mt-1 block w-40 rounded border border-borderStrong bg-panel px-2 py-0.5 text-xs font-normal"
+                />
+              </th>
               {tableColumns.map((key) => (
                 <th key={key} className="group px-3 py-2 font-medium">
                   <span className="inline-flex items-center gap-1">
-                    {metricLabel(key)}
+                    <button onClick={() => tSortBy(key)} className="hover:text-ink">{metricLabel(key)}{tArrow(key)}</button>
                     <button onClick={() => setTableCols(tableColumns.filter((c) => c !== key))}
                       title="Remove column"
                       className="text-inkFaint opacity-0 group-hover:opacity-100 hover:text-red-600">✕</button>
@@ -337,7 +413,7 @@ export default function MoleculesPage() {
             </tr>
           </thead>
           <tbody>
-            {state.molecules.map((mol) => {
+            {tableRows.map((mol) => {
               const vals = tableValsByMol.get(mol.id) ?? {};
               return (
                 <tr key={mol.id}

@@ -33,3 +33,6 @@ frontend/.next/
 # Local secrets — never commit
 backend/secrets.env
 .env
+
+# Local full-system progress snapshots (never committed)
+system-snapshots/
