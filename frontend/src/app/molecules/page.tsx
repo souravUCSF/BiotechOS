@@ -125,8 +125,8 @@ export default function MoleculesPage() {
   const [hoverId, setHoverId] = useState<number | null>(null);
   const [metricsCatalog, setMetricsCatalog] = useState<MetricDef[]>([]);
   const [tableColumns, setTableColumns] = useState<string[]>([
-    "assay:biochemical_ic50:TGTA", "assay:selectivity:TGTA/TGTB",
-    "assay:cellular_antiprolif:TGTA", "adme:MW", "adme:cLogP",
+    "assay:biochemical_ic50:KRAS", "assay:cellular_antiprolif:KRAS",
+    "assay:selectivity:KRAS/WT", "adme:MW", "adme:cLogP",
   ]);
   const [tableValues, setTableValues] = useState<MoleculeValues[]>([]);
   const [showTableColPicker, setShowTableColPicker] = useState(false);

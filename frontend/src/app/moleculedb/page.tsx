@@ -243,9 +243,9 @@ export default function MoleculeDatabasePage() {
 
   // configurable table columns (persisted per program as the default view)
   const DEFAULT_COLUMNS = [
-    "assay:biochemical_ic50:TGTA",
-    "assay:selectivity:TGTA/TGTB",
-    "assay:cellular_antiprolif:TGTA",
+    "assay:biochemical_ic50:KRAS",
+    "assay:cellular_antiprolif:KRAS",
+    "assay:selectivity:KRAS/WT",
   ];
   const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
   const [valueRows, setValueRows] = useState<MoleculeValues[]>([]);
@@ -265,6 +265,16 @@ export default function MoleculeDatabasePage() {
       if (saved) setColumns(JSON.parse(saved));
     } catch { /* ignore */ }
   }, [programId, loadMetrics, colKey]);
+
+  // default the visible columns to the program's TPP metrics (unless the user saved a
+  // view) — so the table always shows the criteria the program is scored on.
+  useEffect(() => {
+    if (!scores || !scores.molecules[0]) return;
+    try { if (localStorage.getItem(colKey)) return; } catch { /* ignore */ }
+    const tppCols = scores.molecules[0].params
+      .map((p) => p.metric).filter((m, i, a) => m && a.indexOf(m) === i);
+    if (tppCols.length) setColumns(tppCols);
+  }, [scores, colKey]);
 
   // fetch the value matrix whenever the visible columns change
   useEffect(() => {
