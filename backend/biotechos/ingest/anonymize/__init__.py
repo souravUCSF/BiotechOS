@@ -7,13 +7,10 @@ Two program archives are supported, each with its own token map:
     - amino-acid residues / mutations / positions (target-revealing);
     - SMILES → "[structure withheld]".
 
-  Program B (TGTA-targeting ADC program):
-    - payload name compound-x → [payload];
-    - linker chemistry linker-x/linker-x/L2/linker-x/… → [linker];
-    - reference/comparator ADC reference-ADC/reference-ADC/reference-ADC → [reference-ADC];
+  Program B (targeted-biologic program):
+    - payload / linker / reference-comparator tokens → neutral placeholders;
     - SMILES → "[structure withheld]".
-    NOTE: TGTA (antibody target) is KEPT — Program B is a TGTA ADC. DAR (drug-
-    antibody ratio) is a generic ADC metric and is KEPT. NO TGTA→TGTA remap.
+    NOTE: the antibody target is KEPT (generic); DAR is a generic metric and is KEPT.
 
 Everything else is preserved verbatim: vendor names, people, email domains, phone
 numbers, molecule/project codes, and the original folder slugs (target/payload/
@@ -42,33 +39,17 @@ _PROGRAM_A_SUBS = [
     (rf"{_B}TGTA{_E}", "TGTA"),
 ]
 
-# ---- Program B (ADC) identity obfuscation. -------------------------------------
-# Order matters: match longer/compound linker tokens before the short standalone
-# ones so "linker-x" isn't half-consumed. `vc` is matched case-sensitively as a
-# standalone linker abbreviation; L1/L2/linker-x uppercase-only standalone.
+# ---- Program B identity obfuscation (placeholder table in the public repo; the real
+# payload / linker / comparator token maps are supplied outside version control). ----
 _PROGRAM_B_SUBS = [
-    # High-specificity identity tokens — GLUE-SAFE (no alnum boundary) because PDF
-    # text extraction strips spaces (e.g. "mLofreference-ADC", "resistancetoreference-ADC"). These
-    # strings are unambiguous enough that matching inside a run is safe.
-    (re.compile(r"T[-\s]?reference-ADC|reference-ADC|(?<![A-Za-z0-9])reference-ADC(?![A-Za-z0-9])|"
-                r"DS[-\s]?8201[a-z]?|reference-ADC|reference-mAb[-\s]?payload-1", re.I),
-     "[reference-ADC]"),
-    (re.compile(r"compound-x", re.I), "[payload]"),
-    (re.compile(r"L2[-\s]?L1[-\s]?linker-x|vc[-\s]?linker-x|Val[-\s]?Cit[-\s]?linker-x|"
-                r"linker-x[-\s]?linker-x|Val[-\s]?Cit|linker-x", re.I), "[linker]"),
-    # standalone linker abbreviations — need boundaries to avoid nuking real words
-    # (uppercase L1/L2/linker-x only; lowercase 'vc' too, case-insensitive here since
-    # boundaried). linker-x/L1/L2 as standalone tokens are linker chemistry.
-    (re.compile(rf"{_B}(?:linker-x|L1|L2|vc){_E}", re.I), "[linker]"),
+    (re.compile(r"\[reference-ADC\]", re.I), "[reference-ADC]"),
+    (re.compile(r"\[payload\]", re.I), "[payload]"),
+    (re.compile(r"\[linker\]", re.I), "[linker]"),
 ]
 
 # --- residual leak detectors, per program ---
 _TARGET_LEAK = re.compile(r"\b(tgta|tgtb)\b", re.I)
-_PROGRAM_B_LEAK = re.compile(
-    r"(compound-x|val[-\s]?cit|linker-x|reference-ADC|ds[-\s]?8201|t[-\s]?reference-ADC|reference-ADC|"
-    r"(?<![A-Za-z0-9])reference-ADC(?![A-Za-z0-9])|reference-mAb[-\s]?payload-1|"
-    r"(?<![A-Za-z0-9])(?:linker-x)(?![A-Za-z0-9])|"
-    r"(?<![A-Za-z0-9])L2[-\s]?L1[-\s]?linker-x(?![A-Za-z0-9]))", re.I)
+_PROGRAM_B_LEAK = re.compile(r"\[(?:reference-ADC|payload|linker)\]", re.I)
 
 # Amino-acid residues / mutations / positions (Program A only — reveal the kinase).
 _MUT_RE = re.compile(r"\b[ACDEFGHIKLMNPQRSTVWY]\d{3,4}[ACDEFGHIKLMNPQRSTVWY]\b", re.I)

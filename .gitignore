@@ -36,3 +36,8 @@ backend/secrets.env
 
 # Local full-system progress snapshots (never committed)
 system-snapshots/
+
+# Local data artifacts — never commit
+data/backups/
+**/state/biotechos.db
+data/review_notes.md

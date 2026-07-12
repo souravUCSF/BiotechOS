@@ -23,7 +23,7 @@ const BUYER: Record<string, { name: string; addr: string[]; phone: string; conta
     name: "Example A Bio", addr: ["100 Example Ave", "San Francisco, CA 94100"],
     phone: "(555) 010-0100", contact: "Jordan Lee", email: "founder@example-a.com",
   },
-  program-b: {
+  "program-b": {
     name: "Example B Bio", addr: ["100 Example Ave", "San Francisco, CA 94100"],
     phone: "(555) 010-0100", contact: "Jordan Lee", email: "founder@example-b.com",
   },
