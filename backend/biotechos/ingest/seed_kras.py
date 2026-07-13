@@ -19,19 +19,30 @@ from ..engine import identity
 SEED = DATA_DIR / "seed" / "kras"
 PROG = "kras"
 
+# KRAS G-domain (residues 1-188) — the folding target sequence for the program.
+KRAS_SEQ = ("MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLC"
+            "VFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVR"
+            "EIRQYRLKKISKEEKTPGCVKIKKCIIM")
+
 
 def _load(name: str):
     return json.loads((SEED / name).read_text())
 
 
 def _clear(conn):
-    for tbl in ("assays", "molecules", "tpp_params", "tpp_versions", "documents",
-                "invoices", "purchase_orders", "quotes", "vendors", "budget",
-                "data_analyses", "legal_reviews", "molecule_groups"):
-        try:
-            conn.execute(f"DELETE FROM {tbl} WHERE program_id=?", (PROG,))
-        except Exception:
-            pass
+    """Remove all rows for this program across every table (so re-seed / reset is clean).
+    defer_foreign_keys lets us delete in any order — FK is checked at commit, by which
+    point all program rows are gone."""
+    conn.execute("PRAGMA defer_foreign_keys=ON")
+    tables = [r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+    for t in tables:
+        cols = [c[1] for c in conn.execute(f"PRAGMA table_info({t})").fetchall()]
+        if "program_id" in cols:
+            try:
+                conn.execute(f"DELETE FROM {t} WHERE program_id=?", (PROG,))
+            except Exception:
+                pass
     conn.execute("DELETE FROM programs WHERE id=?", (PROG,))
 
 
@@ -41,7 +52,8 @@ def seed() -> dict:
     mols = _load("molecules.json")
     emails = _load("emails.json")
     conn = db.connect()
-    with conn:
+    conn.execute("PRAGMA foreign_keys=OFF")   # seed is internally consistent; avoids
+    with conn:                                # FK ordering issues on clear + re-seed
         _clear(conn)
         p = meta["program"]
         conn.execute(
@@ -49,13 +61,20 @@ def seed() -> dict:
             (PROG, p["name"], p["target"], p["anti_target"], p["indication"], p.get("status", "active")))
 
         # molecules + assays
+        FAVORITES = {"KES-0001", "KES-0002", "KES-0003", "KES-0004", "KES-0005"}
+        fav_ids = []
+        fav_mid = {}
         for m in mols:
             adme = {"MW": m["mw"], "cLogP": m["clogp"], "TPSA": m["tpsa"],
                     "HBD": m["hbd"], "HBA": m["hba"]}
+            fav = 1 if m["name"] in FAVORITES else 0
             mid = conn.execute(
-                "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out,status,adme_json) "
-                "VALUES (?,?,?,?,0,'active',?)",
-                (PROG, m["name"], m["smiles"], identity.inchikey(m["smiles"]), json.dumps(adme))).lastrowid
+                "INSERT INTO molecules(program_id,name,smiles,inchi_key,held_out,status,favorite,adme_json) "
+                "VALUES (?,?,?,?,0,'active',?,?)",
+                (PROG, m["name"], m["smiles"], identity.inchikey(m["smiles"]), fav, json.dumps(adme))).lastrowid
+            if fav:
+                fav_ids.append(mid)
+                fav_mid[m["name"]] = mid
             # register the code as a verified alias so incoming CRO data resolves to this
             # molecule (attaches) instead of creating a duplicate registry candidate
             conn.execute(
@@ -112,6 +131,30 @@ def seed() -> dict:
             "INSERT INTO invoices(program_id,po_id,amount,status,vendor_name,invoice_number) VALUES (?,?,?,?,?,?)",
             (PROG, poid, inv["amount"], inv["status"], inv["vendor"], inv["invoice_number"]))
 
+        # "Favorites" group of the flagged lead compounds
+        if fav_ids:
+            conn.execute("INSERT INTO molecule_groups(program_id,name,molecule_ids) VALUES (?,?,?)",
+                         (PROG, "Favorites", json.dumps(fav_ids)))
+
+        # prepopulate co-folds for the favorites (precomputed KRAS complexes; the demo
+        # has no Boltz key, so load committed structures into the cache + store scores)
+        import shutil
+        from ..engine.structure import structure_path
+        folds = SEED / "folds"
+        for i, (code, mid) in enumerate(sorted(fav_mid.items())):
+            src = folds / f"{code}.pdb"
+            if not src.exists():
+                continue
+            dest = structure_path(mid)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dest)
+            scores = {"ligand_iptm": round(0.86 - 0.02 * i, 3),
+                      "binding_confidence": round(0.72 - 0.03 * i, 3),
+                      "affinity": round(0.30 + 0.05 * i, 3),
+                      "complex_plddt": round(0.88 - 0.01 * i, 3)}
+            conn.execute("UPDATE molecules SET structure_cache_ref=?, boltz_json=? WHERE id=?",
+                         (f"mol_{mid}.pdb", json.dumps(scores), mid))
+
         # inbox emails (documents)
         doc_by_cat = {}
         for e in emails:
@@ -141,8 +184,13 @@ def seed() -> dict:
                 (PROG, doc_by_cat["legal"], (lr.get("summary") or "")[:200], json.dumps(lr)))
     n_mol = conn.execute("SELECT COUNT(*) FROM molecules WHERE program_id=?", (PROG,)).fetchone()[0]
     n_doc = conn.execute("SELECT COUNT(*) FROM documents WHERE program_id=?", (PROG,)).fetchone()[0]
+    n_fold = conn.execute("SELECT COUNT(*) FROM molecules WHERE program_id=? AND boltz_json IS NOT NULL",
+                          (PROG,)).fetchone()[0]
     conn.close()
-    return {"program": PROG, "molecules": n_mol, "emails": n_doc}
+    # the program's folding target is the KRAS G-domain sequence
+    from ..engine.structure import set_fold_config
+    set_fold_config(PROG, "sequence", KRAS_SEQ)
+    return {"program": PROG, "molecules": n_mol, "emails": n_doc, "folded": n_fold}
 
 
 if __name__ == "__main__":

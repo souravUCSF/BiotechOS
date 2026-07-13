@@ -1215,25 +1215,12 @@ def inbox_decline(item_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)
 
 @app.post("/demo/reset")
 def demo_reset(program_id: str = Query(default=DEMO_PROGRAM_ID)):
-    """Re-seed the inbox and re-hold the demo molecules — resets the loop for a
-    fresh run/recording without a full data reload."""
-    conn = get_conn()
-    with conn:
-        # remove CRO-loaded assays and re-hold the demo molecules
-        for name in ("BTX-1033", "BTX-1026", "BTX-1027"):
-            r = conn.execute(
-                "SELECT id FROM molecules WHERE program_id=? AND name=?", (program_id, name)
-            ).fetchone()
-            if r:
-                conn.execute("DELETE FROM assays WHERE molecule_id=? AND source IN ('cro','derived')",
-                             (r["id"],))
-                conn.execute("UPDATE molecules SET held_out=1 WHERE id=?", (r["id"],))
-        conn.execute("DELETE FROM ledger_entries WHERE program_id=?", (program_id,))
-    conn.close()
-    n = inbox_engine.seed_inbox(program_id)
-    from ..engine import cfo as cfo_engine
-    cfo_engine.seed_financials(program_id)
-    return {"reset": True, "inbox_items": n}
+    """Restore the KRAS demo to its original seeded state — re-runs the seed loader,
+    which clears the program (incl. any approved/registered data) and re-inserts the
+    50 compounds, favorites + group, TPP, budget, four fresh inbox emails, precomputed
+    DataQC/Legal reviews, and the folded favorites."""
+    from ..ingest.seed_kras import seed as _seed_kras
+    return {"reset": True, **_seed_kras()}
 
 
 @app.get("/budget")

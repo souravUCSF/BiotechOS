@@ -4,14 +4,22 @@
     "category": "quote",
     "email_from": "Priya Nair <quotes@cellkinetics.example>",
     "email_to": "founder@kestrel-tx.example",
-    "subject": "Quotation Q-2041 — KRAS G12C cellular pERK panel",
+    "subject": "Quotation Q-2041 \u2014 KRAS G12C cellular pERK panel",
     "sent_at": "2026-06-03T09:14:00Z",
     "vendor": "Cell Kinetics CRO",
     "amount": 48000,
-    "raw_text": "Hi,\n\nThank you for the enquiry. Please find our quotation for the KRAS G12C cellular p-ERK inhibition panel.\n\nScope: dose-response p-ERK (MSD ELISA) IC50 in three KRAS G12C lines — NCI-H358 (lung), MIA PaCa-2 (pancreatic) and SW1573 (lung) — for up to 8 test compounds, 10-point curves in duplicate, plus a reference control compound.\n\nDeliverables: per-compound IC50 per line, curve fits, raw plate data.\nTurnaround: 3-4 weeks from compound receipt.\nPrice: USD 48,000 (fixed).\nQuote ref: Q-2041, valid 60 days.\n\nBest regards,\nPriya Nair\nCell Kinetics CRO",
+    "raw_text": "Hi,\n\nThank you for the enquiry. Please find our quotation for the KRAS G12C cellular p-ERK inhibition panel.\n\nScope: dose-response p-ERK (MSD ELISA) IC50 in three KRAS G12C lines \u2014 NCI-H358 (lung), MIA PaCa-2 (pancreatic) and SW1573 (lung) \u2014 for up to 8 test compounds, 10-point curves in duplicate, plus a reference control compound.\n\nDeliverables: per-compound IC50 per line, curve fits, raw plate data.\nTurnaround: 3-4 weeks from compound receipt.\nPrice: USD 48,000 (fixed).\nQuote ref: Q-2041, valid 60 days.\n\nBest regards,\nPriya Nair\nCell Kinetics CRO",
     "line_items": [
-      {"description": "p-ERK IC50 panel, 3 cell lines x 8 compounds", "quantity": 8, "amount": 42000},
-      {"description": "Reference control + assay QC", "quantity": 1, "amount": 6000}
+      {
+        "description": "p-ERK IC50 panel, 3 cell lines x 8 compounds",
+        "quantity": 8,
+        "amount": 42000
+      },
+      {
+        "description": "Reference control + assay QC",
+        "quantity": 1,
+        "amount": 6000
+      }
     ]
   },
   {
@@ -19,15 +27,23 @@
     "category": "invoice",
     "email_from": "Cell Kinetics Billing <ar@cellkinetics.example>",
     "email_to": "ap@kestrel-tx.example",
-    "subject": "Invoice CK-2041 — DMPK package (PO KES-PO-0007)",
+    "subject": "Invoice CK-2041 \u2014 DMPK package (PO KES-PO-0007)",
     "sent_at": "2026-06-24T16:02:00Z",
     "vendor": "Cell Kinetics CRO",
     "amount": 22500,
     "invoice_number": "CK-2041",
-    "raw_text": "Dear Accounts Payable,\n\nPlease find attached invoice CK-2041 for the completed DMPK package against PO KES-PO-0007.\n\nWork completed: mouse IV/PO cassette PK (3 compounds) and human/mouse liver microsomal stability (8 compounds).\n\nInvoice CK-2041\nAmount due: USD 22,500\nNet 30. Remit to the account on file.\n\nThank you,\nCell Kinetics CRO — Accounts Receivable",
+    "raw_text": "Dear Accounts Payable,\n\nPlease find attached invoice CK-2041 for the completed DMPK package against PO KES-PO-0007.\n\nWork completed: mouse IV/PO cassette PK (3 compounds) and human/mouse liver microsomal stability (8 compounds).\n\nInvoice CK-2041\nAmount due: USD 22,500\nNet 30. Remit to the account on file.\n\nThank you,\nCell Kinetics CRO \u2014 Accounts Receivable",
     "line_items": [
-      {"description": "Mouse cassette PK (IV/PO), 3 compounds", "quantity": 3, "amount": 13500},
-      {"description": "Liver microsomal stability, 8 compounds", "quantity": 8, "amount": 9000}
+      {
+        "description": "Mouse cassette PK (IV/PO), 3 compounds",
+        "quantity": 3,
+        "amount": 13500
+      },
+      {
+        "description": "Liver microsomal stability, 8 compounds",
+        "quantity": 8,
+        "amount": 9000
+      }
     ]
   },
   {
@@ -35,10 +51,10 @@
     "category": "data",
     "email_from": "Wei Chen <results@northgatebio.example>",
     "email_to": "founder@kestrel-tx.example",
-    "subject": "Cellular p-ERK IC50 results — KES series (batch 1)",
+    "subject": "Cellular p-ERK IC50 results \u2014 KES series (batch 1)",
     "sent_at": "2026-06-27T11:41:00Z",
     "vendor": "Northgate BioServices",
-    "raw_text": "Hello,\n\nData for the first batch of the KES series is ready. Cellular p-ERK inhibition IC50 in NCI-H358 (KRAS G12C), 10-point dose-response, duplicate.\n\nCompound   p-ERK IC50 (nM, H358)\nKES-0001   2.0\nKES-0002   4.9\nKES-0003   5.4\nKES-0004   7.1\nKES-0005   9.2\nKES-0006   14\nKES-0007   22\nKES-0008   31\n\nFull plate data and curve fits attached. Let us know if you'd like the MIA PaCa-2 arm next.\n\nWei Chen\nNorthgate BioServices",
+    "raw_text": "Hello,\n\nData for the first batch of the KES series is ready. Cellular p-ERK inhibition IC50 in NCI-H358 (KRAS G12C), 10-point dose-response, duplicate.\n\nCompound   p-ERK IC50 (nM, H358)\nKES-0001   2.0\nKES-0002   4.9\nKES-0003   5.4\nKES-0004   7.1\nKES-0005   9.2\nKES-0006   14\nKES-0007   22\nKES-0051   28\n\n(KES-0051 is a new analog from the latest batch, not yet registered.)\n\nFull plate data and curve fits attached. Let us know if you'd like the MIA PaCa-2 arm next.\n\nWei Chen\nNorthgate BioServices",
     "dataset": {
       "modality": "cellular_antiprolif",
       "target": "KRAS",
@@ -48,10 +64,38 @@
       "system": "NCI-H358",
       "assay_desc": "Cellular p-ERK inhibition IC50 (MSD ELISA), NCI-H358 KRAS G12C, 10-pt duplicate",
       "points": [
-        {"molecule": "KES-0001", "value": 2.0}, {"molecule": "KES-0002", "value": 4.9},
-        {"molecule": "KES-0003", "value": 5.4}, {"molecule": "KES-0004", "value": 7.1},
-        {"molecule": "KES-0005", "value": 9.2}, {"molecule": "KES-0006", "value": 14.0},
-        {"molecule": "KES-0007", "value": 22.0}, {"molecule": "KES-0008", "value": 31.0}
+        {
+          "molecule": "KES-0001",
+          "value": 2.0
+        },
+        {
+          "molecule": "KES-0002",
+          "value": 4.9
+        },
+        {
+          "molecule": "KES-0003",
+          "value": 5.4
+        },
+        {
+          "molecule": "KES-0004",
+          "value": 7.1
+        },
+        {
+          "molecule": "KES-0005",
+          "value": 9.2
+        },
+        {
+          "molecule": "KES-0006",
+          "value": 14.0
+        },
+        {
+          "molecule": "KES-0007",
+          "value": 22.0
+        },
+        {
+          "molecule": "KES-0051",
+          "value": 28.0
+        }
       ]
     }
   },
@@ -60,10 +104,16 @@
     "category": "legal",
     "email_from": "Crestline Bio Legal <contracts@crestlinebio.example>",
     "email_to": "founder@kestrel-tx.example",
-    "subject": "Mutual CDA for signature — Kestrel / Crestline",
+    "subject": "Mutual CDA for signature \u2014 Kestrel / Crestline",
     "sent_at": "2026-06-10T13:20:00Z",
     "vendor": "Crestline Bio",
-    "raw_text": "Hello,\n\nAhead of the KRAS medicinal-chemistry collaboration discussion, please find attached our standard Mutual Confidential Disclosure Agreement for signature.\n\nKey terms: mutual; 2-year term; 5-year confidentiality survival; purpose limited to evaluating a potential research collaboration; governing law Delaware. No financial commitment.\n\nPlease review and return a signed copy, or send redlines.\n\nRegards,\nCrestline Bio — Legal & Contracts",
-    "legal": {"doc_kind": "CDA", "counterparty": "Crestline Bio", "term_years": 2, "governing_law": "Delaware", "value": 0}
+    "raw_text": "Hello,\n\nAhead of the KRAS medicinal-chemistry collaboration discussion, please find attached our standard Mutual Confidential Disclosure Agreement for signature.\n\nKey terms: mutual; 2-year term; 5-year confidentiality survival; purpose limited to evaluating a potential research collaboration; governing law Delaware. No financial commitment.\n\nPlease review and return a signed copy, or send redlines.\n\nRegards,\nCrestline Bio \u2014 Legal & Contracts",
+    "legal": {
+      "doc_kind": "CDA",
+      "counterparty": "Crestline Bio",
+      "term_years": 2,
+      "governing_law": "Delaware",
+      "value": 0
+    }
   }
 ]

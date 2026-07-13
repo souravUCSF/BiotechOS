@@ -505,7 +505,7 @@ export async function approveInbox(itemId: number, programId: string): Promise<A
   return res.json();
 }
 
-export async function resetDemo(programId: string): Promise<{ reset: boolean; inbox_items: number }> {
+export async function resetDemo(programId: string): Promise<{ reset: boolean } & Record<string, unknown>> {
   const res = await fetch(`${API_BASE}/demo/reset?program_id=${programId}`, { method: "POST" });
   if (!res.ok) throw new Error(`reset failed: ${res.status}`);
   return res.json();

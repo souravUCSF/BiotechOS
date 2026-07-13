@@ -433,7 +433,8 @@ def approve(conn, program_id: str, analysis_id: int, deposition: list | None = N
     for d in a.get("deposition", []):
         if d.get("value") is None:
             continue
-        r = identity.resolve_molecule(program_id, d["molecule"], create=True, conn=conn)
+        r = identity.resolve_molecule(program_id, d["molecule"], smiles=d.get("smiles"),
+                                      create=True, conn=conn)
         mid = r.get("molecule_id")
         if not mid:
             continue

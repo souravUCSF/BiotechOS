@@ -1,37 +1,195 @@
 {
   "verdict": "pass",
   "analysis": {
-    "vendor_summary": "Northgate BioServices delivered cellular p-ERK inhibition IC50 (NCI-H358, KRAS G12C) for 8 KES-series compounds — 10-point duplicate dose-response, all curve fits accepted.",
-    "counts": { "datasets": 1, "discrepancies": 0, "warnings": 0 },
+    "vendor_summary": "Northgate BioServices delivered cellular p-ERK inhibition IC50 (NCI-H358, KRAS G12C) for 8 compounds (incl. one new analog, KES-0051, not yet registered) \u2014 10-point duplicate dose-response, all curve fits accepted.",
+    "counts": {
+      "datasets": 1,
+      "discrepancies": 0,
+      "warnings": 0
+    },
     "read_source": "native attachment (results table)",
     "qc_steps": [
-      { "step": "Read source", "detail": "Parsed attached results table (native)", "status": "ok" },
-      { "step": "Detect + extract", "detail": "1 dataset — cellular p-ERK IC50 x 8 compounds", "status": "ok" },
-      { "step": "Unit normalization", "detail": "All values reported in nM; no conversion required", "status": "ok" },
-      { "step": "Curve QC", "detail": "8/8 curves R2 > 0.95; Hill slopes 0.8-1.4", "status": "ok" },
-      { "step": "Controls", "detail": "Positive control within historical range", "status": "ok" }
+      {
+        "step": "Read source",
+        "detail": "Parsed attached results table (native)",
+        "status": "ok"
+      },
+      {
+        "step": "Detect + extract",
+        "detail": "1 dataset \u2014 cellular p-ERK IC50 x 8 compounds",
+        "status": "ok"
+      },
+      {
+        "step": "Unit normalization",
+        "detail": "All values reported in nM; no conversion required",
+        "status": "ok"
+      },
+      {
+        "step": "Curve QC",
+        "detail": "8/8 curves R2 > 0.95; Hill slopes 0.8-1.4",
+        "status": "ok"
+      },
+      {
+        "step": "Controls",
+        "detail": "Positive control within historical range",
+        "status": "ok"
+      }
     ],
     "charts": [
-      { "kind": "panel", "target": "KRAS", "units": "nM", "items": [
-        { "property": "KES-0001", "value": 2.0, "units": "nM", "band": "potent", "flagged": false },
-        { "property": "KES-0002", "value": 4.9, "units": "nM", "band": "potent", "flagged": false },
-        { "property": "KES-0003", "value": 5.4, "units": "nM", "band": "potent", "flagged": false },
-        { "property": "KES-0004", "value": 7.1, "units": "nM", "band": "potent", "flagged": false },
-        { "property": "KES-0005", "value": 9.2, "units": "nM", "band": "potent", "flagged": false },
-        { "property": "KES-0006", "value": 14.0, "units": "nM", "band": "moderate", "flagged": false },
-        { "property": "KES-0007", "value": 22.0, "units": "nM", "band": "moderate", "flagged": false },
-        { "property": "KES-0008", "value": 31.0, "units": "nM", "band": "moderate", "flagged": false }
-      ] }
+      {
+        "kind": "panel",
+        "target": "KRAS",
+        "units": "nM",
+        "items": [
+          {
+            "property": "KES-0001",
+            "value": 2.0,
+            "units": "nM",
+            "band": "potent",
+            "flagged": false
+          },
+          {
+            "property": "KES-0002",
+            "value": 4.9,
+            "units": "nM",
+            "band": "potent",
+            "flagged": false
+          },
+          {
+            "property": "KES-0003",
+            "value": 5.4,
+            "units": "nM",
+            "band": "potent",
+            "flagged": false
+          },
+          {
+            "property": "KES-0004",
+            "value": 7.1,
+            "units": "nM",
+            "band": "potent",
+            "flagged": false
+          },
+          {
+            "property": "KES-0005",
+            "value": 9.2,
+            "units": "nM",
+            "band": "potent",
+            "flagged": false
+          },
+          {
+            "property": "KES-0006",
+            "value": 14.0,
+            "units": "nM",
+            "band": "moderate",
+            "flagged": false
+          },
+          {
+            "property": "KES-0007",
+            "value": 22.0,
+            "units": "nM",
+            "band": "moderate",
+            "flagged": false
+          },
+          {
+            "property": "KES-0051",
+            "value": 28.0,
+            "units": "nM",
+            "band": "moderate",
+            "flagged": false
+          }
+        ]
+      }
     ],
     "deposition": [
-      { "molecule": "KES-0001", "standard_type": "IC50", "target": "KRAS", "value": 2.0, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" },
-      { "molecule": "KES-0002", "standard_type": "IC50", "target": "KRAS", "value": 4.9, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" },
-      { "molecule": "KES-0003", "standard_type": "IC50", "target": "KRAS", "value": 5.4, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" },
-      { "molecule": "KES-0004", "standard_type": "IC50", "target": "KRAS", "value": 7.1, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" },
-      { "molecule": "KES-0005", "standard_type": "IC50", "target": "KRAS", "value": 9.2, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" },
-      { "molecule": "KES-0006", "standard_type": "IC50", "target": "KRAS", "value": 14.0, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" },
-      { "molecule": "KES-0007", "standard_type": "IC50", "target": "KRAS", "value": 22.0, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" },
-      { "molecule": "KES-0008", "standard_type": "IC50", "target": "KRAS", "value": 31.0, "units": "nM", "modality": "cellular_antiprolif", "system_type": "cell_line", "system": "NCI-H358", "species": "human" }
+      {
+        "molecule": "KES-0001",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 2.0,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human"
+      },
+      {
+        "molecule": "KES-0002",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 4.9,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human"
+      },
+      {
+        "molecule": "KES-0003",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 5.4,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human"
+      },
+      {
+        "molecule": "KES-0004",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 7.1,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human"
+      },
+      {
+        "molecule": "KES-0005",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 9.2,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human"
+      },
+      {
+        "molecule": "KES-0006",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 14.0,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human"
+      },
+      {
+        "molecule": "KES-0007",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 22.0,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human"
+      },
+      {
+        "molecule": "KES-0051",
+        "standard_type": "IC50",
+        "target": "KRAS",
+        "value": 28.0,
+        "units": "nM",
+        "modality": "cellular_antiprolif",
+        "system_type": "cell_line",
+        "system": "NCI-H358",
+        "species": "human",
+        "smiles": "C#Cc1c(F)ccc2cc(O)cc(-c3ncc4c(N5CC6CCC(C5)N6)nc(OC[C@@]56CCCN5C[C@H](F)C6)nc4c3F)c12"
+      }
     ]
   }
 }

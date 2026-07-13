@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { resetDemo } from "@/lib/api";
 
 const SECTIONS: { href: string; label: string; blurb: string }[] = [
   { href: "/mailbox", label: "Inbox", blurb: "One company email, auto-sorted into quotes, invoices, legal, data & other — smart processing and ingest." },
@@ -25,11 +27,27 @@ const WORKFLOWS: { title: string; steps: string }[] = [
 ];
 
 export default function Home() {
+  const [resetting, setResetting] = useState(false);
+  const [done, setDone] = useState(false);
+  async function onReset() {
+    if (!window.confirm("Reset the demo to its original state? This clears any changes you've made.")) return;
+    setResetting(true); setDone(false);
+    try { await resetDemo("kras"); setDone(true); }
+    catch (e) { alert(String(e)); }
+    finally { setResetting(false); }
+  }
   return (
     <div className="max-w-5xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink">BiotechOS</h1>
-        <p className="mt-1 text-sm text-inkMuted">The operating system for a drug-discovery program — inbox to modeling, one loop.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink">BiotechOS</h1>
+          <p className="mt-1 text-sm text-inkMuted">The operating system for a drug-discovery program — inbox to modeling, one loop.</p>
+        </div>
+        <button onClick={onReset} disabled={resetting}
+          className="shrink-0 rounded border border-borderStrong px-3 py-1.5 text-sm text-ink hover:bg-panel2 disabled:opacity-50"
+          title="Restore the KRAS demo to its original seeded state">
+          {resetting ? "Resetting…" : done ? "✓ Demo reset" : "↺ Reset demo"}
+        </button>
       </div>
 
       <section>
