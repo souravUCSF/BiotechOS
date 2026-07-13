@@ -122,7 +122,7 @@ def detect_execution_status(program_id: str, doc_row, api_key: str | None = None
     # LLM fallback: single focused question, cheap
     sys = ("Classify whether the attached/described legal document is ALREADY FULLY EXECUTED "
            "(signed/countersigned/completed by all parties and returned for records) versus a "
-           "DTGTAT or REDLINE still under negotiation. Return JSON "
+           "DRAFT or REDLINE still under negotiation. Return JSON "
            '{"execution_status":"executed"|"in_revision"|"draft","reason":str}.')
     obj, _ = llm.json_object(model=MODEL_ARTIFACTS, system=sys, user=text[:6000],
                              fallback={"execution_status": "draft", "reason": "no signature signals"},

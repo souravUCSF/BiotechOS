@@ -207,7 +207,7 @@ def get_po(po_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
 
 
 def create_draft_po_from_document(program_id: str, document_id: int) -> dict:
-    """Build a DTGTAT purchase order from a quote email's parsed quote_lines, so the
+    """Build a DRAFT purchase order from a quote email's parsed quote_lines, so the
     user can review/issue it in the PO template editor (/po/{id}). Reuses one draft per
     document (idempotent) rather than spawning duplicates."""
     conn = db.connect()
@@ -244,7 +244,7 @@ def create_draft_po_from_document(program_id: str, document_id: int) -> dict:
 
 def update_po(po_id: int, line_items: list, vendor_name: str | None = None,
               program_id: str = DEMO_PROGRAM_ID) -> dict:
-    """Save edits to a DTGTAT PO's line items + vendor name. Issued POs are immutable."""
+    """Save edits to a DRAFT PO's line items + vendor name. Issued POs are immutable."""
     conn = db.connect()
     try:
         po = conn.execute("SELECT * FROM purchase_orders WHERE id=? AND program_id=?",
@@ -270,7 +270,7 @@ def update_po(po_id: int, line_items: list, vendor_name: str | None = None,
 
 
 def approve_po(po_id: int, program_id: str = DEMO_PROGRAM_ID) -> dict:
-    """Issue a DTGTAT PO: assign a number, encumber the budget, draft the vendor
+    """Issue a DRAFT PO: assign a number, encumber the budget, draft the vendor
     cover email, and append the Decision Log. Mirrors approve_quote's tail but
     runs on an already-edited PO document. Idempotent for non-draft POs."""
     conn = db.connect()
