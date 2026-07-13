@@ -1,0 +1,27 @@
+name: keep-alive
+
+# Keeps the free Render demo warm during demo hours so it doesn't cold-start.
+# Window: 6am–midnight America/Los_Angeles (PDT = UTC-7 in July).
+#   6am PT = 13:00 UTC ; 11:59pm PT = 06:59 UTC (next day)  -> UTC hours 13-23 and 0-6.
+# Auto-expires after 2026-07-17 PT (the job no-ops; delete this file to remove entirely).
+
+on:
+  schedule:
+    - cron: "*/10 13-23,0-6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the demo (through 2026-07-17 PT)
+        run: |
+          TODAY=$(TZ=America/Los_Angeles date +%F)
+          if [[ "$TODAY" > "2026-07-17" ]]; then
+            echo "Keep-alive window ended (PT date $TODAY > 2026-07-17) — skipping."
+            exit 0
+          fi
+          echo "PT now: $(TZ=America/Los_Angeles date '+%F %T %Z')"
+          curl -fsS -m 90 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
+            https://biotechos-frontend.onrender.com/tpp-builder \
+            || echo "ping failed (site may be cold-starting)"
