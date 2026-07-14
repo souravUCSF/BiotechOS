@@ -1,27 +1,40 @@
 name: keep-alive
 
-# Keeps the free Render demo warm during demo hours so it doesn't cold-start.
-# Window: 6am–midnight America/Los_Angeles (PDT = UTC-7 in July).
-#   6am PT = 13:00 UTC ; 11:59pm PT = 06:59 UTC (next day)  -> UTC hours 13-23 and 0-6.
-# Auto-expires after 2026-07-17 PT (the job no-ops; delete this file to remove entirely).
+# Keeps the free Render demo warm during demo hours (6am–midnight America/Los_Angeles),
+# through 2026-07-17 PT. GitHub throttles scheduled runs (often ~hourly), so each run
+# self-bridges by pinging every 5 min for ~58 min — giving continuous coverage even if
+# only one trigger lands per hour. Delete this file to remove entirely.
 
 on:
   schedule:
-    - cron: "*/10 13-23,0-6 * * *"
+    - cron: "*/30 13-23,0-6 * * *"   # attempt every 30 min during UTC 13-23,0-6 (= 6am–midnight PDT)
   workflow_dispatch: {}
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false          # allow overlap so a new run can't leave a gap
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 62
     steps:
-      - name: Ping the demo (through 2026-07-17 PT)
+      - name: Ping demo every 5 min for ~58 min (6am–midnight PT, through 2026-07-17)
         run: |
-          TODAY=$(TZ=America/Los_Angeles date +%F)
-          if [[ "$TODAY" > "2026-07-17" ]]; then
-            echo "Keep-alive window ended (PT date $TODAY > 2026-07-17) — skipping."
-            exit 0
-          fi
-          echo "PT now: $(TZ=America/Los_Angeles date '+%F %T %Z')"
-          curl -fsS -m 90 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
-            https://biotechos-frontend.onrender.com/tpp-builder \
-            || echo "ping failed (site may be cold-starting)"
+          URL="https://biotechos-frontend.onrender.com/tpp-builder"
+          END=$(( $(date +%s) + 58*60 ))
+          while [ "$(date +%s)" -le "$END" ]; do
+            TODAY=$(TZ=America/Los_Angeles date +%F)
+            HOUR=$((10#$(TZ=America/Los_Angeles date +%H)))
+            if [[ "$TODAY" > "2026-07-17" ]]; then
+              echo "Keep-alive window ended (PT $TODAY > 2026-07-17) — stopping."; exit 0
+            fi
+            if [ "$HOUR" -ge 6 ]; then    # 6am–11:59pm PT
+              printf '%s  ' "$(TZ=America/Los_Angeles date '+%F %T %Z')"
+              curl -fsS -m 90 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" "$URL" \
+                || echo "ping failed (site may be cold-starting)"
+            else
+              echo "$(TZ=America/Los_Angeles date '+%T %Z') outside 6am–midnight PT — idle"
+            fi
+            sleep 300
+          done
