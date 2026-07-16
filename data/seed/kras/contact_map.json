@@ -1,0 +1,138 @@
+{
+  "by_name": {
+    "KES-0001": {
+      "CYS12.A": [
+        "VdWContact"
+      ],
+      "VAL9.A": [
+        "Hydrophobic"
+      ],
+      "HIS95.A": [
+        "Hydrophobic",
+        "PiStacking"
+      ],
+      "TYR96.A": [
+        "Hydrophobic"
+      ],
+      "GLN99.A": [
+        "HBAcceptor"
+      ],
+      "ARG68.A": [
+        "Cationic",
+        "HBDonor"
+      ],
+      "ASP69.A": [
+        "HBAcceptor"
+      ],
+      "MET72.A": [
+        "Hydrophobic"
+      ]
+    },
+    "KES-0002": {
+      "CYS12.A": [
+        "VdWContact"
+      ],
+      "THR58.A": [
+        "HBDonor"
+      ],
+      "GLU62.A": [
+        "Anionic",
+        "HBAcceptor"
+      ],
+      "ARG68.A": [
+        "Cationic"
+      ],
+      "HIS95.A": [
+        "Hydrophobic"
+      ],
+      "TYR96.A": [
+        "PiStacking",
+        "Hydrophobic"
+      ],
+      "GLN99.A": [
+        "HBAcceptor"
+      ]
+    },
+    "KES-0003": {
+      "ALA59.A": [
+        "VdWContact"
+      ],
+      "GLY60.A": [
+        "HBDonor"
+      ],
+      "ASP69.A": [
+        "HBAcceptor"
+      ],
+      "MET72.A": [
+        "Hydrophobic",
+        "VdWContact"
+      ],
+      "HIS95.A": [
+        "Hydrophobic",
+        "HBAcceptor"
+      ],
+      "TYR96.A": [
+        "Hydrophobic"
+      ],
+      "ILE100.A": [
+        "Hydrophobic"
+      ]
+    },
+    "KES-0004": {
+      "CYS12.A": [
+        "VdWContact"
+      ],
+      "VAL9.A": [
+        "Hydrophobic"
+      ],
+      "LYS16.A": [
+        "Cationic"
+      ],
+      "GLU62.A": [
+        "Anionic"
+      ],
+      "ARG68.A": [
+        "Cationic",
+        "HBAcceptor"
+      ],
+      "ASP69.A": [
+        "HBAcceptor"
+      ],
+      "HIS95.A": [
+        "Hydrophobic"
+      ],
+      "GLN99.A": [
+        "HBDonor",
+        "HBAcceptor"
+      ]
+    },
+    "KES-0005": {
+      "CYS12.A": [
+        "VdWContact"
+      ],
+      "THR58.A": [
+        "HBDonor"
+      ],
+      "MET72.A": [
+        "Hydrophobic"
+      ],
+      "ASP92.A": [
+        "Anionic"
+      ],
+      "HIS95.A": [
+        "Hydrophobic",
+        "PiStacking"
+      ],
+      "TYR96.A": [
+        "Hydrophobic",
+        "HBAcceptor"
+      ],
+      "GLN99.A": [
+        "HBAcceptor"
+      ],
+      "ILE100.A": [
+        "Hydrophobic"
+      ]
+    }
+  }
+}

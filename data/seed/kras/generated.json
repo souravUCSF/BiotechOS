@@ -1,0 +1,158 @@
+{
+  "job_id": "seed0demo",
+  "molecules": [
+    {
+      "id": "cand-001",
+      "smiles": "C=CC(=O)N1CCCC(C1)Oc1ncnc2[nH]ccc12",
+      "metrics": {
+        "iptm": 0.88,
+        "binding_confidence": 0.86,
+        "ptm": 0.9,
+        "complex_plddt": 0.88,
+        "structure_confidence": 0.87,
+        "optimization_score": 0.93
+      },
+      "adme": {
+        "lipophilicity": 2.6,
+        "permeability": "high",
+        "solubility": "moderate"
+      }
+    },
+    {
+      "id": "cand-002",
+      "smiles": "CN1CCN(CC1)c1ccc(Nc2ncc(F)c(n2)-c2ccccc2)cc1",
+      "metrics": {
+        "iptm": 0.83,
+        "binding_confidence": 0.79,
+        "ptm": 0.86,
+        "complex_plddt": 0.84,
+        "structure_confidence": 0.83,
+        "optimization_score": 0.88
+      },
+      "adme": {
+        "lipophilicity": 3.4,
+        "permeability": "moderate",
+        "solubility": "moderate"
+      }
+    },
+    {
+      "id": "cand-004",
+      "smiles": "O=C(Nc1ccccc1)c1ccc(cc1)N1CCOCC1",
+      "metrics": {
+        "iptm": 0.71,
+        "binding_confidence": 0.66,
+        "ptm": 0.8,
+        "complex_plddt": 0.78,
+        "structure_confidence": 0.76,
+        "optimization_score": 0.72
+      },
+      "adme": {
+        "lipophilicity": 3.1,
+        "permeability": "moderate",
+        "solubility": "moderate"
+      }
+    },
+    {
+      "id": "cand-005",
+      "smiles": "Cc1ccc(cc1)S(=O)(=O)N1CCN(CC1)c1ncccn1",
+      "metrics": {
+        "iptm": 0.77,
+        "binding_confidence": 0.72,
+        "ptm": 0.83,
+        "complex_plddt": 0.8,
+        "structure_confidence": 0.79,
+        "optimization_score": 0.81
+      },
+      "adme": {
+        "lipophilicity": 2.4,
+        "permeability": "high",
+        "solubility": "high"
+      }
+    },
+    {
+      "id": "cand-006",
+      "smiles": "CC(C)Oc1ncnc(N2CCN(C)CC2)c1C#N",
+      "metrics": {
+        "iptm": 0.74,
+        "binding_confidence": 0.7,
+        "ptm": 0.82,
+        "complex_plddt": 0.79,
+        "structure_confidence": 0.77,
+        "optimization_score": 0.78
+      },
+      "adme": {
+        "lipophilicity": 1.9,
+        "permeability": "high",
+        "solubility": "high"
+      }
+    },
+    {
+      "id": "cand-007",
+      "smiles": "Fc1ccc(cc1)-c1cnc2[nH]ncc2c1",
+      "metrics": {
+        "iptm": 0.69,
+        "binding_confidence": 0.63,
+        "ptm": 0.78,
+        "complex_plddt": 0.75,
+        "structure_confidence": 0.73,
+        "optimization_score": 0.68
+      },
+      "adme": {
+        "lipophilicity": 2.8,
+        "permeability": "moderate",
+        "solubility": "moderate"
+      }
+    },
+    {
+      "id": "cand-008",
+      "smiles": "O=C1CCN(CC1)c1ncnc2[nH]ccc12",
+      "metrics": {
+        "iptm": 0.72,
+        "binding_confidence": 0.67,
+        "ptm": 0.81,
+        "complex_plddt": 0.78,
+        "structure_confidence": 0.76,
+        "optimization_score": 0.74
+      },
+      "adme": {
+        "lipophilicity": 1.6,
+        "permeability": "high",
+        "solubility": "high"
+      }
+    },
+    {
+      "id": "cand-009",
+      "smiles": "OC(=O)c1ccc(cc1)Nc1nccc(n1)-c1cccnc1",
+      "metrics": {
+        "iptm": 0.66,
+        "binding_confidence": 0.6,
+        "ptm": 0.77,
+        "complex_plddt": 0.74,
+        "structure_confidence": 0.71,
+        "optimization_score": 0.64
+      },
+      "adme": {
+        "lipophilicity": 2.2,
+        "permeability": "moderate",
+        "solubility": "high"
+      }
+    },
+    {
+      "id": "cand-010",
+      "smiles": "COc1cc2c(cc1OC)ncc(-c1ccccc1F)c2N",
+      "metrics": {
+        "iptm": 0.79,
+        "binding_confidence": 0.75,
+        "ptm": 0.84,
+        "complex_plddt": 0.81,
+        "structure_confidence": 0.8,
+        "optimization_score": 0.83
+      },
+      "adme": {
+        "lipophilicity": 3.0,
+        "permeability": "moderate",
+        "solubility": "moderate"
+      }
+    }
+  ]
+}

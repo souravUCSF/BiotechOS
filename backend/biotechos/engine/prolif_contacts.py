@@ -94,6 +94,35 @@ def _resnum(label: str) -> int:
     return int(m.group(1)) if m else 0
 
 
+def _seed_contact_map(program_id, molecule_ids, names, want):
+    """Precomputed contact map for a demo program, keyed by molecule NAME (ids are
+    assigned at seed time). Used when a committed seed exists — the public demo has no
+    live ProLIF/OpenBabel stack. Returns None when there is no seed file."""
+    import json
+    from ..config import DATA_DIR
+    p = DATA_DIR / "seed" / program_id / "contact_map.json"
+    if not p.exists():
+        return None
+    by_name = json.loads(p.read_text()).get("by_name", {})
+    rows, skipped, residues = [], [], {}
+    for mid in molecule_ids:
+        nm = names.get(mid, f"#{mid}")
+        inter = by_name.get(nm)
+        if not inter:
+            skipped.append({"id": mid, "name": nm, "reason": "no co-fold structure"})
+            continue
+        if want:
+            inter = {r: [i for i in t if i in want] for r, t in inter.items()}
+            inter = {r: t for r, t in inter.items() if t}
+        for r in inter:
+            residues[r] = residues.get(r, 0) + 1
+        rows.append({"id": mid, "name": nm, "interactions": inter})
+    ordered = sorted(residues.keys(), key=_resnum)
+    return {"residues": ordered,
+            "frequency": [{"residue": r, "count": residues[r]} for r in ordered],
+            "molecules": rows, "skipped": skipped, "glyphs": GLYPH, "n_cofolded": len(rows)}
+
+
 def contact_map(program_id: str, molecule_ids: list[int], names: dict[int, str] | None = None,
                 interactions: list[str] | None = None) -> dict:
     """Build the contact map across the co-folded molecules in the set. Returns the
@@ -101,6 +130,9 @@ def contact_map(program_id: str, molecule_ids: list[int], names: dict[int, str] 
     reported in `skipped`."""
     names = names or {}
     want = set(interactions) if interactions else None
+    seeded = _seed_contact_map(program_id, molecule_ids, names, want)
+    if seeded is not None:
+        return seeded
     rows, skipped, residues = [], [], {}
     for mid in molecule_ids:
         loaded = None

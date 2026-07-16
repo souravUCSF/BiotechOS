@@ -143,7 +143,25 @@ def latest_generated() -> dict:
             return {"job_id": run_dir.name.replace("gen_", ""),
                     "run_dir": str(run_dir), "molecules": mols,
                     "created": run_dir.stat().st_mtime}
+    seeded = _seed_generated()   # committed demo candidates (public demo has no runs on disk)
+    if seeded:
+        return seeded
     return {"job_id": None, "molecules": []}
+
+
+def _seed_generated() -> dict | None:
+    """Precomputed 'last generate' results for the demo, from a committed seed file, so
+    'Load last results' works on a fresh deploy with no runs on disk. None if absent."""
+    from ..config import DATA_DIR
+    p = DATA_DIR / "seed" / "kras" / "generated.json"
+    if not p.exists():
+        return None
+    data = json.loads(p.read_text())
+    mols = [_flatten_generated(r) for r in data.get("molecules", []) if r.get("smiles")]
+    if not mols:
+        return None
+    return {"job_id": data.get("job_id") or "seed", "run_dir": None,
+            "molecules": mols, "created": None}
 
 
 def generated_structure_path(job_id: str, pres_id: str) -> Path | None:
