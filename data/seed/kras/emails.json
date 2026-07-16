@@ -4,11 +4,11 @@
     "category": "quote",
     "email_from": "Priya Nair <quotes@cellkinetics.example>",
     "email_to": "founder@kestrel-tx.example",
-    "subject": "Quotation Q-2041 \u2014 KRAS G12C cellular pERK panel",
+    "subject": "Quotation Q-2041 — KRAS G12C cellular pERK panel",
     "sent_at": "2026-06-03T09:14:00Z",
     "vendor": "Cell Kinetics CRO",
     "amount": 48000,
-    "raw_text": "Hi,\n\nThank you for the enquiry. Please find our quotation for the KRAS G12C cellular p-ERK inhibition panel.\n\nScope: dose-response p-ERK (MSD ELISA) IC50 in three KRAS G12C lines \u2014 NCI-H358 (lung), MIA PaCa-2 (pancreatic) and SW1573 (lung) \u2014 for up to 8 test compounds, 10-point curves in duplicate, plus a reference control compound.\n\nDeliverables: per-compound IC50 per line, curve fits, raw plate data.\nTurnaround: 3-4 weeks from compound receipt.\nPrice: USD 48,000 (fixed).\nQuote ref: Q-2041, valid 60 days.\n\nBest regards,\nPriya Nair\nCell Kinetics CRO",
+    "raw_text": "Hi,\n\nThank you for the enquiry. Please find our quotation for the KRAS G12C cellular p-ERK inhibition panel.\n\nScope: dose-response p-ERK (MSD ELISA) IC50 in three KRAS G12C lines — NCI-H358 (lung), MIA PaCa-2 (pancreatic) and SW1573 (lung) — for up to 8 test compounds, 10-point curves in duplicate, plus a reference control compound.\n\nDeliverables: per-compound IC50 per line, curve fits, raw plate data.\nTurnaround: 3-4 weeks from compound receipt.\nPrice: USD 48,000 (fixed).\nQuote ref: Q-2041, valid 60 days.\n\nBest regards,\nPriya Nair\nCell Kinetics CRO",
     "line_items": [
       {
         "description": "p-ERK IC50 panel, 3 cell lines x 8 compounds",
@@ -27,12 +27,12 @@
     "category": "invoice",
     "email_from": "Cell Kinetics Billing <ar@cellkinetics.example>",
     "email_to": "ap@kestrel-tx.example",
-    "subject": "Invoice CK-2041 \u2014 DMPK package (PO KES-PO-0007)",
+    "subject": "Invoice CK-2041 — DMPK package (PO KES-PO-0007)",
     "sent_at": "2026-06-24T16:02:00Z",
     "vendor": "Cell Kinetics CRO",
     "amount": 22500,
     "invoice_number": "CK-2041",
-    "raw_text": "Dear Accounts Payable,\n\nPlease find attached invoice CK-2041 for the completed DMPK package against PO KES-PO-0007.\n\nWork completed: mouse IV/PO cassette PK (3 compounds) and human/mouse liver microsomal stability (8 compounds).\n\nInvoice CK-2041\nAmount due: USD 22,500\nNet 30. Remit to the account on file.\n\nThank you,\nCell Kinetics CRO \u2014 Accounts Receivable",
+    "raw_text": "Dear Accounts Payable,\n\nPlease find attached invoice CK-2041 for the completed DMPK package against PO KES-PO-0007.\n\nWork completed: mouse IV/PO cassette PK (3 compounds) and human/mouse liver microsomal stability (8 compounds).\n\nInvoice CK-2041\nAmount due: USD 22,500\nNet 30. Remit to the account on file.\n\nThank you,\nCell Kinetics CRO — Accounts Receivable",
     "line_items": [
       {
         "description": "Mouse cassette PK (IV/PO), 3 compounds",
@@ -51,7 +51,7 @@
     "category": "data",
     "email_from": "Wei Chen <results@northgatebio.example>",
     "email_to": "founder@kestrel-tx.example",
-    "subject": "Cellular p-ERK IC50 results \u2014 KES series (batch 1)",
+    "subject": "Cellular p-ERK IC50 results — KES series (batch 1)",
     "sent_at": "2026-06-27T11:41:00Z",
     "vendor": "Northgate BioServices",
     "raw_text": "Hello,\n\nData for the first batch of the KES series is ready. Cellular p-ERK inhibition IC50 in NCI-H358 (KRAS G12C), 10-point dose-response, duplicate.\n\nCompound   p-ERK IC50 (nM, H358)\nKES-0001   2.0\nKES-0002   4.9\nKES-0003   5.4\nKES-0004   7.1\nKES-0005   9.2\nKES-0006   14\nKES-0007   22\nKES-0051   28\n\n(KES-0051 is a new analog from the latest batch, not yet registered.)\n\nFull plate data and curve fits attached. Let us know if you'd like the MIA PaCa-2 arm next.\n\nWei Chen\nNorthgate BioServices",
@@ -104,15 +104,15 @@
     "category": "legal",
     "email_from": "Crestline Bio Legal <contracts@crestlinebio.example>",
     "email_to": "founder@kestrel-tx.example",
-    "subject": "Mutual CDA for signature \u2014 Kestrel / Crestline",
+    "subject": "Mutual CDA for signature — Kestrel / Crestline",
     "sent_at": "2026-06-10T13:20:00Z",
     "vendor": "Crestline Bio",
-    "raw_text": "Hello,\n\nAhead of the KRAS medicinal-chemistry collaboration discussion, please find attached our standard Mutual Confidential Disclosure Agreement for signature.\n\nKey terms: mutual; 2-year term; 5-year confidentiality survival; purpose limited to evaluating a potential research collaboration; governing law Delaware. No financial commitment.\n\nPlease review and return a signed copy, or send redlines.\n\nRegards,\nCrestline Bio \u2014 Legal & Contracts",
+    "raw_text": "Hello,\n\nAhead of the KRAS medicinal-chemistry collaboration discussion, please find attached our standard Mutual Confidential Disclosure Agreement for signature.\n\nKey terms: mutual; 2-year term; 5-year confidentiality survival; purpose limited to evaluating a potential research collaboration; governing law the People's Republic of China, with exclusive jurisdiction in the Shanghai courts. No financial commitment.\n\nPlease review and return a signed copy, or send redlines.\n\nRegards,\nCrestline Bio - Legal & Contracts\n\n--- attachment: Mutual_CDA_Kestrel_Crestline.txt ---\nMUTUAL CONFIDENTIAL DISCLOSURE AGREEMENT\n\nThis Mutual Confidential Disclosure Agreement (\"Agreement\") is entered into as of 10 June 2026 (the \"Effective Date\") by and between:\n\nKestrel Therapeutics, Inc., a Delaware corporation with offices at 100 Kestrel Way, South San Francisco, CA 94080, USA (\"Kestrel\"); and\n\nCrestline Bio Co., Ltd., a company organized under the laws of the People's Republic of China with offices at 1500 Zhangjiang Road, Pudong, Shanghai, PRC (\"Crestline\").\n\nEach of Kestrel and Crestline may act as a discloser (\"Discloser\") and/or a recipient (\"Recipient\") of Confidential Information under this Agreement.\n\nRECITALS\nThe parties wish to explore a potential research collaboration in KRAS G12C medicinal chemistry (the \"Purpose\") and, in connection with the Purpose, may disclose to each other certain confidential and proprietary information. This Agreement governs the exchange of such information.\n\n1. CONFIDENTIAL INFORMATION. \"Confidential Information\" means any non-public information disclosed by or on behalf of a Discloser to a Recipient, in any form, that is marked or identified as confidential or that a reasonable person would understand to be confidential given its nature and the circumstances of disclosure, including without limitation research plans, chemical structures, assay data, know-how, and business information.\n\n2. TERM. This Agreement commences on the Effective Date and continues for a period of two (2) years, unless earlier terminated by either party on thirty (30) days' written notice. Termination does not affect the obligations in Section 5, which survive as set out therein.\n\n3. PERMITTED USE. The Recipient shall use the Confidential Information solely for the Purpose and for no other purpose, and may disclose it only to its employees, officers, and professional advisors who have a need to know for the Purpose and who are bound by confidentiality obligations no less protective than those herein.\n\n4. EXCLUSIONS. Confidential Information does not include information that: (a) is or becomes public through no breach of this Agreement by the Recipient; (b) was rightfully known to the Recipient without restriction before receipt; (c) is rightfully received from a third party without a duty of confidentiality; or (d) is independently developed by the Recipient without use of or reference to the Confidential Information.\n\n5. CONFIDENTIALITY; SURVIVAL. The Recipient shall protect the Confidential Information using at least the degree of care it uses for its own confidential information of like importance, and in no event less than a reasonable degree of care. The Recipient's obligations of confidentiality and non-use shall survive the expiration or termination of this Agreement for a period of five (5) years from the date of disclosure.\n\n6. RETURN OR DESTRUCTION. Upon the Discloser's written request or upon expiration or termination, the Recipient shall promptly return or destroy all Confidential Information and copies thereof, except that the Recipient may retain one archival copy solely to monitor its surviving obligations.\n\n7. NO LICENSE; NO WARRANTY. No license or other right under any patent, copyright, trademark, or other intellectual property right is granted or implied. All Confidential Information is provided \"AS IS,\" without warranty of any kind.\n\n8. NO OBLIGATION. Nothing in this Agreement obligates either party to proceed with any transaction or collaboration, and each party may terminate discussions at any time.\n\n9. GOVERNING LAW; DISPUTE RESOLUTION. This Agreement shall be governed by and construed in accordance with the laws of the People's Republic of China, without regard to its conflict-of-laws principles. The parties submit to the exclusive jurisdiction of the competent courts located in Shanghai, PRC, for any dispute arising out of or in connection with this Agreement.\n\n10. MISCELLANEOUS. This Agreement is the entire agreement between the parties as to its subject matter and supersedes all prior understandings. It may be amended only in a writing signed by both parties, and may be executed in counterparts (including by electronic signature), each of which is deemed an original.\n\nIN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date.\n\nKESTREL THERAPEUTICS, INC.                    CRESTLINE BIO CO., LTD.\nBy: ______________________________            By: ______________________________\nName:                                         Name:\nTitle:                                        Title:\nDate:                                         Date:",
     "legal": {
       "doc_kind": "CDA",
       "counterparty": "Crestline Bio",
       "term_years": 2,
-      "governing_law": "Delaware",
+      "governing_law": "PRC (Shanghai)",
       "value": 0
     }
   }

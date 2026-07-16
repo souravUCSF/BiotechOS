@@ -787,6 +787,21 @@ export async function createPoFromEmail(id: number, programId: string): Promise<
   return res.json();
 }
 
+export type QuoteLineItem = { description: string; quantity: number | null; amount: number };
+export type Quotation = {
+  doc_id: number; vendor: string; vendor_email: string;
+  buyer: { name: string; contact: string; email: string; addr: string[] };
+  subject: string; quote_ref: string; dated: string;
+  valid: string | null; turnaround: string | null;
+  line_items: QuoteLineItem[]; amount: number | null;
+};
+
+export async function fetchQuote(id: number, programId: string): Promise<Quotation> {
+  const res = await fetch(`${API_BASE}/quote/${id}?program_id=${programId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`fetch quote failed: ${res.status}`);
+  return res.json();
+}
+
 export type RelatedQuoteLine = {
   line_id: number; document_id: number; vendor: string | null; scope: string | null;
   amount: number; turnaround?: string | null;

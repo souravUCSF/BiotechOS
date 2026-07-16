@@ -1278,6 +1278,43 @@ def po_approve(po_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
         raise HTTPException(404, str(e))
 
 
+@app.get("/quote/{doc_id}")
+def quote_get(doc_id: int, program_id: str = Query(default=DEMO_PROGRAM_ID)):
+    """One vendor quotation rendered as a document (line items + vendor + ref)."""
+    import re
+    conn = get_conn()
+    r = conn.execute("SELECT * FROM documents WHERE id=? AND program_id=?",
+                     (doc_id, program_id)).fetchone()
+    conn.close()
+    if not r or r["doc_type"] != "quote":
+        raise HTTPException(404, "quote not found")
+    d = dict(r)
+    try:
+        ext = json.loads(d.get("extraction_json") or "{}")
+    except json.JSONDecodeError:
+        ext = {}
+    raw = d.get("raw_text") or ""
+    ref = re.search(r"Quote ref[:\s]+([A-Za-z0-9\-/]+)", raw)
+    valid = re.search(r"valid\s+([0-9]{1,3}\s+days)", raw, re.I)
+    turn = re.search(r"Turnaround[:\s]+([^\n]+)", raw)
+    vendor = ext.get("vendor") or (d.get("email_from") or "").split("<")[0].strip()
+    return {
+        "doc_id": d["id"],
+        "vendor": vendor,
+        "vendor_email": d.get("email_from") or "",
+        "buyer": {"name": "Kestrel Therapeutics, Inc.", "contact": "Jordan Lee",
+                  "email": d.get("email_to") or "founder@kestrel-tx.example",
+                  "addr": ["100 Kestrel Way", "South San Francisco, CA 94080"]},
+        "subject": d.get("subject") or "",
+        "quote_ref": ref.group(1) if ref else "",
+        "dated": d.get("sent_at") or "",
+        "valid": valid.group(1) if valid else None,
+        "turnaround": turn.group(1).strip() if turn else None,
+        "line_items": ext.get("line_items") or [],
+        "amount": ext.get("amount"),
+    }
+
+
 @app.get("/kb/details")
 def kb_details_get(program_id: str = Query(default=DEMO_PROGRAM_ID),
                    entity_type: str = Query(...), name: str = Query(...)):

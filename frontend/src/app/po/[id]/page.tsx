@@ -8,6 +8,7 @@ import {
   type PurchaseOrder, type POLineItem,
 } from "@/lib/api";
 import { API_BASE } from "@/lib/apiBase";
+import { useProgram } from "@/lib/ProgramContext";
 
 const BLUE = "#4472c4";
 const num = (v: number) => (v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -27,11 +28,16 @@ const BUYER: Record<string, { name: string; addr: string[]; phone: string; conta
     name: "Example B Bio", addr: ["100 Example Ave", "San Francisco, CA 94100"],
     phone: "(555) 010-0100", contact: "Jordan Lee", email: "founder@example-b.com",
   },
+  kras: {
+    name: "Kestrel Therapeutics, Inc.", addr: ["100 Kestrel Way", "South San Francisco, CA 94080"],
+    phone: "(555) 010-0100", contact: "Jordan Lee", email: "founder@kestrel-tx.example",
+  },
 };
 
 export default function POPage() {
   const { id } = useParams<{ id: string }>();
   const poId = Number(id);
+  const { programId } = useProgram();
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [items, setItems] = useState<POLineItem[]>([]);
   const [vendor, setVendor] = useState("");
@@ -56,10 +62,10 @@ export default function POPage() {
   const [kb, setKb] = useState<Record<string, boolean>>({});
 
   const load = useCallback(() => {
-    fetchPO(poId).then((p) => {
+    fetchPO(poId, programId).then((p) => {
       setPo(p); setItems(p.line_items); setVendor(p.vendor_name ?? ""); setDirty(false);
     }).catch(() => setPo(null));
-  }, [poId]);
+  }, [poId, programId]);
   useEffect(load, [load]);
 
   // pull company (buyer) profile from the KB, falling back to the template defaults
@@ -135,15 +141,15 @@ export default function POPage() {
 
   async function save() {
     setBusy(true);
-    try { const p = await updatePO(poId, items, vendor); setPo(p); setItems(p.line_items); setDirty(false); await saveKb(); }
+    try { const p = await updatePO(poId, items, vendor, programId); setPo(p); setItems(p.line_items); setDirty(false); await saveKb(); }
     finally { setBusy(false); }
   }
   async function approve() {
     setBusy(true);
     try {
-      if (dirty) await updatePO(poId, items, vendor);
+      if (dirty) await updatePO(poId, items, vendor, programId);
       await saveKb();
-      const r = await approvePO(poId); setEmail(r.email); load();
+      const r = await approvePO(poId, programId); setEmail(r.email); load();
     } finally { setBusy(false); }
   }
   // amber highlight + reset on edit for KB-sourced fields

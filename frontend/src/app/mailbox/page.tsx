@@ -59,7 +59,11 @@ function QuotePanel({ item, programId }: { item: MailItem; programId: string }) 
   return (
     <div className="mt-3 rounded-lg border border-borderStrong bg-panel2 p-3">
       <div className="mb-2 text-xs text-inkMuted">This vendor quote was parsed into structured line items.</div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => router.push(`/quote/${item.id}`)}
+          className="rounded border border-borderStrong px-3 py-1.5 text-sm text-ink">
+          📄 View quotation (PDF)
+        </button>
         <button onClick={createPo} disabled={busy}
           className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
           {busy ? "Creating…" : "Create PO from this quote"}

@@ -158,7 +158,7 @@ def seed() -> dict:
         # inbox emails (documents)
         doc_by_cat = {}
         for e in emails:
-            extraction = {k: e[k] for k in ("dataset", "line_items", "amount", "legal", "invoice_number") if k in e}
+            extraction = {k: e[k] for k in ("dataset", "line_items", "amount", "legal", "invoice_number", "vendor") if k in e}
             did = conn.execute(
                 "INSERT INTO documents(program_id,direction,email_from,email_to,subject,sent_at,doc_type,"
                 "triage,raw_text,extraction_json,triage_json,seen) "
@@ -167,6 +167,15 @@ def seed() -> dict:
                  e["raw_text"], json.dumps(extraction) if extraction else None,
                  json.dumps({"category": e["category"], "triage": "actionable"}))).lastrowid
             doc_by_cat[e["category"]] = did
+            # quote line items -> quote_lines, so "Create PO from this quote"
+            # builds a filled PO (create_draft_po_from_document reads quote_lines).
+            if e.get("doc_type") == "quote":
+                for li in e.get("line_items") or []:
+                    conn.execute(
+                        "INSERT INTO quote_lines(program_id,document_id,vendor,scope,quantity,amount,currency) "
+                        "VALUES (?,?,?,?,?,?, 'USD')",
+                        (PROG, did, e.get("vendor"), li.get("description"),
+                         li.get("quantity"), li.get("amount") or 0))
 
         # precomputed DataQC + Legal review so the buttons work with no LLM key
         if "data" in doc_by_cat and (SEED / "data_analysis.json").exists():
