@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import type { Molecule } from "@/lib/types";
-import { PROPERTIES, moleculeProperties, propDef } from "@/lib/properties";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchMoleculeValues, type MetricDef, type MoleculeValues } from "@/lib/api";
 import { API_BASE } from "@/lib/apiBase";
 
 const W = 640;
@@ -16,68 +15,95 @@ function scale(v: number, lo: number, hi: number, a: number, b: number) {
 
 type Pt = { id: number; name: string; x: number; y: number; px: number; py: number };
 
+// X/Y axis options come from the SAME program metric catalog the "All molecules"
+// table uses (fetchMetrics → metrics), so the two are always in sync — including
+// assays, ADME, cell lines and Boltz-predicted metrics.
 export function PropertyScatter({
-  molecules,
+  programId,
+  metrics,
   onSelect,
   highlight,
   externalHoverId,
   onHoverId,
   onBrush,
 }: {
-  molecules: Molecule[];
+  programId: string;
+  metrics: MetricDef[];
   onSelect?: (id: number) => void;
   highlight?: Set<number>;
   externalHoverId?: number | null;
   onHoverId?: (id: number | null) => void;
   onBrush?: (ids: number[]) => void;
 }) {
-  const [xKey, setXKey] = useState("tgta_ic50");
-  const [yKey, setYKey] = useState("selectivity");
+  const [xKey, setXKey] = useState("");
+  const [yKey, setYKey] = useState("");
+  const [rows, setRows] = useState<MoleculeValues[]>([]);
   const [hovered, setHovered] = useState<Pt | null>(null);
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const xDef = propDef(xKey)!;
-  const yDef = propDef(yKey)!;
+  // pick sensible defaults from the catalog (potency vs selectivity), and repair
+  // the selection whenever the program (and thus the catalog) changes.
+  useEffect(() => {
+    if (metrics.length === 0) return;
+    const keys = new Set(metrics.map((m) => m.key));
+    setXKey((prev) => {
+      if (keys.has(prev)) return prev;
+      const potency = metrics.find((m) => /ic50/i.test(m.key) || /ic50/i.test(m.label)) ?? metrics[0];
+      return potency.key;
+    });
+    setYKey((prev) => {
+      if (keys.has(prev)) return prev;
+      const sel = metrics.find((m) => /selectiv/i.test(m.key) || /selectiv/i.test(m.label))
+        ?? metrics.find((m) => !/ic50/i.test(m.key)) ?? metrics[Math.min(1, metrics.length - 1)];
+      return sel.key;
+    });
+  }, [metrics]);
+
+  // fetch per-molecule values for just the two selected axes
+  useEffect(() => {
+    if (!xKey || !yKey) { setRows([]); return; }
+    const keys = Array.from(new Set([xKey, yKey]));
+    fetchMoleculeValues(keys, programId).then(setRows).catch(() => setRows([]));
+  }, [xKey, yKey, programId]);
+
+  const xDef = metrics.find((m) => m.key === xKey);
+  const yDef = metrics.find((m) => m.key === yKey);
 
   const raw = useMemo(() => {
-    return molecules
-      .map((m) => {
-        const props = moleculeProperties(m);
-        const xv = props[xKey];
-        const yv = props[yKey];
-        if (xv == null || yv == null || xv <= 0 || yv <= 0) return null;
-        return { id: m.id, name: m.name, x: xv, y: yv };
+    if (!xDef || !yDef) return [] as { id: number; name: string; x: number; y: number }[];
+    return rows
+      .map((r) => {
+        const xv = r.values[xKey];
+        const yv = r.values[yKey];
+        if (xv == null || yv == null) return null;
+        if (xDef.log && xv <= 0) return null;
+        if (yDef.log && yv <= 0) return null;
+        return { id: r.molecule_id, name: r.name, x: xv, y: yv };
       })
       .filter((p): p is { id: number; name: string; x: number; y: number } => p !== null);
-  }, [molecules, xKey, yKey]);
+  }, [rows, xKey, yKey, xDef, yDef]);
 
-  const xs = raw.map((p) => (xDef.log ? Math.log10(p.x) : p.x));
-  const ys = raw.map((p) => (yDef.log ? Math.log10(p.y) : p.y));
+  const xs = raw.map((p) => (xDef?.log ? Math.log10(p.x) : p.x));
+  const ys = raw.map((p) => (yDef?.log ? Math.log10(p.y) : p.y));
   const xlo = Math.min(...xs), xhi = Math.max(...xs);
   const ylo = Math.min(...ys), yhi = Math.max(...ys);
 
   const pts: Pt[] = raw.map((p) => ({
     ...p,
-    px: scale(xDef.log ? Math.log10(p.x) : p.x, xlo, xhi, PAD, W - 12),
-    py: scale(yDef.log ? Math.log10(p.y) : p.y, ylo, yhi, H - PAD, 12),
+    px: scale(xDef?.log ? Math.log10(p.x) : p.x, xlo, xhi, PAD, W - 12),
+    py: scale(yDef?.log ? Math.log10(p.y) : p.y, ylo, yhi, H - PAD, 12),
   }));
 
   const fmt = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v >= 10 ? v.toFixed(0) : v.toFixed(2));
+  const units = (d?: MetricDef) => (d?.units ? ` ${d.units}` : "");
 
   function toSvg(e: React.MouseEvent) {
     const r = svgRef.current!.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
   }
-  function onDown(e: React.MouseEvent) {
-    const { x, y } = toSvg(e);
-    setDrag({ x0: x, y0: y, x1: x, y1: y });
-  }
-  function onMove(e: React.MouseEvent) {
-    if (!drag) return;
-    const { x, y } = toSvg(e);
-    setDrag({ ...drag, x1: x, y1: y });
-  }
+  function onDown(e: React.MouseEvent) { const { x, y } = toSvg(e); setDrag({ x0: x, y0: y, x1: x, y1: y }); }
+  function onMove(e: React.MouseEvent) { if (!drag) return; const { x, y } = toSvg(e); setDrag({ ...drag, x1: x, y1: y }); }
   function onUp() {
     if (!drag) return;
     if (Math.abs(drag.x1 - drag.x0) > 4 || Math.abs(drag.y1 - drag.y0) > 4) {
@@ -101,14 +127,14 @@ export function PropertyScatter({
           X:{" "}
           <select value={xKey} onChange={(e) => setXKey(e.target.value)}
             className="rounded border border-borderStrong bg-panel px-2 py-1 text-ink">
-            {PROPERTIES.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            {metrics.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
         </label>
         <label className="text-inkMuted">
           Y:{" "}
           <select value={yKey} onChange={(e) => setYKey(e.target.value)}
             className="rounded border border-borderStrong bg-panel px-2 py-1 text-ink">
-            {PROPERTIES.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            {metrics.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
         </label>
         <span className="text-xs text-inkFaint">
@@ -130,16 +156,25 @@ export function PropertyScatter({
           <line x1={PAD} y1={H - PAD} x2={W - 12} y2={H - PAD} stroke="#cbd3df" />
           <line x1={PAD} y1={12} x2={PAD} y2={H - PAD} stroke="#cbd3df" />
           <text x={(W + PAD) / 2} y={H - 16} fill="#5b6472" fontSize="12" textAnchor="middle">
-            {xDef.label} {xDef.units} {xDef.log ? "(log)" : ""}
+            {xDef?.label ?? ""}{units(xDef)} {xDef?.log ? "(log)" : ""}
           </text>
           <text x={16} y={(H - PAD) / 2} fill="#5b6472" fontSize="12" textAnchor="middle"
             transform={`rotate(-90 16 ${(H - PAD) / 2})`}>
-            {yDef.label} {yDef.units} {yDef.log ? "(log)" : ""}
+            {yDef?.label ?? ""}{units(yDef)} {yDef?.log ? "(log)" : ""}
           </text>
-          <text x={PAD} y={H - PAD + 16} fill="#8a94a3" fontSize="10" textAnchor="middle">{fmt(Math.min(...pts.map((p) => p.x)))}</text>
-          <text x={W - 12} y={H - PAD + 16} fill="#8a94a3" fontSize="10" textAnchor="end">{fmt(Math.max(...pts.map((p) => p.x)))}</text>
-          <text x={PAD - 6} y={H - PAD} fill="#8a94a3" fontSize="10" textAnchor="end">{fmt(Math.min(...pts.map((p) => p.y)))}</text>
-          <text x={PAD - 6} y={18} fill="#8a94a3" fontSize="10" textAnchor="end">{fmt(Math.max(...pts.map((p) => p.y)))}</text>
+          {pts.length > 0 && (
+            <>
+              <text x={PAD} y={H - PAD + 16} fill="#8a94a3" fontSize="10" textAnchor="middle">{fmt(Math.min(...pts.map((p) => p.x)))}</text>
+              <text x={W - 12} y={H - PAD + 16} fill="#8a94a3" fontSize="10" textAnchor="end">{fmt(Math.max(...pts.map((p) => p.x)))}</text>
+              <text x={PAD - 6} y={H - PAD} fill="#8a94a3" fontSize="10" textAnchor="end">{fmt(Math.min(...pts.map((p) => p.y)))}</text>
+              <text x={PAD - 6} y={18} fill="#8a94a3" fontSize="10" textAnchor="end">{fmt(Math.max(...pts.map((p) => p.y)))}</text>
+            </>
+          )}
+          {pts.length === 0 && (
+            <text x={(W + PAD) / 2} y={H / 2} fill="#8a94a3" fontSize="12" textAnchor="middle">
+              No molecules have values for both selected properties.
+            </text>
+          )}
 
           {brushRect && (
             <rect x={brushRect.x} y={brushRect.y} width={brushRect.w} height={brushRect.h}
@@ -177,7 +212,7 @@ export function PropertyScatter({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`${API_BASE}/molecule/${hovered.id}/structure2d`} alt="" className="h-24 w-32 object-contain" />
             <div className="mt-1 text-[10px] text-inkMuted">
-              {xDef.label} {fmt(hovered.x)}{xDef.units} · {yDef.label} {fmt(hovered.y)}{yDef.units}
+              {xDef?.label} {fmt(hovered.x)}{units(xDef)} · {yDef?.label} {fmt(hovered.y)}{units(yDef)}
             </div>
           </div>
         )}

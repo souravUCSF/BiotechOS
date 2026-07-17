@@ -340,7 +340,8 @@ export default function MoleculesPage() {
       </h2>
       <div className="mb-4">
         <PropertyScatter
-          molecules={state.molecules}
+          programId={programId}
+          metrics={metricsCatalog}
           highlight={meets}
           externalHoverId={hoverId}
           onHoverId={setHoverId}
