@@ -70,6 +70,13 @@ function ContactMapWidget({ programId, members }: { programId: string; members: 
   }
   function toggle(i: string) { setInters((s) => s.includes(i) ? s.filter((x) => x !== i) : [...s, i]); }
 
+  // auto-show the contact map on page load / when the co-folded set changes
+  const cofoldKey = cofolded.map((m) => m.id).join(",");
+  useEffect(() => {
+    if (cofolded.length) run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cofoldKey, programId]);
+
   return (
     <div className="rounded-lg border border-border bg-panel p-4">
       <div className="mb-2 text-sm font-semibold text-ink">🔬 Interaction contact map (ProLIF)</div>
@@ -204,15 +211,20 @@ function GenerateWidget({ programId, members }: { programId: string; members: Mo
     catch (e) { setStatus("error: " + String(e)); }
     finally { setBusy(false); }
   }
-  async function loadCached() {
+  async function loadCached(silent = false) {
     setBusy(true); setStatus(""); setSelected(new Set());
     try {
       const r = await fetchCachedGenerate();
       setMols(r.molecules); setJobId(r.job_id);
       setStatus(r.molecules.length ? "done" : "");
-      if (!r.molecules.length) alert("No cached generate results on disk yet — run Generate once.");
-    } catch (e) { alert(String(e)); } finally { setBusy(false); }
+      if (!r.molecules.length && !silent) alert("No cached generate results on disk yet — run Generate once.");
+    } catch (e) { if (!silent) alert(String(e)); } finally { setBusy(false); }
   }
+  // auto-load the last generate results on page load (silent: no alert if empty)
+  useEffect(() => {
+    loadCached(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const molId = (m: Record<string, unknown>): string => String(m.id ?? "");
   const bindConf = (m: Record<string, unknown>): number => Number(m.binding_confidence ?? m.affinity ?? 0) || 0;
   const sortVal = (m: Record<string, unknown>, key: string): number => {
@@ -271,7 +283,7 @@ function GenerateWidget({ programId, members }: { programId: string; members: Mo
             className="w-24 rounded border border-borderStrong bg-panel2 px-2 py-1" /></label>
         <span className="rounded bg-panel2 px-2 py-1">est. cost: {cost != null ? `$${num(cost)}` : "…"}</span>
         <span>seeded by {members.length} molecule(s)</span>
-        <button onClick={loadCached} disabled={busy}
+        <button onClick={() => loadCached()} disabled={busy}
           className="ml-auto rounded border border-borderStrong px-3 py-1.5 text-sm font-medium text-ink hover:bg-panel2 disabled:opacity-50"
           title="Load the last completed run from disk — no new Boltz job / no cost">
           Load last results
