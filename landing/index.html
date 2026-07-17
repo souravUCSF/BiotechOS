@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BiotechOS — an operating system for preclinical drug programs</title>
+<meta name="description" content="BiotechOS synthesizes, drafts, computes, and tracks — the human decides and signs. Every inbox message becomes one action you just approve.">
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f4f3ee; --bg-2:#efeee6; --surf:#ffffff; --surf-2:#faf9f3;
+    --line:#e5e3da; --line-2:#d6d4c8;
+    --ink:#191b21; --ink-2:#43474f; --muted:#6d7280;
+    --accent:#d89a34; --accent-2:#c98a22; --accent-text:#8f5f12; --on-accent:#20160a;
+    --accent-soft:rgba(216,154,52,.14);
+    --good:#2f9e63; --bad:#cf5347; --do:#2f6fc0;
+    --good-soft:rgba(47,158,99,.12); --bad-soft:rgba(207,83,71,.12); --do-soft:rgba(47,111,192,.12);
+    --radius:14px; --maxw:1160px;
+    --shadow:0 1px 2px rgba(30,25,10,.05), 0 22px 48px -30px rgba(40,32,10,.32);
+    --shadow-sm:0 1px 2px rgba(30,25,10,.05), 0 8px 22px -16px rgba(40,32,10,.35);
+    --font:-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.5;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  a{color:inherit}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 clamp(18px,4vw,40px)}
+  h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.03em;line-height:1.05;color:var(--ink)}
+  h1{font-size:clamp(38px,6vw,66px)}
+  h2{font-size:clamp(28px,4vw,44px)}
+  h3{font-size:19px;font-weight:750;letter-spacing:-.01em}
+  p{margin:0}
+  .amber{color:var(--accent-2)}
+  .muted{color:var(--muted)}
+  .mono{font-family:var(--mono)}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+  .eyebrow.gold{color:var(--accent-text)}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:11px;font-size:15px;
+    font-weight:700;text-decoration:none;border:1px solid transparent;cursor:pointer;white-space:nowrap;
+    transition:filter .12s,background .12s,transform .05s}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-sm)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.secondary{background:var(--surf);border-color:var(--line-2);color:var(--ink)}
+  .btn.secondary:hover{background:var(--surf-2)}
+  .btn.ghost{color:var(--ink)}
+  .btn.ghost:hover{background:var(--accent-soft)}
+
+  /* chips */
+  .chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;font-weight:600;
+    letter-spacing:.02em;padding:3px 8px;border-radius:7px;text-transform:uppercase}
+  .chip.near{background:var(--accent-soft);color:var(--accent-text)}
+  .chip.pass{background:var(--good-soft);color:var(--good)}
+  .chip.warn{background:var(--bad-soft);color:var(--bad)}
+  .grade{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
+  .grade.g-near{background:var(--accent-soft);color:var(--accent-text)}
+  .grade.g-pass{background:var(--good-soft);color:var(--good)}
+
+  /* top strip */
+  .strip{padding:18px 0 4px}
+  .strip .wrap{display:flex;gap:12px;flex-wrap:wrap}
+  .strip .pill{flex:1 1 320px}
+  .pill{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--line);
+    border-radius:12px;padding:11px 15px;box-shadow:var(--shadow-sm);text-decoration:none;font-size:14px;color:var(--ink)}
+  .pill:hover{border-color:var(--line-2)}
+  .pill .ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:12px;flex:none;
+    background:var(--accent-soft);color:var(--accent-text)}
+  .pill .rest{color:var(--muted)}
+  .pill .arr{margin-left:auto;color:var(--muted)}
+
+  /* header */
+  header.nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 86%,transparent);
+    backdrop-filter:saturate(1.3) blur(8px);border-bottom:1px solid var(--line)}
+  header.nav .wrap{display:flex;align-items:center;gap:24px;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:18px;text-decoration:none}
+  .brand .mark{width:28px;height:28px;border-radius:9px;background:var(--accent);color:var(--on-accent);
+    display:grid;place-items:center;font-weight:900;font-size:16px;box-shadow:var(--shadow-sm)}
+  .nav-links{display:flex;gap:22px;margin-left:6px}
+  .nav-links a{color:var(--ink-2);text-decoration:none;font-size:14.5px;font-weight:500}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  @media(max-width:860px){ .nav-links{display:none} }
+
+  /* hero */
+  .hero{padding:clamp(30px,4vw,52px) 0 clamp(40px,6vw,74px)}
+  .hero .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(30px,5vw,60px);align-items:center}
+  @media(max-width:940px){ .hero .grid{grid-template-columns:1fr;gap:36px} }
+  .hero h1{margin:16px 0 20px;max-width:15ch}
+  .hero .sub{font-size:clamp(16.5px,1.7vw,19px);color:var(--ink-2);max-width:50ch}
+  .hero .ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+
+  /* generic card */
+  .card{background:var(--surf);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+  /* hero slack-style verdict card */
+  .slack{overflow:hidden}
+  .slack .sh{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px}
+  .slack .sh .b{width:22px;height:22px;border-radius:6px;background:var(--accent);color:var(--on-accent);
+    display:grid;place-items:center;font-weight:900;font-size:12px}
+  .slack .sh .app{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);
+    border:1px solid var(--line-2);border-radius:5px;padding:1px 5px}
+  .slack .sh .ch{color:var(--ink);font-weight:600}
+  .slack .sh .rt{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .slack .row{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:15px 16px}
+  .slack .row+.row{border-top:1px dashed var(--line)}
+  .slack .rhead{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .slack .rhead .name{font-weight:750}
+  .slack .rhead .cond{color:var(--muted);font-size:13.5px}
+  .slack .rbody{grid-column:2;font-size:13.5px;color:var(--ink-2);margin-top:5px}
+  .slack .sfoot{padding:12px 16px;border-top:1px solid var(--line);background:var(--surf-2);
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.5}
+
+  /* bands */
+  .band{padding:clamp(48px,7vw,88px) 0;border-top:1px solid var(--line)}
+  .band.alt{background:var(--bg-2)}
+  .band .head{max-width:62ch;margin-bottom:32px}
+  .band .head h2{margin:10px 0 12px}
+  .band .head p{color:var(--ink-2);font-size:17px;max-width:56ch}
+
+  /* live app window */
+  .appwin{border:1px solid var(--line-2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);background:var(--surf);
+    max-width:70%;margin:0 auto}
+  @media(max-width:760px){ .appwin{max-width:100%} }
+  .appwin .chrome{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surf-2);border-bottom:1px solid var(--line)}
+  .appwin .dots{display:flex;gap:6px}
+  .appwin .dots i{width:11px;height:11px;border-radius:50%;background:var(--line-2);display:block}
+  .appwin .url{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
+    border-radius:7px;padding:4px 12px;flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .appwin .open{font-size:13px;font-weight:600;color:var(--accent-text);text-decoration:none;white-space:nowrap}
+  .appwin .open:hover{text-decoration:underline}
+  .appwin .speed{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+  .screen{position:relative;background:#f7f9fb;min-height:280px}
+  .screen video{display:block;width:100%;height:auto}
+  .endcard{display:flex;flex-direction:column;align-items:center;gap:13px;margin-top:24px;animation:fade .4s ease both}
+  .endcard[hidden]{display:none}
+  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .endcard .lbl{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);background:var(--surf);border:1px solid var(--line);
+    border-radius:999px;padding:6px 15px;box-shadow:var(--shadow-sm)}
+  .capline{margin-top:20px;font-family:var(--mono);font-size:13px;color:var(--muted);max-width:80ch}
+
+  /* three things */
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:880px){ .three{grid-template-columns:1fr} }
+  .feat{padding:24px}
+  .feat .lbl{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-text)}
+  .feat h3{margin:10px 0 11px}
+  .feat p{font-size:14.5px;color:var(--ink-2)}
+  .feat .foot{margin-top:15px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+  /* quote / queryos */
+  .qgrid{display:grid;grid-template-columns:1fr .92fr;gap:44px;align-items:center}
+  @media(max-width:880px){ .qgrid{grid-template-columns:1fr} }
+  blockquote{margin:0;font-size:clamp(22px,2.7vw,30px);font-weight:750;letter-spacing:-.02em;line-height:1.28;color:var(--ink)}
+  .qattr{margin-top:16px;font-size:14.5px;color:var(--muted)}
+  .term{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:18px;font-family:var(--mono);
+    font-size:13px;box-shadow:var(--shadow);line-height:1.65}
+  .term .q{color:var(--ink)}
+  .term .a{color:var(--ink-2);margin-top:9px}
+  .term .cite{color:var(--accent-text)}
+  .term .arrow{color:var(--accent-2)}
+
+  /* run it */
+  pre.code{background:#20160a;color:#f4efe6;border-radius:14px;padding:18px 20px;overflow-x:auto;
+    font-family:var(--mono);font-size:13px;line-height:1.75;margin:20px 0 0;box-shadow:var(--shadow)}
+  pre.code .c{color:#b79b6b}
+  pre.code .p{color:var(--accent)}
+  .stackline{display:flex;gap:12px 26px;flex-wrap:wrap;font-size:14px;color:var(--ink-2);margin-top:20px}
+  .stackline b{color:var(--ink)}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);background:var(--bg-2);padding:44px 0 60px}
+  footer .cols{display:flex;justify-content:space-between;gap:34px;flex-wrap:wrap}
+  footer .disc{max-width:54ch;font-size:13px;color:var(--muted)}
+  footer .disc .brand{font-size:16px;margin-bottom:12px}
+  footer .disc p{margin-top:4px;line-height:1.6}
+  .foot-links{display:flex;flex-direction:column;gap:9px;font-size:14.5px}
+  .foot-links a{color:var(--ink-2);text-decoration:none}
+  .foot-links a:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<!-- top strip -->
+<div class="strip"><div class="wrap">
+  <a class="pill" href="https://biotechos-frontend.onrender.com/" target="_blank" rel="noopener">
+    <span class="ic">▶</span>
+    <span><b>Open the live app</b> <span class="rest">— the real KRAS G12C program, running now</span></span>
+    <span class="arr">↗</span>
+  </a>
+  <a class="pill" href="#run">
+    <span class="ic">↓</span>
+    <span><b>Want to run it yourself?</b> <span class="rest">clone it and go — read the setup</span></span>
+    <span class="arr">↓</span>
+  </a>
+</div></div>
+
+<!-- header -->
+<header class="nav"><div class="wrap">
+  <a class="brand" href="#top"><span class="mark">B</span>BiotechOS</a>
+  <nav class="nav-links">
+    <a href="#dashboard">Live demo</a>
+    <a href="#how">How it works</a>
+    <a href="#ask">Ask anything</a>
+    <a href="#run">Run it</a>
+  </nav>
+  <div class="nav-right">
+    <a class="btn ghost" href="https://github.com/souravUCSF/BiotechOS" target="_blank" rel="noopener">GitHub ↗</a>
+    <a class="btn primary" href="https://biotechos-frontend.onrender.com/" target="_blank" rel="noopener">Open the app ↗</a>
+  </div>
+</div></header>
+
+<main id="top">
+<!-- hero -->
+<section class="hero"><div class="wrap"><div class="grid">
+  <div>
+    <span class="eyebrow gold">One scientist · an entire drug-discovery portfolio</span>
+    <h1>An <span class="amber">operating system</span> for running preclinical drug programs.</h1>
+    <p class="sub">BiotechOS synthesizes, drafts, computes, and tracks — the human decides and signs.
+      Every inbox message becomes one concrete action you just approve, so one scientist can run
+      an entire portfolio or even multiple companies.</p>
+    <div class="ctas">
+      <a class="btn primary" href="#dashboard">See the live demo</a>
+      <a class="btn secondary" href="#how">How it works</a>
+      <a class="btn ghost" href="https://github.com/souravUCSF/BiotechOS" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </div>
+
+  <!-- hero verdict card, Slack-style -->
+  <div class="card slack">
+    <div class="sh">
+      <span class="b">B</span><span class="ch">BiotechOS</span><span class="app">APP</span>
+      <span>#molecule-dashboard</span><span class="rt">TPP verdict</span>
+    </div>
+    <div class="row">
+      <span class="grade g-pass">✓</span>
+      <div>
+        <div class="rhead"><span class="name">KES-0004</span><span class="cond">KRAS G12C · 1.5 nM</span>
+          <span class="chip pass">62× selective</span></div>
+        <div class="rbody">The front-runner: clears potency and the 30× WT-KRAS selectivity bar. One ADME
+          axis still pending, so it scores <b>NEAR</b> — not yet a full pass.</div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="grade g-near">!</span>
+      <div>
+        <div class="rhead"><span class="name">KES-0001</span><span class="cond">KRAS G12C · 0.5 nM</span>
+          <span class="chip warn">21× selective</span></div>
+        <div class="rbody">Most potent in the set — but selectivity sits under the TPP bar, so the score
+          is held at <b>NEAR</b> until the off-target gap closes.</div>
+      </div>
+    </div>
+    <div class="sfoot">KRAS G12C vs WT-KRAS · 50 active molecules · TPP status is computed from the data, not asserted.</div>
+  </div>
+</div></div></section>
+
+<!-- signature: live molecule dashboard -->
+<section class="band" id="dashboard"><div class="wrap">
+  <div class="head">
+    <span class="eyebrow">Live — the molecule dashboard</span>
+    <h2>Where every molecule is <span class="amber">scored, folded, and tracked.</span></h2>
+    <p>50 active molecules across the KRAS G12C program. Each card flips from its 2D structure to the
+      Boltz-2 co-fold; TPP status is computed, not asserted. This is the real app — press play and use it.</p>
+  </div>
+
+  <div class="appwin">
+    <div class="chrome">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="url">biotechos-frontend.onrender.com/molecules</span>
+      <span class="speed">walkthrough · 2×</span>
+    </div>
+    <div class="screen" id="screen">
+      <video id="demovid" poster="assets/dashboard.png" muted playsinline preload="metadata">
+        <source src="assets/demo.mp4" type="video/mp4">
+      </video>
+    </div>
+  </div>
+  <div class="endcard" id="endcard" hidden>
+    <span class="lbl">that's the look — now try it yourself</span>
+    <a class="btn primary" href="https://biotechos-frontend.onrender.com/molecules" target="_blank" rel="noopener">See the live demo ↗</a>
+  </div>
+  <p class="capline">KES-0001 is the most potent (0.5 nM); KES-0004 the most selective (62× over WT-KRAS)
+    — the board makes the trade-off legible at a glance.</p>
+</div></section>
+
+<!-- how it works: one engine, three things -->
+<section class="band alt" id="how"><div class="wrap">
+  <div class="head">
+    <span class="eyebrow">One engine, three things it does</span>
+    <h2>Triage the inbox. Verify the numbers. <span class="amber">Design the next molecule.</span></h2>
+    <p>Constantly monitoring your inbox for data, quotes, legal docs, POs and more. BiotechOS hands you an action you can
+      approve — and never commits anything silently.</p>
+  </div>
+  <div class="three">
+    <div class="card feat">
+      <div class="lbl">Triage</div>
+      <h3>Inbox → an action you approve</h3>
+      <p>One classifier tags every email and attachment — Quote · Invoice · Legal · Data · Other — then
+        routes it to a specialized processor that returns a reviewable action. Approving an item is the
+        only thing that mutates state.</p>
+      <div class="foot">engine/classifier.py</div>
+    </div>
+    <div class="card feat">
+      <div class="lbl">Verify</div>
+      <h3>It re-derives the vendor's numbers</h3>
+      <p>Analyzers recompute rather than transcribe: a 4-parameter logistic refit re-derives IC50, checks
+        recovery and efflux bands, and flags any discrepancy against the vendor's reported value before it
+        ever lands in the database.</p>
+      <div class="foot">engine/curvefit.py</div>
+    </div>
+    <div class="card feat">
+      <div class="lbl">Design</div>
+      <h3>Closes the design→make→test loop</h3>
+      <p>Boltz-2 co-folds the target with a ligand, maps protein–ligand contacts with ProLIF, and generates
+        de novo analogs to feed the next round — about <b>$0.05</b> a complex.</p>
+      <div class="foot">engine/structure.py · boltz.py</div>
+    </div>
+  </div>
+</div></section>
+
+<!-- streamline operations -->
+<section class="band" id="streamline"><div class="wrap">
+  <div class="head">
+    <span class="eyebrow">Streamline operations</span>
+    <h2>Make the routine parts of running a startup <span class="amber">painless.</span></h2>
+    <p>Quotes, invoices, contracts, data — the busywork of a lab becomes one reviewable action
+      you just approve. Here's a day of operations running itself.</p>
+  </div>
+  <div class="appwin">
+    <div class="chrome">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="url">biotechos-frontend.onrender.com</span>
+      <span class="speed">operations walkthrough</span>
+    </div>
+    <div class="screen">
+      <video id="streamvid" controls muted playsinline preload="metadata">
+        <source src="assets/streamline.mp4" type="video/mp4">
+      </video>
+    </div>
+  </div>
+</div></section>
+
+<!-- folding & molecular analysis (Boltz) -->
+<section class="band alt" id="boltz"><div class="wrap">
+  <div class="head">
+    <span class="eyebrow">Structure &amp; design</span>
+    <h2>Easy access to the frontier folding and molecular analysis with <span class="amber">Boltz.</span></h2>
+    <p>Every molecule is co-folded against your target and can be used to dig deeper into
+      protein–ligand contacts, as well as generate additional molecules to test from Enamine REAL
+      based on your known ligands.</p>
+  </div>
+  <div class="appwin">
+    <div class="chrome">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="url">biotechos-frontend.onrender.com/modeling</span>
+      <span class="speed">folding &amp; design</span>
+    </div>
+    <div class="screen">
+      <video id="boltzvid" controls muted playsinline preload="metadata">
+        <source src="assets/boltz.mp4" type="video/mp4">
+      </video>
+    </div>
+  </div>
+</div></section>
+
+<!-- ask anything / queryos -->
+<section class="band" id="ask"><div class="wrap"><div class="qgrid">
+  <div>
+    <span class="eyebrow gold">QueryOS</span>
+    <blockquote style="margin-top:14px">Ask anything across the program — and get an answer that
+      <span class="amber">verifies every citation</span> against the source document.</blockquote>
+    <p class="qattr">Grounded Q&amp;A over the corpus. No answer without a receipt.</p>
+  </div>
+  <div class="term">
+    <div class="q">&gt; what is Cell Kinetics CRO's invoice submission email and accepted tax forms?</div>
+    <div class="a"><span class="arrow">↳</span> ar@cellkinetics.example <span class="cite">[1]</span>;
+      W-9 (US), W-8BEN (Non-US), VAT Certificate <span class="cite">[1][2]</span></div>
+  </div>
+</div></div></section>
+
+<!-- run it -->
+<section class="band alt" id="run"><div class="wrap">
+  <div class="head">
+    <span class="eyebrow">Run it</span>
+    <h2>Local-first. <span class="amber">One SQLite file per program.</span></h2>
+    <p>The whole OS runs on your machine — and every processor runs end-to-end even without an API key.</p>
+  </div>
+<pre class="code"><span class="c"># clone and run (see README for exact commands)</span>
+git clone <span class="p">&lt;your-repo-url&gt;</span> biotechos &amp;&amp; cd biotechos
+
+<span class="c"># backend — FastAPI on :8010</span>
+cd backend &amp;&amp; uv sync &amp;&amp; uv run uvicorn biotechos.api.main:app --port 8010
+
+<span class="c"># frontend — Next.js on :3000</span>
+cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</pre>
+  <div class="stackline">
+    <span><b>Frontend</b> Next.js · :3000</span>
+    <span><b>Backend</b> FastAPI · :8010</span>
+    <span><b>Store</b> a single committable SQLite file</span>
+    <span><b>Models</b> Claude — Opus / Sonnet / Haiku, with keyless fallback</span>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <div class="cols">
+    <div class="disc">
+      <div class="brand" style="display:flex;align-items:center;gap:10px">
+        <span class="mark" style="width:26px;height:26px;border-radius:8px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:900;font-size:14px">B</span>
+        BiotechOS
+      </div>
+      <p>BiotechOS outputs are hypotheses to prioritize bench work, not clinical claims. Molecule
+        identities shown are internal program codes (KES-####). Built with Claude for Life Sciences.</p>
+      <p style="margin-top:10px;color:var(--muted)">Everything is partitioned by program — multi-program is a data property, not a bolt-on.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="https://biotechos-frontend.onrender.com/" target="_blank" rel="noopener">Open the live app ↗</a>
+      <a href="#dashboard">The live demo</a>
+      <a href="#run">Run it locally</a>
+      <a href="https://github.com/souravUCSF/BiotechOS" target="_blank" rel="noopener">Repository ↗</a>
+      <a href="#top">Back to top</a>
+    </nav>
+  </div>
+</div></footer>
+
+<script>
+  // signature visual: play the walkthrough at 1.5x when scrolled into view,
+  // then reveal the live-demo link when it ends
+  (function(){
+    var v = document.getElementById('demovid');
+    var end = document.getElementById('endcard');
+    if(!v) return;
+    function setRate(){ try{ v.playbackRate = 2.0; }catch(e){} }
+    v.addEventListener('loadedmetadata', setRate);
+    v.addEventListener('play', setRate);
+    v.addEventListener('ended', function(){ if(end) end.hidden = false; });
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ setRate(); v.play().catch(function(){}); io.unobserve(v); }
+        });
+      }, { threshold: 0.4 });
+      io.observe(v);
+    } else { setRate(); v.play().catch(function(){}); }
+  })();
+
+  // "Streamline operations" walkthrough: autoplay (muted) at 1.5x when scrolled into view
+  (function(){
+    var v = document.getElementById('streamvid');
+    if(!v) return;
+    function rate(){ try{ v.playbackRate = 1.5; }catch(e){} }
+    v.addEventListener('loadedmetadata', rate);
+    v.addEventListener('play', rate);
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ rate(); v.play().catch(function(){}); io.unobserve(v); }
+        });
+      }, { threshold: 0.4 });
+      io.observe(v);
+    } else { rate(); v.play().catch(function(){}); }
+  })();
+
+  // "Folding & analysis (Boltz)" walkthrough: autoplay (muted) at 1.5x when in view
+  (function(){
+    var v = document.getElementById('boltzvid');
+    if(!v) return;
+    function rate(){ try{ v.playbackRate = 1.5; }catch(e){} }
+    v.addEventListener('loadedmetadata', rate);
+    v.addEventListener('play', rate);
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ rate(); v.play().catch(function(){}); io.unobserve(v); }
+        });
+      }, { threshold: 0.4 });
+      io.observe(v);
+    } else { rate(); v.play().catch(function(){}); }
+  })();
+</script>
+</body>
+</html>
