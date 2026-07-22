@@ -3,8 +3,6 @@
 > ### ▶ Live demo — [**biotechos-frontend.onrender.com**](https://biotechos-frontend.onrender.com/)
 > A fully interactive, fictional **KRAS G12C** program — inbox, registry, molecule database, modeling, and budget. No login, no keys required.
 >
-> *Hosted on Render's free tier, so it spins down after ~15 min of inactivity — the first load after an idle period takes ~30–60 s to wake up, and it re-seeds to the original demo state on each cold start.*
-
 *The operating system for a drug-discovery program — inbox to modeling, one human-in-the-loop.*
 
 ---
